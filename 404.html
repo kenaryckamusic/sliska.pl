@@ -19,26 +19,49 @@
 html,body{height:100%;margin:0;background:#000;color:var(--frost);font-family:var(--ui);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
 a{color:inherit}
 .stage{position:fixed;inset:0;display:grid;place-items:center;overflow:hidden;padding:5rem 1.5rem;background:#000}
-.stage::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("sliska.jpg") center 36%/cover;filter:grayscale(1)}
+.stage::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("/sliska.jpg") center 36%/cover;filter:grayscale(1)}
 .content{position:relative;width:min(100%,36rem);text-align:center}
+.section-label{display:block;margin-bottom:1.25rem;color:rgba(255,255,255,.72);font-size:.75rem;letter-spacing:.28em;text-transform:uppercase}
 .code{margin:0;font-family:var(--display);font-size:clamp(7rem,25vw,13rem);font-weight:400;line-height:.9;letter-spacing:.08em;text-shadow:0 4px 24px rgba(0,0,0,.4)}
 .message{margin:1.5rem 0 0;font-size:clamp(1rem,3vw,1.2rem);line-height:1.6;color:rgba(255,255,255,.82)}
-.home{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:2rem;padding:.7rem 1.25rem;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.28);font-size:.95rem;text-decoration:none;transition:background .2s,border-color .2s}
+.home{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:2rem;padding:.7rem 1.25rem;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.28);font-size:.95rem;text-decoration:none;transition:background .2s,border-color .2s,color .2s}
 .home:hover{background:rgba(255,255,255,.14);border-color:#fff}
 .home:focus-visible{outline:2px solid #fff;outline-offset:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:.65rem 1rem calc(.65rem + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.09);background:rgba(0,0,0,.34);text-align:center;font-size:.72rem;color:rgba(244,246,241,.72)}
-@media (max-width:560px){.stage::before{background-image:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("sliska2.jpg")}}
+body.smg-page .section-label{color:#d53088;font-weight:700}
+body.smg-page .stage::before{background-image:radial-gradient(ellipse at center,rgba(213,48,136,.2),transparent 65%),linear-gradient(145deg,#141412,#000 70%)}
+body.smg-page .home{border-color:#d53088}
+body.smg-page .home:hover{background:#d53088;color:#fff}
+@media (max-width:560px){.stage::before{background-image:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("/sliska2.jpg")}}
 @media (prefers-reduced-motion:reduce){.home{transition:none}}
 </style>
 </head>
 <body>
 <main class="stage">
   <section class="content" aria-labelledby="error-title">
+    <span class="section-label" id="section-label" hidden></span>
     <h1 class="code" id="error-title">404</h1>
-    <p class="message">Wygląda na to, że ta strona nie istnieje albo została przeniesiona.</p>
-    <a class="home" href="/">Wróć na stronę główną</a>
+    <p class="message" id="error-message">Wygląda na to, że ta strona nie istnieje albo została przeniesiona.</p>
+    <a class="home" id="home-link" href="/">Wróć na stronę główną</a>
   </section>
 </main>
-<footer class="bar">© 2026 Suno Community / Spotted Śliska 10</footer>
+<footer class="bar" id="footer">© 2026 Suno Community / Spotted Śliska 10</footer>
+<script>
+const isSmgPage = /^\/smg(?:\/|$)/.test(window.location.pathname);
+
+if (isSmgPage) {
+  document.body.classList.add('smg-page');
+  document.title = '404 — Nie znaleziono strony | Śliska Music Group';
+  document.getElementById('section-label').textContent = 'Śliska Music Group';
+  document.getElementById('section-label').hidden = false;
+  document.getElementById('error-message').textContent =
+    'Nie znaleźliśmy tej strony w Śliska Music Group.';
+  const homeLink = document.getElementById('home-link');
+  homeLink.href = '/smg/';
+  homeLink.textContent = 'Wróć do Śliska Music Group';
+  document.getElementById('footer').textContent =
+    '© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.';
+}
+</script>
 </body>
 </html>
