@@ -281,26 +281,6 @@ a:hover, button:hover { color: var(--accent); }
 		</section>
 		<section class="roster" aria-label="Artyści Śliska Music Group">
 			<div class="artist-grid" id="artist-grid">
-				<article class="artist-card" id="lejdi-luna-card">
-					<div class="artist-portrait">
-						<div class="artist-placeholder" aria-hidden="true">Zdjęcie czarno-białe</div>
-						<img class="artist-photo" src="img/lejdiluna.jpg" alt="Portret: Lejdi Luna" loading="lazy" decoding="async">
-					</div>
-					<div class="artist-details">
-						<h2>Lejdi Luna</h2>
-						<div class="artist-socials">
-							<a href="https://instagram.com/lejdi.luna" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
-							</a>
-							<a href="https://open.spotify.com/artist/7hMfcbO7h4DFQDdaoBNZOG" target="_blank" rel="noopener noreferrer" aria-label="Spotify">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M6.5 9.5c3.5-1 7.5-.7 11 1.2M7 12.7c3-.8 6-.5 8.8 1M7.5 15.7c2.4-.6 4.7-.3 6.9.9" stroke="#f4f4f0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
-							</a>
-							<a href="https://music.youtube.com/channel/UCt2u1DQ-HGDM83KrU-GNMNA" target="_blank" rel="noopener noreferrer" aria-label="YouTube Music">
-								<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 8.2c-.2-1.2-1-2-2.2-2.2C18 5.6 12 5.6 12 5.6s-6 0-7.8.4C3 6.2 2.2 7 2 8.2 1.7 10 1.7 12 1.7 12s0 2 .3 3.8c.2 1.2 1 2 2.2 2.2 1.8.4 7.8.4 7.8.4s6 0 7.8-.4c1.2-.2 2-1 2.2-2.2.3-1.8.3-3.8.3-3.8s0-2-.3-3.8z"/><path d="M10 9.2v5.6l5-2.8z" fill="#f4f4f0"/></svg>
-							</a>
-						</div>
-					</div>
-				</article>
 			</div>
 		</section>
 	</main>
@@ -315,10 +295,291 @@ a:hover, button:hover { color: var(--accent); }
 	</footer>
 	<div class="grain" aria-hidden="true"></div>
 <script>
-(()=>{const b=atob("Y29uc3QgYXJ0aXN0cyA9IFsKCXsKCQluYW1lOiAnVGFtYXJhIEtlbmFyeWNrYScsCgkJaW1hZ2U6ICdpbWcvdGFtYXJha2VuYXJ5Y2thLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20va2VuYXJ5Y2thbXVzaWMnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC8wTFN0d3o1WDlybUVkeWg0Qkxyb1pOJywKCQkJeW91dHViZTogJ2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL0B0YW1hcmFrZW5hcnlja2EnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvVGFtYXJhX0tlbmFyeWNrYScKCQl9Cgl9LAoJewoJCW5hbWU6ICdMdWN5bmEgS3JlZGthJywKCQlpbWFnZTogJ2ltZy9sdWN5bmFrcmVka2EuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJycsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzVSM0RZYUp2TlZQRG4wQmRZWVcxbWI/c2k9S3VqMllTTXVScC15bUZLMm1KY0dsQScsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNMcklIYXJYVW9sOWJEd2pUZHNhdFFBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL0x1Y3luYV9LcmVka2EnCgkJfQoJfSwKCXsKCQluYW1lOiAnTWlzcyBUYW1pemEnLAoJCWltYWdlOiAnaW1nL21pc3N0YW1pemEuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9taXNzX3RhbWl6YScsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzdKdld5Q1ZOSFFBQmNrZjdINDA1U1A/c2k9ZWYyMjA2OTFkMjI3NDM4YicsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUN0YUZlQ1Q2LTQtWFVyVUpUaURNN3FnJywKCQkJZmFuZG9tOiAnJwoJCX0KCX0sCgl7CgkJbmFtZTogJ2JpdXN0eW5hJywKCQlpbWFnZTogJ2ltZy9iaXVzdHluYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNW1CNUxFWU1WZ3d3enYwVXpxZUtTTz9zaT03ZjU3OGMxMDkyMmI0MThjJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ2lPR3hQc3NuUVZlM3ZoNUEwaXpqOEEnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvQml1c3R5bmEnCgkJfQoJfSwKCXsKCQluYW1lOiAnVmlvbGV0dGEgTEMnLAoJCWltYWdlOiAnaW1nL3Zpb2xldHRhbGMuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS92aW9sZXR0YWxlY29xJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvMmxjVWpFeGxHVVFleDI4ZDQ1U1FPdj9zaT1kOGY1MDNjYjUyZWQ0NDQ4JywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQy12bUV6TjZ1NG9QZy1JSjVOdDZnT1EnLAoJCQlmYW5kb206ICcnCgkJfQoJfSwKCXsKCQluYW1lOiAnTG9yZXR0YSBTem1hdG/FvGVybmEnLAoJCWltYWdlOiAnaW1nL2xvcmV0dGFzem1hdG96ZXJuYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2xvcmV0dGNpYScsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0Lzd6NXJsYzd6RjZTUkJSZzBGR3UwUnE/c2k9MzAxM2M1N2UxM2UwNDFmMCcsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNmTU9kd1ZPUV9OcGhzMHQwZ0VMRnd3JywKCQkJZmFuZG9tOiAnJwoJCX0KCX0sCgl7CgkJbmFtZTogJ0Zpb25hIEZpa3Vub3ZhJywKCQlpbWFnZTogJ2ltZy9maW9uYWZpa3Vub3ZhLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vODA4ZmlrdW5vdmEnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC83ZzQ3YnU3N3YzdEJ0WWxYR3BiV3M2P3NpPTFkYmY5YWY4MjEzYjQ4OGUnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDa0pid1pna0NNOUFEREFxYjBkaERJUScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS9GaW9uYV9GaWt1bm92YScKCQl9Cgl9LAoJewoJCW5hbWU6ICdHQUVOT1ZFRkEnLAoJCWltYWdlOiAnaW1nL2dhZW5vdmVmYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2FtZXJpY2FzbmV4dHN1cGVybW9kZWwnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC82ZE5uZ2RZRFJLekZIOHJmWlhHMmJoP3NpPTMxYjAyNmVjMzFjMDQ4OTcnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9AR0FFTk9WRUZBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL0dBRU5PVkVGQScKCQl9Cgl9LAoJewoJCW5hbWU6ICdNYXJpa2EgRHVwb2RhamthJywKCQlpbWFnZTogJ2ltZy9tYXJpa2FkdXBvZGFqa2EuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9wYW5pcHJvd29rYXRvcicsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzB5M0h6MlRCYmo0Q1NXN1BzWkIweGg/c2k9YWNmYjRhYTIwYzZkNDMyNScsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL0BNYXJpa2FEdXBvZGFqa2EnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvTWFyaWthX0R1cG9kYWprYScKCQl9Cgl9LAoJewoJCW5hbWU6ICdTaGVtcmVsJywKCQlpbWFnZTogJ2ltZy9zaGVtcmVsLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vc2hlbXJlbC5vZmZpY2lhbCcsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzJwclBBQjk3am5RNUVPSlR2SXhzV04/c2k9OTFlNGEzNWM5ZGVmNDllNycsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNsek96R1JYWHhMenFtOUtZRjc5Q3lBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL1NoZW1yZWwnCgkJfQoJfSwKCXsKCQluYW1lOiAnR2Vqb3dpIEdlamUgR2Vqb3p5JywKCQlpbWFnZTogJ2ltZy9nZWpvd2lnZWplZ2Vqb3p5LmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZ2Vqb3dpLmdlamVfZ2Vqb3p5JywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvMGJ6aXpRRFp1aHZJZ0tJMmQxMWlDUT9zaT05ZTY2YWIxN2FjOWM0NzkzJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ3NMdHZEY25YZFpyek1OQUd1U1NaS2cnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvR2Vqb3dpX0dlamVfR2Vqb3p5JwoJCX0KCX0sCgl7CgkJbmFtZTogJ0Vyb25hIFF1ZWVuJywKCQlpbWFnZTogJ2ltZy9lcm9uYXF1ZWVuLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZXJvbmFxdWVlbm9mZmljaWFsJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNW0xcFRoRm82SUFWQTVTNzNPWmJKWT9zaT1mNzk0MDI0ZjUzOTU0NzNiJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vQEVyb25hUXVlZW4nLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvRXJvbmFfUXVlZW4nCgkJfQoJfSwKCXsKCQluYW1lOiAnRGFuaWVsbGEgU3RvaXBhxYJhJywKCQlpbWFnZTogJ2ltZy9kYW5pZWxsYXN0b2lwYWxhLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZGFuaWVsbGFzdG9pcGFsYW9mZmljaWFsJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvN2I2VXhERXlWYkdlNHFHZ1dyeFl2cj9zaT1jNjc1MDAzM2YxNTE0NTE0JywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ2N2aGhwMWI4bjZtZjhSZ0ZGVUtoaFEnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvRGFuaWVsbGFfU3RvaXBhxYJhJwoJCX0KCX0sCgl7CgkJbmFtZTogJ8W7YW5ldGEgUG9jaXNrJywKCQlpbWFnZTogJ2ltZy96YW5ldGFwb2Npc2suanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9wb2Npc2t6YW5ldGEnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC83b2o2dXg5eUJBSklBc3RqcWJEbGFUP3NpPWE3NjEzNzg0ZGRmYTRmYTMnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDZER4TkVmY1QzZEVBdS1CQ0FqOXh6UScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS/Fu2FuZXRhX1BvY2lzaycKCQl9Cgl9LAoJewoJCW5hbWU6ICdMaWwgVmV4eCcsCgkJaW1hZ2U6ICdpbWcvbGlsdmV4eC5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2xpbHZleHgub2ZmaWNpYWwnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC8zM0hoUm5Wc2FRUVBBbFBXNzVKaWluP3NpPWRjMzYxZTA3MTk1YTQzYmEnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDczRCRzFHcEsybFNQNUZlUlFNZUZZQScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS9MaWxfVmV4eCcKCQl9Cgl9LAoJewoJCW5hbWU6ICdCYXNpYSBMYXRla3MnLAoJCWltYWdlOiAnaW1nL2Jhc2lhbGF0ZWtzLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vYmJhc2lhbGF0ZWtzJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNjJvdjZ5bUtHakh1Y2ZZQzlxTDBIUT9zaT1lYmE1NGQ0YWQ5ZmY0NWFlJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ1hYTW4wZThfNTlvRzdtVDJlUmxiVlEnLAoJCQlmYW5kb206ICcnCgkJfQoJfQpdOwoKY29uc3QgYXJ0aXN0R3JpZCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNhcnRpc3QtZ3JpZCcpOwpjb25zdCBtZW51ID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLnNpdGUtbWVudScpOwpjb25zdCBvcGVuQnV0dG9uID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLm1lbnUtdG9nZ2xlLS1vcGVuJyk7CmNvbnN0IGNsb3NlQnV0dG9uID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLm1lbnUtdG9nZ2xlLS1jbG9zZScpOwoKY29uc3Qgc29jaWFsUGxhdGZvcm1zID0gewoJaW5zdGFncmFtOiB7CgkJbGFiZWw6ICdJbnN0YWdyYW0nLAoJCWljb246ICc8c3ZnIHZpZXdCb3g9IjAgMCAyNCAyNCIgYXJpYS1oaWRkZW49InRydWUiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMTcuNSIgY3k9IjYuNSIgcj0iMS4yIiBmaWxsPSJjdXJyZW50Q29sb3IiLz48L3N2Zz4nCgl9LAoJc3BvdGlmeTogewoJCWxhYmVsOiAnU3BvdGlmeScsCgkJaWNvbjogJzxzdmcgdmlld0JveD0iMCAwIDI0IDI0IiBhcmlhLWhpZGRlbj0idHJ1ZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjxwYXRoIGQ9Ik02LjUgOS41YzMuNS0xIDcuNS0uNyAxMSAxLjJNNyAxMi43YzMtLjggNi0uNSA4LjggMU03LjUgMTUuN2MyLjQtLjYgNC43LS4zIDYuOS45IiBzdHJva2U9IiNmNGY0ZjAiIHN0cm9rZS13aWR0aD0iMS42IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4nCgl9LAoJeW91dHViZTogewoJCWxhYmVsOiAnWW91VHViZScsCgkJaWNvbjogJzxzdmcgdmlld0JveD0iMCAwIDI0IDI0IiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggZmlsbD0iY3VycmVudENvbG9yIiBkPSJNMjIgOC4yYy0uMi0xLjItMS0yLTIuMi0yLjJDMTggNS42IDEyIDUuNiAxMiA1LjZzLTYgMC03LjguNEMzIDYuMiAyLjIgNyAyIDguMiAxLjcgMTAgMS43IDEyIDEuNyAxMnMwIDIgLjMgMy44Yy4yIDEuMiAxIDIgMi4yIDIuMiAxLjguNCA3LjguNCA3LjguNHM2IDAgNy44LS40YzEuMi0uMiAyLTEgMi4yLTIuMi4zLTEuOC4zLTMuOC4zLTMuOHMwLTItLjMtMy44eiIvPjxwYXRoIGQ9Ik0xMCA5LjJ2NS42bDUtMi44eiIgZmlsbD0iI2Y0ZjRmMCIvPjwvc3ZnPicKCX0sCglmYW5kb206IHsKCQlsYWJlbDogJ1dpa2kgRmFuZG9tJywKCQlpY29uOiAnPHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGFyaWEtaGlkZGVuPSJ0cnVlIj48cGF0aCBkPSJNMyA1LjJjMy4yLS45IDYuNC0uMiA5IDJ2MTJjLTIuNi0yLjItNS44LTIuOS05LTJ6TTIxIDUuMmMtMy4yLS45LTYuNC0uMi05IDJ2MTJjMi42LTIuMiA1LjgtMi45IDktMnoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik02IDloM002IDEyaDNtNi0zaDNtLTMgM2gzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPicKCX0KfTsKCmZ1bmN0aW9uIHJlbmRlclNvY2lhbExpbmtzKHNvY2lhbHMgPSB7fSkgewoJY29uc3QgbGlua3MgPSBPYmplY3QuZW50cmllcyhzb2NpYWxQbGF0Zm9ybXMpLmZsYXRNYXAoKFtwbGF0Zm9ybSwgc29jaWFsXSkgPT4gewoJCWNvbnN0IGhyZWYgPSBzb2NpYWxzW3BsYXRmb3JtXTsKCQlpZiAodHlwZW9mIGhyZWYgIT09ICdzdHJpbmcnIHx8ICFocmVmLnRyaW0oKSkgcmV0dXJuIFtdOwoKCQlsZXQgdXJsOwoJCXRyeSB7CgkJCXVybCA9IG5ldyBVUkwoaHJlZik7CgkJfSBjYXRjaCB7CgkJCXJldHVybiBbXTsKCQl9CgkJaWYgKCFbJ2h0dHA6JywgJ2h0dHBzOiddLmluY2x1ZGVzKHVybC5wcm90b2NvbCkpIHJldHVybiBbXTsKCgkJcmV0dXJuIFtgPGEgaHJlZj0iJHt1cmwuaHJlZn0iIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiIGFyaWEtbGFiZWw9IiR7c29jaWFsLmxhYmVsfSI+JHtzb2NpYWwuaWNvbn08L2E+YF07Cgl9KS5qb2luKCcnKTsKCglyZXR1cm4gbGlua3MgPyBgPGRpdiBjbGFzcz0iYXJ0aXN0LXNvY2lhbHMiPiR7bGlua3N9PC9kaXY+YCA6ICcnOwp9CgphcnRpc3RzLmZvckVhY2goKGFydGlzdCkgPT4gewoJY29uc3QgY2FyZCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2FydGljbGUnKTsKCWNhcmQuY2xhc3NOYW1lID0gJ2FydGlzdC1jYXJkJzsKCWNvbnN0IHBvcnRyYWl0ID0gYAoJCTxkaXYgY2xhc3M9ImFydGlzdC1wbGFjZWhvbGRlciIgYXJpYS1oaWRkZW49InRydWUiPlpkasSZY2llIGN6YXJuby1iaWHFgmU8L2Rpdj4KCQk8aW1nIGNsYXNzPSJhcnRpc3QtcGhvdG8iIHNyYz0iJHthcnRpc3QuaW1hZ2V9IiBhbHQ9IlBvcnRyZXQ6ICR7YXJ0aXN0Lm5hbWV9IiBsb2FkaW5nPSJsYXp5IiBkZWNvZGluZz0iYXN5bmMiPgoJYDsKCgljYXJkLmlubmVySFRNTCA9IGAKCQk8ZGl2IGNsYXNzPSJhcnRpc3QtcG9ydHJhaXQiPiR7cG9ydHJhaXR9PC9kaXY+CgkJPGRpdiBjbGFzcz0iYXJ0aXN0LWRldGFpbHMiPgoJCQk8aDI+JHthcnRpc3QubmFtZX08L2gyPgoJCQkke3JlbmRlclNvY2lhbExpbmtzKGFydGlzdC5zb2NpYWxzKX0KCQk8L2Rpdj4KCWA7Cgljb25zdCBpbWFnZSA9IGNhcmQucXVlcnlTZWxlY3RvcignLmFydGlzdC1waG90bycpOwoJaW1hZ2UuYWRkRXZlbnRMaXN0ZW5lcignZXJyb3InLCAoKSA9PiB7CgkJaW1hZ2UuaGlkZGVuID0gdHJ1ZTsKCQljYXJkLnF1ZXJ5U2VsZWN0b3IoJy5hcnRpc3QtcG9ydHJhaXQnKS5jbGFzc0xpc3QuYWRkKCdpcy1taXNzaW5nJyk7Cgl9LCB7IG9uY2U6IHRydWUgfSk7CglhcnRpc3RHcmlkLmFwcGVuZChjYXJkKTsKfSk7CgpmdW5jdGlvbiBzZXRNZW51T3Blbihpc09wZW4pIHsKCW1lbnUuaW5lcnQgPSAhaXNPcGVuOwoJbWVudS5jbGFzc0xpc3QudG9nZ2xlKCdpcy1vcGVuJywgaXNPcGVuKTsKCW9wZW5CdXR0b24uaGlkZGVuID0gaXNPcGVuOwoJY2xvc2VCdXR0b24uaGlkZGVuID0gIWlzT3BlbjsKCW9wZW5CdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJY2xvc2VCdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJKGlzT3BlbiA/IGNsb3NlQnV0dG9uIDogb3BlbkJ1dHRvbikuZm9jdXMoKTsKfQoKb3BlbkJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNldE1lbnVPcGVuKHRydWUpKTsKY2xvc2VCdXR0b24uYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLCAoKSA9PiBzZXRNZW51T3BlbihmYWxzZSkpOwpkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCdrZXlkb3duJywgKGV2ZW50KSA9PiB7CglpZiAoZXZlbnQua2V5ID09PSAnRXNjYXBlJyAmJiAhbWVudS5pbmVydCkgc2V0TWVudU9wZW4oZmFsc2UpOwp9KTsK");const x=Uint8Array.from(b,c=>c.charCodeAt(0));const s=document.createElement("script");s.textContent=new TextDecoder().decode(x);document.currentScript.replaceWith(s)})();
-</script>
-<script>
-	document.querySelector('#artist-grid').append(document.querySelector('#lejdi-luna-card'));
+// Edit each artist's social URLs here; leave a URL empty to hide its icon.
+const artists = [
+	{
+		name: 'Tamara Kenarycka',
+		image: 'img/tamarakenarycka.jpg',
+		socials: {
+			instagram: 'https://instagram.com/kenaryckamusic',
+			spotify: 'https://open.spotify.com/artist/0LStwz5X9rmEdyh4BLroZN',
+			youtube: 'https://www.youtube.com/@tamarakenarycka',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Tamara_Kenarycka'
+		}
+	},
+	{
+		name: 'Lucyna Kredka',
+		image: 'img/lucynakredka.jpg',
+		socials: {
+			instagram: '',
+			spotify: 'https://open.spotify.com/artist/5R3DYaJvNVPDn0BdYYW1mb?si=Kuj2YSMuRp-ymFK2mJcGlA',
+			youtube: 'https://music.youtube.com/channel/UCLrIHarXUol9bDwjTdsatQA',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Lucyna_Kredka'
+		}
+	},
+	{
+		name: 'Miss Tamiza',
+		image: 'img/misstamiza.jpg',
+		socials: {
+			instagram: 'https://instagram.com/miss_tamiza',
+			spotify: 'https://open.spotify.com/artist/7JvWyCVNHQABckf7H405SP?si=ef220691d227438b',
+			youtube: 'https://music.youtube.com/channel/UCtaFeCT6-4-XUrUJTiDM7qg',
+			fandom: ''
+		}
+	},
+	{
+		name: 'biustyna',
+		image: 'img/biustyna.jpg',
+		socials: {
+			instagram: '',
+			spotify: 'https://open.spotify.com/artist/5mB5LEYMVgwwzv0UzqeKSO?si=7f578c10922b418c',
+			youtube: 'https://music.youtube.com/channel/UCiOGxPssnQVe3vh5A0izj8A',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Biustyna'
+		}
+	},
+	{
+		name: 'Violetta LC',
+		image: 'img/violettalc.jpg',
+		socials: {
+			instagram: 'https://instagram.com/violettalecoq',
+			spotify: 'https://open.spotify.com/artist/2lcUjExlGUQex28d45SQOv?si=d8f503cb52ed4448',
+			youtube: 'https://music.youtube.com/channel/UC-vmEzN6u4oPg-IJ5Nt6gOQ',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Loretta Szmatożerna',
+		image: 'img/lorettaszmatozerna.jpg',
+		socials: {
+			instagram: 'https://instagram.com/lorettcia',
+			spotify: 'https://open.spotify.com/artist/7z5rlc7zF6SRBRg0FGu0Rq?si=3013c57e13e041f0',
+			youtube: 'https://music.youtube.com/channel/UCfMOdwVOQ_Nphs0t0gELFww',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Fiona Fikunova',
+		image: 'img/fionafikunova.jpg',
+		socials: {
+			instagram: 'https://instagram.com/808fikunova',
+			spotify: 'https://open.spotify.com/artist/7g47bu77v3tBtYlXGpbWs6?si=1dbf9af8213b488e',
+			youtube: 'https://music.youtube.com/channel/UCkJbwZgkCM9ADDAqb0dhDIQ',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Fiona_Fikunova'
+		}
+	},
+	{
+		name: 'GAENOVEFA',
+		image: 'img/gaenovefa.jpg',
+		socials: {
+			instagram: 'https://instagram.com/americasnextsupermodel',
+			spotify: 'https://open.spotify.com/artist/6dNngdYDRKzFH8rfZXG2bh?si=31b026ec31c04897',
+			youtube: 'https://music.youtube.com/@GAENOVEFA',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/GAENOVEFA'
+		}
+	},
+	{
+		name: 'Marika Dupodajka',
+		image: 'img/marikadupodajka.jpg',
+		socials: {
+			instagram: 'https://instagram.com/paniprowokator',
+			spotify: 'https://open.spotify.com/artist/0y3Hz2TBbj4CSW7PsZB0xh?si=acfb4aa20c6d4325',
+			youtube: 'https://music.youtube.com/@MarikaDupodajka',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Marika_Dupodajka'
+		}
+	},
+	{
+		name: 'Shemrel',
+		image: 'img/shemrel.jpg',
+		socials: {
+			instagram: 'https://instagram.com/shemrel.official',
+			spotify: 'https://open.spotify.com/artist/2prPAB97jnQ5EOJTvIxsWN?si=91e4a35c9def49e7',
+			youtube: 'https://music.youtube.com/channel/UClzOzGRXXxLzqm9KYF79CyA',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Shemrel'
+		}
+	},
+	{
+		name: 'Gejowi Geje Gejozy',
+		image: 'img/gejowigejegejozy.jpg',
+		socials: {
+			instagram: 'https://instagram.com/gejowi.geje_gejozy',
+			spotify: 'https://open.spotify.com/artist/0bzizQDZuhvIgKI2d11iCQ?si=9e66ab17ac9c4793',
+			youtube: 'https://music.youtube.com/channel/UCsLtvDcnXdZrzMNAGuSSZKg',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Gejowi_Geje_Gejozy'
+		}
+	},
+	{
+		name: 'Erona Queen',
+		image: 'img/eronaqueen.jpg',
+		socials: {
+			instagram: 'https://instagram.com/eronaqueenofficial',
+			spotify: 'https://open.spotify.com/artist/5m1pThFo6IAVA5S73OZbJY?si=f794024f5395473b',
+			youtube: 'https://music.youtube.com/@EronaQueen',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Erona_Queen'
+		}
+	},
+	{
+		name: 'Daniella Stoipała',
+		image: 'img/daniellastoipala.jpg',
+		socials: {
+			instagram: 'https://instagram.com/daniellastoipalaofficial',
+			spotify: 'https://open.spotify.com/artist/7b6UxDEyVbGe4qGgWrxYvr?si=c6750033f1514514',
+			youtube: 'https://music.youtube.com/channel/UCcvhhp1b8n6mf8RgFFUKhhQ',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Daniella_Stoipała'
+		}
+	},
+	{
+		name: 'Żaneta Pocisk',
+		image: 'img/zanetapocisk.jpg',
+		socials: {
+			instagram: 'https://instagram.com/pociskzaneta',
+			spotify: 'https://open.spotify.com/artist/7oj6ux9yBAJIAstjqbDlaT?si=a7613784ddfa4fa3',
+			youtube: 'https://music.youtube.com/channel/UCdDxNEfcT3dEAu-BCAj9xzQ',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Żaneta_Pocisk'
+		}
+	},
+	{
+		name: 'Lil Vexx',
+		image: 'img/lilvexx.jpg',
+		socials: {
+			instagram: 'https://instagram.com/lilvexx.official',
+			spotify: 'https://open.spotify.com/artist/33HhRnVsaQQPAlPW75Jiin?si=dc361e07195a43ba',
+			youtube: 'https://music.youtube.com/channel/UCs4BG1GpK2lSP5FeRQMeFYA',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Lil_Vexx'
+		}
+	},
+	{
+		name: 'Basia Lateks',
+		image: 'img/basialateks.jpg',
+		socials: {
+			instagram: 'https://instagram.com/bbasialateks',
+			spotify: 'https://open.spotify.com/artist/62ov6ymKGjHucfYC9qL0HQ?si=eba54d4ad9ff45ae',
+			youtube: 'https://music.youtube.com/channel/UCXXMn0e8_59oG7mT2eRlbVQ',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Lejdi Luna',
+		image: 'img/lejdiluna.jpg',
+		socials: {
+			instagram: 'https://instagram.com/lejdi.luna',
+			spotify: 'https://open.spotify.com/artist/7hMfcbO7h4DFQDdaoBNZOG',
+			youtube: 'https://music.youtube.com/channel/UCt2u1DQ-HGDM83KrU-GNMNA',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Oliwia Mokrawska',
+		image: 'img/oliwiamokrawska.jpg',
+		socials: {
+			instagram: 'https://instagram.com/oliwia_.mokrawska',
+			spotify: '',
+			youtube: '',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Malwinka Malinka',
+		image: 'img/malwinkamalinka.jpg',
+		socials: {
+			instagram: 'https://instagram.com/malwinka_.malinka',
+			spotify: 'https://open.spotify.com/artist/0W2p7lCGqK64QDAe3PFwRI',
+			youtube: 'https://music.youtube.com/channel/UCNh8-UmGnaWMZNFKF0grODQ',
+			fandom: ''
+		}
+	},
+	{
+		name: 'Playgirlz',
+		image: 'img/playgirlz.jpg',
+		socials: {
+			instagram: 'https://instagram.com/playgirlz1347',
+			spotify: '',
+			youtube: '',
+			fandom: 'https://sunopedia.fandom.com/pl/wiki/Playgirlz'
+		}
+	}
+];
+
+const artistGrid = document.querySelector('#artist-grid');
+const menu = document.querySelector('.site-menu');
+const openButton = document.querySelector('.menu-toggle--open');
+const closeButton = document.querySelector('.menu-toggle--close');
+
+const socialPlatforms = {
+	instagram: {
+		label: 'Instagram',
+		icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>'
+	},
+	spotify: {
+		label: 'Spotify',
+		icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M6.5 9.5c3.5-1 7.5-.7 11 1.2M7 12.7c3-.8 6-.5 8.8 1M7.5 15.7c2.4-.6 4.7-.3 6.9.9" stroke="#f4f4f0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>'
+	},
+	youtube: {
+		label: 'YouTube',
+		icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 8.2c-.2-1.2-1-2-2.2-2.2C18 5.6 12 5.6 12 5.6s-6 0-7.8.4C3 6.2 2.2 7 2 8.2 1.7 10 1.7 12 1.7 12s0 2 .3 3.8c.2 1.2 1 2 2.2 2.2 1.8.4 7.8.4 7.8.4s6 0 7.8-.4c1.2-.2 2-1 2.2-2.2.3-1.8.3-3.8.3-3.8s0-2-.3-3.8z"/><path d="M10 9.2v5.6l5-2.8z" fill="#f4f4f0"/></svg>'
+	},
+	fandom: {
+		label: 'Wiki Fandom',
+		icon: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>'
+	}
+};
+
+function renderSocialLinks(socials = {}) {
+	const links = Object.entries(socialPlatforms).flatMap(([platform, social]) => {
+		const href = socials[platform];
+		if (typeof href !== 'string' || !href.trim()) return [];
+
+		let url;
+		try {
+			url = new URL(href);
+		} catch {
+			return [];
+		}
+		if (!['http:', 'https:'].includes(url.protocol)) return [];
+
+		return [`<a href="${url.href}" target="_blank" rel="noopener noreferrer" aria-label="${social.label}">${social.icon}</a>`];
+	}).join('');
+
+	return links ? `<div class="artist-socials">${links}</div>` : '';
+}
+
+artists.forEach((artist) => {
+	const card = document.createElement('article');
+	card.className = 'artist-card';
+	const portrait = `
+		<div class="artist-placeholder" aria-hidden="true">Zdjęcie czarno-białe</div>
+		<img class="artist-photo" src="${artist.image}" alt="Portret: ${artist.name}" loading="lazy" decoding="async">
+	`;
+
+	card.innerHTML = `
+		<div class="artist-portrait">${portrait}</div>
+		<div class="artist-details">
+			<h2>${artist.name}</h2>
+			${renderSocialLinks(artist.socials)}
+		</div>
+	`;
+	const image = card.querySelector('.artist-photo');
+	image.addEventListener('error', () => {
+		image.hidden = true;
+		card.querySelector('.artist-portrait').classList.add('is-missing');
+	}, { once: true });
+	artistGrid.append(card);
+});
+
+function setMenuOpen(isOpen) {
+	menu.inert = !isOpen;
+	menu.classList.toggle('is-open', isOpen);
+	openButton.hidden = isOpen;
+	closeButton.hidden = !isOpen;
+	openButton.setAttribute('aria-expanded', String(isOpen));
+	closeButton.setAttribute('aria-expanded', String(isOpen));
+	(isOpen ? closeButton : openButton).focus();
+}
+
+openButton.addEventListener('click', () => setMenuOpen(true));
+closeButton.addEventListener('click', () => setMenuOpen(false));
+document.addEventListener('keydown', (event) => {
+	if (event.key === 'Escape' && !menu.inert) setMenuOpen(false);
+});
 </script>
 </body>
 </html>
