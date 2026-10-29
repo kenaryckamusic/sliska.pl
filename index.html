@@ -43,6 +43,8 @@ a{color:inherit}
 .nav a{position:relative;color:rgba(255,255,255,.94);text-decoration:none;font-weight:400;font-size:clamp(.7rem,2.8vw,.86rem);letter-spacing:0;white-space:nowrap;padding:.3rem 0}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:.1rem;height:1px;background:currentColor;opacity:0;transition:opacity .2s}
 .nav a:hover::after,.nav a:focus-visible::after{opacity:.8}
+.nav__group{display:grid;justify-items:center;line-height:1.15}
+.nav__group .nav__sub-link{padding-top:0;font-size:.78em}
 
 /* cienki dolny pasek */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:0 1.5rem;flex-wrap:wrap;
@@ -79,7 +81,10 @@ a{color:inherit}
 <body>
 
 <nav class="nav" aria-label="Główna nawigacja">
-  <a href="/smg">Śliska Music Group</a>
+  <div class="nav__group">
+    <a href="/smg">Śliska Music Group</a>
+    <a class="nav__sub-link" href="https://crackrecordings.pl/" target="_blank" rel="noopener noreferrer">CRACK Recordings</a>
+  </div>
   <a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Fandom Wiki</a>
 </nav>
 
