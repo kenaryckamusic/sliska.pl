@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#0a0a0a">
+	<title>Śliska Music Group — Kontakt</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<style>
+:root {
+	color-scheme: dark;
+	--ink: #0a0a0a;
+	--paper: #f4f4f0;
+	--muted: #9a9a96;
+	--accent: #d53088;
+	--rule: rgba(255, 255, 255, 0.15);
+	font-family: Inter, sans-serif;
+	background: var(--ink);
+	color: var(--paper);
+}
+
+* { box-sizing: border-box; }
+html { overflow-x: clip; }
+body { min-width: 320px; min-height: 100vh; margin: 0; overflow-x: hidden; background: var(--ink); }
+button, a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+a { text-decoration: none; }
+a:hover, button:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.site-header { position: relative; z-index: 40; height: 64px; border-bottom: 1px solid var(--rule); }
+.brand {
+	position: absolute;
+	top: 50%;
+	left: 50vw;
+	display: grid;
+	justify-items: center;
+	font: 800 14px/1.4 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .3em;
+	text-transform: uppercase;
+	transform: translate(-50%, -50%);
+}
+.brand small { color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: .45em; }
+.menu-toggle {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 61;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border: 0;
+	background: var(--accent);
+	color: var(--paper);
+}
+.menu-toggle:hover { color: var(--paper); background: #b82270; }
+.menu-toggle--close { left: min(420px, calc(85vw - 64px)); font-size: 30px; line-height: 1; }
+.home-link {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 62;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+}
+.home-link:hover { background: rgba(255,255,255,.06); color: var(--paper); }
+.site-menu {
+	position: fixed;
+	z-index: 60;
+	inset: 0 auto 0 0;
+	width: min(420px, 85vw);
+	overflow: auto;
+	padding: 64px 32px 32px 64px;
+	background: #000;
+	transform: translateX(-100%);
+	transition: transform 260ms ease;
+}
+.site-menu.is-open { transform: translateX(0); }
+.site-menu > a {
+	display: block;
+	padding: 18px 24px 18px 0;
+	border-bottom: 3px solid #2a2a28;
+	font: 500 21px/1.2 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.site-menu > a[aria-current="page"] { color: var(--accent); }
+.site-menu > a span { color: var(--muted); font: 14px Inter, sans-serif; }
+.menu-contact {
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: 1px solid var(--rule);
+	color: var(--muted);
+	font-size: 11px;
+	letter-spacing: .2em;
+	line-height: 1.9;
+	text-transform: uppercase;
+}
+.menu-contact a { text-transform: none; }
+
+.contact-hero {
+	position: relative;
+	isolation: isolate;
+	overflow: hidden;
+	min-height: 260px;
+	display: grid;
+	align-content: center;
+	justify-items: center;
+	padding: 36px 24px;
+	border-bottom: 1px solid var(--rule);
+	background: #161615;
+	text-align: center;
+}
+.contact-hero::before {
+	position: absolute;
+	z-index: 1;
+	inset: 0;
+	background: linear-gradient(180deg, rgba(0,0,0,.34), rgba(0,0,0,.55));
+	content: "";
+}
+.contact-hero-photo {
+	position: absolute;
+	z-index: 0;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 52%;
+	filter: grayscale(1) brightness(.65);
+}
+.contact-hero > .eyebrow, .contact-hero > h1 { position: relative; z-index: 2; }
+.eyebrow { margin: 0 0 18px; color: var(--muted); font-size: 11px; letter-spacing: .3em; text-transform: uppercase; }
+.contact-hero h1 {
+	margin: 0;
+	font: 800 104px/1 'Bricolage Grotesque', sans-serif;
+	letter-spacing: -.01em;
+	text-transform: uppercase;
+}
+.contact-hero h1 span { color: transparent; -webkit-text-stroke: 1px var(--paper); }
+.contact-summary {
+	display: flex;
+	align-items: end;
+	justify-content: space-between;
+	gap: 24px;
+	padding: 48px 56px;
+	border-bottom: 1px solid var(--rule);
+}
+.contact-summary .eyebrow { margin-bottom: 10px; }
+.email-link { color: var(--accent); font: 700 30px/1.2 'Bricolage Grotesque', sans-serif; overflow-wrap: anywhere; }
+.company-address { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.65; text-align: right; }
+.contact-form-section { padding: 48px 56px 96px; }
+.form-heading, #contact-form { width: min(100%, 820px); margin-inline: auto; }
+.form-heading { margin-bottom: 32px; }
+.form-heading .eyebrow { margin-bottom: 12px; }
+.form-heading h2 { margin: 0; font: 800 40px/1.1 'Bricolage Grotesque', sans-serif; text-align: center; }
+#contact-form { display: flex; flex-direction: column; gap: 22px; }
+.field { min-width: 0; }
+.field-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.field label { display: block; margin: 0 0 8px; font-size: 15px; font-weight: 600; }
+.field label span { color: var(--accent); }
+.field input, .field select, .field textarea {
+	width: 100%;
+	border: 1px solid rgba(244, 244, 240, .7);
+	border-radius: 0;
+	background: var(--ink);
+	color: var(--paper);
+	font: 400 16px/1.5 Inter, sans-serif;
+}
+.field input, .field select { min-height: 52px; padding: 0 16px; }
+.field textarea { min-height: 160px; padding: 14px 16px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); outline: 1px solid var(--accent); }
+.demo-guidance { margin-bottom: 10px; color: #d8d8d4; font-size: 15px; line-height: 1.65; }
+.demo-guidance strong { color: var(--paper); }
+.demo-guidance p { margin: 6px 0 10px; }
+.demo-guidance ul { margin: 0; padding-left: 22px; }
+.demo-guidance li + li { margin-top: 6px; }
+.consent { display: flex; align-items: flex-start; gap: 12px; color: #d8d8d4; font-size: 14px; line-height: 1.6; }
+.consent input { width: 22px; height: 22px; flex: none; margin: 0; accent-color: var(--accent); }
+.consent a { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+.consent a:hover { color: var(--accent); }
+.consent [aria-hidden="true"] { color: var(--accent); }
+.submit-button {
+	min-height: 58px;
+	border: 1px solid var(--paper);
+	background: transparent;
+	color: var(--paper);
+	font: 700 15px 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .18em;
+	text-transform: uppercase;
+}
+.submit-button:not(:disabled):hover { border-color: var(--accent); background: var(--accent); color: var(--paper); }
+.submit-button:disabled { cursor: not-allowed; opacity: .42; }
+.form-note { margin: -10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; text-align: center; }
+
+.site-footer {
+	position: relative;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-top: 1px solid var(--rule);
+	background: var(--ink);
+	color: var(--muted);
+	font-size: 11px;
+}
+.copyright, .legal-links { flex: 1; padding: 0 20px; }
+.legal-links { text-align: right; white-space: nowrap; }
+.legal-links a:hover { color: var(--accent); }
+.fandom-link {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	gap: 10px;
+	padding: 0 20px;
+	border-right: 1px solid var(--rule);
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+	font-size: 12px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+.grain {
+	position: fixed;
+	z-index: 50;
+	inset: 0;
+	pointer-events: none;
+	opacity: .045;
+	background-image: repeating-radial-gradient(circle at 17% 32%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 83% 68%, #000 0 1px, transparent 1px 4px);
+}
+
+@media (max-width: 700px) {
+	.contact-hero { min-height: 220px; }
+	.contact-hero h1 { font-size: 64px; }
+	.contact-summary { align-items: flex-start; flex-direction: column; gap: 22px; padding: 32px 24px; }
+	.email-link { font-size: clamp(20px, 7vw, 28px); }
+	.company-address { text-align: left; }
+	.contact-form-section { padding: 36px 24px 64px; }
+	.form-heading h2 { font-size: 34px; }
+	.field-grid { grid-template-columns: 1fr; gap: 22px; }
+	.site-menu { padding-left: 32px; }
+	.site-footer { min-height: 80px; flex-wrap: wrap; justify-content: center; }
+	.copyright { order: 2; flex: 1 0 100%; padding: 0 12px 10px; text-align: center; }
+	.fandom-link { order: 0; min-height: 40px; border: 0; }
+	.legal-links { order: 1; flex: 0 1 auto; padding: 0 12px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+.site-header { height: 44px; }
+.brand { font-size: clamp(.7rem, 2.8vw, .86rem); }
+.menu-toggle { width: 44px; height: 44px; }
+.menu-toggle--close { left: min(420px, calc(85vw - 44px)); }
+.home-link { width: 44px; height: 44px; }
+.site-footer { min-height: 36px; font-size: .72rem; }
+.copyright, .legal-links { padding-right: clamp(1rem, 4vw, 2.5rem); padding-left: clamp(1rem, 4vw, 2.5rem); }
+.fandom-link { min-height: 36px; font-size: .72rem; }
+
+@media (max-width: 700px) {
+	.site-footer { min-height: 80px; }
+	.copyright { padding: 0 1rem 10px; font-size: .68rem; }
+	.fandom-link { min-height: 36px; }
+	.legal-links { padding: 0 1rem; font-size: .68rem; }
+}
+.site-header { height: 50px; border-bottom: 0; }
+.brand {
+	top: 0;
+	padding: 7px 26px 9px;
+	border: 1px solid var(--rule);
+	border-top: 0;
+	border-radius: 0 0 16px 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	box-shadow: 0 6px 24px rgba(0,0,0,.18);
+	transform: translateX(-50%);
+}
+.menu-toggle {
+	border-right: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	border-radius: 0 0 16px 0;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+}
+.menu-toggle--open { color: var(--accent); }
+.menu-toggle:hover { background: var(--accent); }
+.home-link {
+	border-bottom: 1px solid var(--rule);
+	border-radius: 0 0 0 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+}
+.site-menu { border-right: 1px solid var(--rule); border-radius: 0 0 20px 0; }
+.fandom-link { border-radius: 0; }
+.contact-hero {
+	margin: 16px clamp(12px, 2vw, 24px) 0;
+	border: 1px solid var(--rule);
+	border-radius: 24px;
+}
+.contact-summary {
+	margin: 16px clamp(12px, 2vw, 24px) 0;
+	padding: clamp(24px, 4vw, 48px);
+}
+.email-link {
+	max-width: 100%;
+}
+.company-address { padding: 0; border: 0; border-radius: 0; background: transparent; }
+.contact-form-section { padding-top: 40px; }
+#contact-form {
+	padding: clamp(18px, 4vw, 36px);
+	border: 1px solid var(--rule);
+	border-radius: 24px;
+	background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+	box-shadow: 0 18px 50px rgba(0,0,0,.2);
+}
+.field input, .field select, .field textarea {
+	border-color: rgba(244,244,240,.3);
+	border-radius: 14px;
+	background: rgba(0,0,0,.32);
+	transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.field input:hover, .field select:hover, .field textarea:hover { border-color: rgba(244,244,240,.58); }
+.field input:focus, .field select:focus, .field textarea:focus {
+	border-color: var(--accent);
+	background: rgba(0,0,0,.5);
+	outline: 0;
+	box-shadow: 0 0 0 3px rgba(213,48,136,.16);
+}
+.field textarea { border-radius: 16px; }
+.demo-guidance {
+	padding: 18px 20px;
+	border: 1px solid var(--rule);
+	border-radius: 16px;
+	background: rgba(255,255,255,.025);
+}
+.consent { padding: 14px 16px; border: 1px solid var(--rule); border-radius: 14px; background: rgba(255,255,255,.025); }
+.consent input { border-radius: 5px; }
+.submit-button {
+	border-radius: 999px;
+	background: rgba(255,255,255,.025);
+	transition: border-color .2s, background .2s, color .2s, transform .2s;
+}
+.submit-button:not(:disabled):hover { transform: translateY(-1px); }
+.form-note { padding: 0; border: 0; border-radius: 0; background: transparent; }
+@media (max-width: 700px) {
+	.contact-hero { margin: 12px 12px 0; border-radius: 20px; }
+	.contact-summary { margin: 12px; padding: 24px 20px; border: 0; border-radius: 0; background: transparent; }
+	.email-link { padding: 0; font-size: clamp(14px, 4.5vw, 18px); }
+	.company-address { text-align: left; }
+	.contact-form-section { padding: 28px 12px 48px; }
+	#contact-form { padding: 18px; border-radius: 20px; }
+	.demo-guidance { padding: 16px; border-radius: 14px; }
+	.fandom-link { min-height: 36px; }
+}
+</style>
+	
+</head>
+<body>
+	<header class="site-header">
+		<button class="menu-toggle menu-toggle--open" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="site-menu">
+			<svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2" /></svg>
+		</button>
+		<a class="brand" href="/smg" aria-label="Śliska Music Group, strona główna">
+			<span>Śliska</span>
+			<small>Music Group</small>
+		</a>
+		<a class="home-link" href="https://sliska.pl/" aria-label="Strona główna sliska.pl" title="Strona główna sliska.pl">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+		</a>
+	</header>
+
+	<nav class="site-menu" id="site-menu" aria-label="Menu" inert>
+		<a href="/smg">Strona Główna</a>
+		<a href="../artysci/">Artyści</a>
+		<a href="./" aria-current="page">Kontakt</a>
+		<a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Wikipedia <span aria-hidden="true">↗</span></a>
+		<div class="menu-contact">Warszawa<br><a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a></div>
+	</nav>
+	<button class="menu-toggle menu-toggle--close" type="button" aria-label="Zamknij menu" aria-expanded="true" aria-controls="site-menu" hidden>×</button>
+
+	<main>
+		<section class="contact-hero" aria-labelledby="page-title">
+			<img class="contact-hero-photo" src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&amp;fit=crop&amp;w=2400&amp;q=85&amp;sat=-100" alt="" aria-hidden="true" fetchpriority="high">
+			<h1 id="page-title">Kon<span>takt</span></h1>
+		</section>
+
+		<section class="contact-summary" aria-label="Dane kontaktowe">
+			<div>
+				<p class="eyebrow">Email</p>
+				<a class="email-link" href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a>
+			</div>
+			<p class="company-address">SMG Entertainment Sp. z o.o.<br>ul. Śliska 10, Warszawa</p>
+		</section>
+
+		<section class="contact-form-section" aria-labelledby="form-title">
+			<div class="form-heading">
+				<h2 id="form-title">Napisz do nas</h2>
+			</div>
+
+			<form id="contact-form">
+				<div class="field">
+					<label for="topic">Temat <span aria-hidden="true">*</span></label>
+					<select id="topic" name="topic" required>
+						<option value="Demo">Demo</option>
+						<option value="Współpraca">Współpraca</option>
+						<option value="Sync & Licensing">Sync &amp; Licensing</option>
+						<option value="Inne">Inne</option>
+					</select>
+				</div>
+				<div class="field-grid">
+					<div class="field">
+						<label for="first-name">Imię <span aria-hidden="true">*</span></label>
+						<input id="first-name" name="firstName" type="text" autocomplete="given-name" required>
+					</div>
+					<div class="field">
+						<label for="last-name">Nazwisko</label>
+						<input id="last-name" name="lastName" type="text" autocomplete="family-name">
+					</div>
+				</div>
+				<div class="field">
+					<label for="email">E-mail <span aria-hidden="true">*</span></label>
+					<input id="email" name="email" type="email" autocomplete="email" required>
+				</div>
+				<div class="field">
+					<label for="message">Wiadomość <span aria-hidden="true">*</span></label>
+					<div class="demo-guidance">
+						<strong>Wyślij nam swoje demo</strong>
+						<p>Chcesz, aby Twoja muzyka trafiła do Śliska Music Group? Opisz się krótko i wklej link do materiału.</p>
+						<ul>
+							<li><b>Format:</b> link do materiału (np. YouTube, SoundCloud, Google Drive, Dropbox, WeTransfer).</li>
+							<li><b>Ustawienia prywatności:</b> upewnij się, że link jest aktywny i nie wymaga dodatkowych zgód na dostęp.</li>
+						</ul>
+					</div>
+					<textarea id="message" name="message" required></textarea>
+				</div>
+				<label class="consent" for="privacy-consent">
+					<input id="privacy-consent" name="privacyConsent" type="checkbox" required>
+					<span>Akceptuję wymagane warunki dotyczące <a href="../prywatnosc/">prywatności</a> <span aria-hidden="true">*</span></span>
+				</label>
+				<button class="submit-button" type="submit" disabled>Wyślij</button>
+				<p class="form-note" id="form-note" aria-live="polite">Przycisk „Wyślij” otworzy Twoją aplikację pocztową z gotową wiadomością do ssmlabel.kontakt@gmail.com.</p>
+			</form>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<span class="copyright">© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.</span>
+		<a class="fandom-link" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener noreferrer" aria-label="Wiki Fandom">
+			<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			Wiki Fandom
+		</a>
+		<div class="legal-links"><a href="../regulamin/">Regulamin</a> / <a href="../prywatnosc/">Prywatność</a> / <a href="../cookies/">Cookies</a></div>
+	</footer>
+	<div class="grain" aria-hidden="true"></div>
+<script>
+(()=>{const b=atob("Y29uc3QgbWVudSA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5zaXRlLW1lbnUnKTsKY29uc3Qgb3BlbkJ1dHRvbiA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5tZW51LXRvZ2dsZS0tb3BlbicpOwpjb25zdCBjbG9zZUJ1dHRvbiA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5tZW51LXRvZ2dsZS0tY2xvc2UnKTsKY29uc3QgZm9ybSA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNjb250YWN0LWZvcm0nKTsKY29uc3Qgc3VibWl0QnV0dG9uID0gZm9ybS5xdWVyeVNlbGVjdG9yKCcuc3VibWl0LWJ1dHRvbicpOwoKZnVuY3Rpb24gc2V0TWVudU9wZW4oaXNPcGVuKSB7CgltZW51LmluZXJ0ID0gIWlzT3BlbjsKCW1lbnUuY2xhc3NMaXN0LnRvZ2dsZSgnaXMtb3BlbicsIGlzT3Blbik7CglvcGVuQnV0dG9uLmhpZGRlbiA9IGlzT3BlbjsKCWNsb3NlQnV0dG9uLmhpZGRlbiA9ICFpc09wZW47CglvcGVuQnV0dG9uLnNldEF0dHJpYnV0ZSgnYXJpYS1leHBhbmRlZCcsIFN0cmluZyhpc09wZW4pKTsKCWNsb3NlQnV0dG9uLnNldEF0dHJpYnV0ZSgnYXJpYS1leHBhbmRlZCcsIFN0cmluZyhpc09wZW4pKTsKCShpc09wZW4gPyBjbG9zZUJ1dHRvbiA6IG9wZW5CdXR0b24pLmZvY3VzKCk7Cn0KCmZ1bmN0aW9uIHVwZGF0ZVN1Ym1pdFN0YXRlKCkgewoJc3VibWl0QnV0dG9uLmRpc2FibGVkID0gIWZvcm0uY2hlY2tWYWxpZGl0eSgpOwp9CgpvcGVuQnV0dG9uLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgKCkgPT4gc2V0TWVudU9wZW4odHJ1ZSkpOwpjbG9zZUJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNldE1lbnVPcGVuKGZhbHNlKSk7CmRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ2tleWRvd24nLCAoZXZlbnQpID0+IHsKCWlmIChldmVudC5rZXkgPT09ICdFc2NhcGUnICYmICFtZW51LmluZXJ0KSBzZXRNZW51T3BlbihmYWxzZSk7Cn0pOwoKZm9ybS5hZGRFdmVudExpc3RlbmVyKCdpbnB1dCcsIHVwZGF0ZVN1Ym1pdFN0YXRlKTsKZm9ybS5hZGRFdmVudExpc3RlbmVyKCdjaGFuZ2UnLCB1cGRhdGVTdWJtaXRTdGF0ZSk7CmZvcm0uYWRkRXZlbnRMaXN0ZW5lcignc3VibWl0JywgKGV2ZW50KSA9PiB7CglldmVudC5wcmV2ZW50RGVmYXVsdCgpOwoJaWYgKCFmb3JtLnJlcG9ydFZhbGlkaXR5KCkpIHJldHVybjsKCgljb25zdCBmb3JtRGF0YSA9IG5ldyBGb3JtRGF0YShmb3JtKTsKCWNvbnN0IHN1YmplY3QgPSBgJHtmb3JtRGF0YS5nZXQoJ3RvcGljJyl9IOKAlCAke2Zvcm1EYXRhLmdldCgnZmlyc3ROYW1lJyl9ICR7Zm9ybURhdGEuZ2V0KCdsYXN0TmFtZScpIHx8ICcnfWAudHJpbSgpOwoJY29uc3QgYm9keSA9IFsKCQlgSW1pxJk6ICR7Zm9ybURhdGEuZ2V0KCdmaXJzdE5hbWUnKX1gLAoJCWBOYXp3aXNrbzogJHtmb3JtRGF0YS5nZXQoJ2xhc3ROYW1lJykgfHwgJyd9YCwKCQlgRS1tYWlsOiAke2Zvcm1EYXRhLmdldCgnZW1haWwnKX1gLAoJCScnLAoJCWZvcm1EYXRhLmdldCgnbWVzc2FnZScpCgldLmpvaW4oJ1xyXG4nKTsKCXdpbmRvdy5sb2NhdGlvbi5ocmVmID0gYG1haWx0bzpzc21sYWJlbEBnbWFpbC5jb20/c3ViamVjdD0ke2VuY29kZVVSSUNvbXBvbmVudChzdWJqZWN0KX0mYm9keT0ke2VuY29kZVVSSUNvbXBvbmVudChib2R5KX1gOwp9KTs=");const x=Uint8Array.from(b,c=>c.charCodeAt(0));const s=document.createElement("script");s.textContent=new TextDecoder().decode(x);document.currentScript.replaceWith(s)})();
+</script>
+</body>
+</html>

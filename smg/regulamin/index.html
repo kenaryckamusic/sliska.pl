@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#0a0a0a">
+	<title>Śliska Music Group — Regulamin</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<style>
+:root {
+	color-scheme: dark;
+	--ink: #0a0a0a;
+	--paper: #f4f4f0;
+	--muted: #9a9a96;
+	--accent: #d53088;
+	--rule: rgba(255, 255, 255, 0.15);
+	font-family: Inter, sans-serif;
+	background: var(--ink);
+	color: var(--paper);
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--ink); }
+button, a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+a { text-decoration: none; }
+a:hover, button:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.site-header { position: relative; z-index: 40; height: 64px; border-bottom: 1px solid var(--rule); }
+.brand {
+	position: absolute;
+	top: 50%;
+	left: 50vw;
+	display: grid;
+	justify-items: center;
+	font: 800 14px/1.4 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .3em;
+	text-transform: uppercase;
+	transform: translate(-50%, -50%);
+}
+.brand small { color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: .45em; }
+.menu-toggle {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 61;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border: 0;
+	background: var(--accent);
+	color: var(--paper);
+}
+.menu-toggle:hover { color: var(--paper); background: #b82270; }
+.menu-toggle--close { left: min(420px, calc(85vw - 64px)); font-size: 30px; line-height: 1; }
+.home-link {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 62;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+}
+.home-link:hover { background: rgba(255,255,255,.06); color: var(--paper); }
+.site-menu {
+	position: fixed;
+	z-index: 60;
+	inset: 0 auto 0 0;
+	width: min(420px, 85vw);
+	overflow: auto;
+	padding: 64px 32px 32px 64px;
+	background: #000;
+	transform: translateX(-100%);
+	transition: transform 260ms ease;
+}
+.site-menu.is-open { transform: translateX(0); }
+.site-menu > a {
+	display: block;
+	padding: 18px 24px 18px 0;
+	border-bottom: 3px solid #2a2a28;
+	font: 500 21px/1.2 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.site-menu > a span { color: var(--muted); font: 14px Inter, sans-serif; }
+.menu-contact {
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: 1px solid var(--rule);
+	color: var(--muted);
+	font-size: 11px;
+	letter-spacing: .2em;
+	line-height: 1.9;
+	text-transform: uppercase;
+}
+.menu-contact a { text-transform: none; }
+
+.document-intro { padding: 56px 56px 24px; border-bottom: 1px solid var(--rule); }
+.eyebrow { margin: 0 0 16px; color: var(--muted); font-size: 11px; letter-spacing: .3em; text-transform: uppercase; }
+.document-intro h1 {
+	margin: 0;
+	font: 800 88px/.95 'Bricolage Grotesque', sans-serif;
+	letter-spacing: -.01em;
+	text-transform: uppercase;
+}
+.effective-date { margin: 20px 0 24px; color: var(--muted); font-size: 13px; }
+.document-content { padding: 24px 56px 96px; }
+.document-content-inner { max-width: 820px; }
+.document-content h2 {
+	margin: 48px 0 14px;
+	font: 700 26px/1.2 'Bricolage Grotesque', sans-serif;
+}
+.document-content h2:first-child { margin-top: 24px; }
+.document-content p, .document-content ul {
+	margin: 0 0 14px;
+	color: #d8d8d4;
+	font-size: 15px;
+	line-height: 1.75;
+}
+.document-content ul { padding-left: 22px; }
+.document-content li { margin-bottom: 6px; }
+.document-content a { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
+.document-content a:hover { color: var(--accent); }
+.document-content strong { color: var(--accent); }
+
+.site-footer {
+	position: relative;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-top: 1px solid var(--rule);
+	background: var(--ink);
+	color: var(--muted);
+	font-size: 11px;
+}
+.copyright, .legal-links { flex: 1; padding: 0 20px; }
+.legal-links { text-align: right; white-space: nowrap; }
+.legal-links a:hover, .legal-links a[aria-current="page"] { color: var(--accent); }
+.fandom-link {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	gap: 10px;
+	padding: 0 20px;
+	border-right: 1px solid var(--rule);
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+	font-size: 12px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+.grain {
+	position: fixed;
+	z-index: 50;
+	inset: 0;
+	pointer-events: none;
+	opacity: .045;
+	background-image: repeating-radial-gradient(circle at 17% 32%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 83% 68%, #000 0 1px, transparent 1px 4px);
+}
+
+@media (max-width: 700px) {
+	.document-intro { padding: 48px 24px 20px; }
+	.document-intro h1 { font-size: 56px; }
+	.effective-date { margin: 20px 0 24px; }
+	.document-content { padding: 16px 24px 64px; }
+	.document-content h2 { margin-top: 36px; font-size: 23px; }
+	.document-content h2:first-child { margin-top: 28px; }
+	.site-menu { padding-left: 32px; }
+	.site-footer { min-height: 80px; flex-wrap: wrap; justify-content: center; }
+	.copyright { order: 2; flex: 1 0 100%; padding: 0 12px 10px; text-align: center; }
+	.fandom-link { order: 0; min-height: 40px; border: 0; }
+	.legal-links { order: 1; flex: 0 1 auto; padding: 0 12px; font-size: 10px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+.site-header { height: 44px; }
+.brand { font-size: clamp(.7rem, 2.8vw, .86rem); }
+.menu-toggle { width: 44px; height: 44px; }
+.menu-toggle--close { left: min(420px, calc(85vw - 44px)); }
+.home-link { width: 44px; height: 44px; }
+.site-footer { min-height: 36px; font-size: .72rem; }
+.copyright, .legal-links { padding-right: clamp(1rem, 4vw, 2.5rem); padding-left: clamp(1rem, 4vw, 2.5rem); }
+.fandom-link { min-height: 36px; font-size: .72rem; }
+
+@media (max-width: 700px) {
+	.site-footer { min-height: 80px; }
+	.copyright { padding: 0 1rem 10px; font-size: .68rem; }
+	.fandom-link { min-height: 36px; }
+	.legal-links { padding: 0 1rem; font-size: .68rem; }
+}
+.site-header { height: 50px; border-bottom: 0; }
+.brand {
+	top: 0;
+	padding: 7px 26px 9px;
+	border: 1px solid var(--rule);
+	border-top: 0;
+	border-radius: 0 0 16px 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	transform: translateX(-50%);
+}
+.menu-toggle { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); border-radius: 0 0 16px 0; }
+.menu-toggle--open { color: var(--accent); background: rgba(0,0,0,.3); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); }
+.home-link { border-bottom: 1px solid var(--rule); border-radius: 0 0 0 16px; }
+.site-menu { border-right: 1px solid var(--rule); border-radius: 0 0 20px 0; }
+.fandom-link { border-radius: 0; }
+.document-intro {
+	margin: 16px 20px 0;
+	border: 1px solid var(--rule);
+	border-radius: 22px;
+	background: rgba(255,255,255,.02);
+}
+@media (max-width: 700px) {
+	.document-intro { margin: 12px 12px 0; border-radius: 18px; }
+	.document-content { padding-right: 12px; padding-left: 12px; }
+}
+</style>
+	
+</head>
+<body>
+	<header class="site-header">
+		<button class="menu-toggle menu-toggle--open" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="site-menu">
+			<svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2" /></svg>
+		</button>
+		<a class="brand" href="/smg" aria-label="Śliska Music Group, strona główna">
+			<span>Śliska</span>
+			<small>Music Group</small>
+		</a>
+		<a class="home-link" href="https://sliska.pl/" aria-label="Strona główna sliska.pl" title="Strona główna sliska.pl">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+		</a>
+	</header>
+
+	<nav class="site-menu" id="site-menu" aria-label="Menu" inert>
+		<a href="/smg">Strona Główna</a>
+		<a href="../artysci/">Artyści</a>
+		<a href="../kontakt/">Kontakt</a>
+		<a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Wikipedia <span aria-hidden="true">↗</span></a>
+		<div class="menu-contact">Warszawa<br><a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a></div>
+	</nav>
+	<button class="menu-toggle menu-toggle--close" type="button" aria-label="Zamknij menu" aria-expanded="true" aria-controls="site-menu" hidden>×</button>
+
+	<main>
+		<header class="document-intro">
+			<p class="eyebrow">Dokument prawny</p>
+			<h1>Regulamin</h1>
+			<p class="effective-date">Obowiązuje od: 28 października 2026 r.</p>
+		</header>
+
+		<article class="document-content">
+			<div class="document-content-inner">
+				<h2>§ 1. Postanowienia ogólne</h2>
+				<p>Niniejszy Regulamin określa zasady korzystania z serwisu internetowego dostępnego pod adresem sliska.pl/smg wraz z jego podstronami (dalej: „Serwis”). Serwis prowadzi <strong>SMG Entertainment Sp. z o.o.</strong>, z siedzibą przy ul. Śliskiej 10 w Warszawie, NIP <strong>3789021824</strong> (dalej: „Usługodawca”).</p>
+				<p>Kontakt z Usługodawcą jest możliwy pod adresem e-mail: <a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a>.</p>
+				<p>Regulamin jest dostępny nieodpłatnie w Serwisie w formie umożliwiającej jego odczytanie, zapisanie i wydrukowanie. Regulamin stanowi regulamin świadczenia usług drogą elektroniczną w rozumieniu ustawy z dnia 18 lipca 2002 r. o świadczeniu usług drogą elektroniczną.</p>
+				<p>Korzystanie z Serwisu oznacza akceptację niniejszego Regulaminu.</p>
+
+				<h2>§ 2. Definicje</h2>
+				<ul>
+					<li>Użytkownik – każda osoba korzystająca z Serwisu.</li>
+					<li>Usługa – usługa świadczona drogą elektroniczną w ramach Serwisu, opisana w § 3.</li>
+					<li>Formularz kontaktowy – funkcja Serwisu umożliwiająca przygotowanie wiadomości e-mail kierowanej do Usługodawcy.</li>
+					<li>Demo – materiał muzyczny (w szczególności link do nagrania) przesłany Usługodawcy w celu zapoznania się z nim.</li>
+				</ul>
+
+				<h2>§ 3. Rodzaje i zakres usług</h2>
+				<p>W ramach Serwisu Usługodawca nieodpłatnie udostępnia:</p>
+				<ul>
+					<li>informacje o Śliska Music Group i artystach współpracujących z grupą,</li>
+					<li>odnośniki do zewnętrznych serwisów (w szczególności Instagram oraz Wikipedia),</li>
+					<li>dane kontaktowe oraz Formularz kontaktowy, w tym możliwość przesłania Demo.</li>
+				</ul>
+				<p>Usługi są świadczone bezterminowo, a Użytkownik może z nich zrezygnować w dowolnym momencie, przestając korzystać z Serwisu.</p>
+
+				<h2>§ 4. Wymagania techniczne</h2>
+				<p>Do korzystania z Serwisu niezbędne są: urządzenie z dostępem do Internetu, aktualna przeglądarka internetowa z włączoną obsługą JavaScript oraz – w przypadku Formularza kontaktowego – skonfigurowany program pocztowy.</p>
+
+				<h2>§ 5. Zasady korzystania z Serwisu</h2>
+				<p>Użytkownik zobowiązuje się korzystać z Serwisu zgodnie z prawem, dobrymi obyczajami i Regulaminem. Zabronione jest w szczególności:</p>
+				<ul>
+					<li>dostarczanie treści bezprawnych, obraźliwych lub naruszających prawa osób trzecich,</li>
+					<li>podejmowanie działań zakłócających lub utrudniających działanie Serwisu,</li>
+					<li>wykorzystywanie Serwisu do rozsyłania niezamówionych informacji handlowych.</li>
+				</ul>
+				<p>Przesyłając Demo, Użytkownik oświadcza, że przysługują mu prawa do utworów i nagrań zawartych w materiale albo że posiada zgodę uprawnionych podmiotów na jego przesłanie.</p>
+				<p>Przesłanie Demo nie rodzi po stronie Usługodawcy obowiązku odsłuchania materiału, udzielenia odpowiedzi, publikacji ani zawarcia jakiejkolwiek umowy. Usługodawca nie wykorzystuje przesłanych Demo komercyjnie bez zawarcia odrębnej umowy z uprawnionymi osobami.</p>
+
+				<h2>§ 6. Prawa autorskie i znaki</h2>
+				<p>Zawartość Serwisu, w tym teksty, grafiki, fotografie, logotypy i nazwa „Śliska Music Group”, jest chroniona prawem autorskim oraz innymi przepisami o ochronie własności intelektualnej. Fotografie i nagrania artystów mogą należeć do artystów lub innych uprawnionych podmiotów.</p>
+				<p>Kopiowanie, rozpowszechnianie lub inne wykorzystywanie zawartości Serwisu wykraczające poza dozwolony użytek wymaga uprzedniej zgody Usługodawcy lub innego uprawnionego podmiotu.</p>
+
+				<h2>§ 7. Odpowiedzialność</h2>
+				<p>Usługodawca dokłada starań, aby Serwis działał prawidłowo i bez przerw, jednak nie ponosi odpowiedzialności za przerwy wynikające z przyczyn technicznych lub niezależnych od niego.</p>
+				<p>Usługodawca nie odpowiada za treści i działanie serwisów zewnętrznych, do których Serwis zawiera odnośniki. Korzystanie z nich podlega regulaminom i politykom ich operatorów.</p>
+
+				<h2>§ 8. Reklamacje</h2>
+				<p>Reklamacje dotyczące funkcjonowania Serwisu można zgłaszać na adres e-mail <a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a>. Zgłoszenie powinno zawierać dane kontaktowe zgłaszającego oraz opis problemu.</p>
+				<p>Usługodawca rozpatruje reklamacje w terminie 14 dni od dnia ich otrzymania i informuje zgłaszającego o rozstrzygnięciu drogą elektroniczną.</p>
+
+				<h2>§ 9. Ochrona danych osobowych</h2>
+				<p>Zasady przetwarzania danych osobowych opisuje <a href="../prywatnosc/">Polityka prywatności</a>, a zasady dotyczące plików cookies – <a href="../cookies/">Polityka cookies</a>. Oba dokumenty są dostępne w Serwisie.</p>
+
+				<h2>§ 10. Zmiany Regulaminu</h2>
+				<p>Usługodawca może zmienić Regulamin z ważnych powodów, w szczególności w razie zmiany przepisów prawa lub zakresu usług. Zmieniony Regulamin obowiązuje od dnia opublikowania w Serwisie. Użytkownik, który nie akceptuje zmian, powinien zaprzestać korzystania z Serwisu.</p>
+
+				<h2>§ 11. Postanowienia końcowe</h2>
+				<p>W sprawach nieuregulowanych Regulaminem zastosowanie mają przepisy prawa polskiego, w szczególności Kodeksu cywilnego oraz ustawy o świadczeniu usług drogą elektroniczną. Postanowienia Regulaminu nie wyłączają ani nie ograniczają praw konsumentów wynikających z bezwzględnie obowiązujących przepisów.</p>
+			</div>
+		</article>
+	</main>
+
+	<footer class="site-footer">
+		<span class="copyright">© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.</span>
+		<a class="fandom-link" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener noreferrer" aria-label="Wiki Fandom">
+			<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			Wiki Fandom
+		</a>
+		<div class="legal-links"><a href="./" aria-current="page">Regulamin</a> / <a href="../prywatnosc/">Prywatność</a> / <a href="../cookies/">Cookies</a></div>
+	</footer>
+	<div class="grain" aria-hidden="true"></div>
+<script>
+(()=>{const b=atob("Y29uc3QgbWVudSA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5zaXRlLW1lbnUnKTsKY29uc3Qgb3BlbkJ1dHRvbiA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5tZW51LXRvZ2dsZS0tb3BlbicpOwpjb25zdCBjbG9zZUJ1dHRvbiA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJy5tZW51LXRvZ2dsZS0tY2xvc2UnKTsKCmZ1bmN0aW9uIHNldE1lbnVPcGVuKGlzT3BlbikgewoJbWVudS5pbmVydCA9ICFpc09wZW47CgltZW51LmNsYXNzTGlzdC50b2dnbGUoJ2lzLW9wZW4nLCBpc09wZW4pOwoJb3BlbkJ1dHRvbi5oaWRkZW4gPSBpc09wZW47CgljbG9zZUJ1dHRvbi5oaWRkZW4gPSAhaXNPcGVuOwoJb3BlbkJ1dHRvbi5zZXRBdHRyaWJ1dGUoJ2FyaWEtZXhwYW5kZWQnLCBTdHJpbmcoaXNPcGVuKSk7CgljbG9zZUJ1dHRvbi5zZXRBdHRyaWJ1dGUoJ2FyaWEtZXhwYW5kZWQnLCBTdHJpbmcoaXNPcGVuKSk7CgkoaXNPcGVuID8gY2xvc2VCdXR0b24gOiBvcGVuQnV0dG9uKS5mb2N1cygpOwp9CgpvcGVuQnV0dG9uLmFkZEV2ZW50TGlzdGVuZXIoJ2NsaWNrJywgKCkgPT4gc2V0TWVudU9wZW4odHJ1ZSkpOwpjbG9zZUJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNldE1lbnVPcGVuKGZhbHNlKSk7CmRvY3VtZW50LmFkZEV2ZW50TGlzdGVuZXIoJ2tleWRvd24nLCAoZXZlbnQpID0+IHsKCWlmIChldmVudC5rZXkgPT09ICdFc2NhcGUnICYmICFtZW51LmluZXJ0KSBzZXRNZW51T3BlbihmYWxzZSk7Cn0pOw==");const x=Uint8Array.from(b,c=>c.charCodeAt(0));const s=document.createElement("script");s.textContent=new TextDecoder().decode(x);document.currentScript.replaceWith(s)})();
+</script>
+</body>
+</html>

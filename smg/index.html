@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#000000">
+	<title>Śliska Music Group</title>
+	<link rel="canonical" href="https://sliska.pl/smg">
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<style>
+:root {
+	color-scheme: dark;
+	--ink: #000;
+	--paper: #fff;
+	--muted: #9a9a96;
+	--accent: #d53088;
+	--rule: rgba(255, 255, 255, 0.1);
+	--display: 'Anton', 'Arial Narrow', sans-serif;
+	font-family: Inter, sans-serif;
+	background: var(--ink);
+	color: var(--paper);
+}
+
+* { box-sizing: border-box; }
+
+body {
+	min-width: 320px;
+	min-height: 100vh;
+	margin: 0;
+	background: var(--ink);
+}
+
+button, a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+a { text-decoration: none; }
+a:hover, button:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.stage {
+	position: relative;
+	min-height: 640px;
+	height: 100vh;
+	overflow: hidden;
+	background: #141412;
+}
+.site-header {
+	position: absolute;
+	top: 0;
+	right: 0;
+	left: 0;
+	z-index: 40;
+	height: 50px;
+	pointer-events: none;
+}
+
+.slides, .slide { position: absolute; inset: 0; }
+.slide {
+	overflow: hidden;
+	background: #141412;
+	opacity: 0;
+	transition: opacity 900ms cubic-bezier(.77, 0, .18, 1);
+	pointer-events: none;
+}
+.artist-photo {
+	position: absolute;
+	inset: 0;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	object-position: center 38%;
+	filter: grayscale(1) brightness(.62);
+	transform: scale(1.02);
+	transition: transform 8s linear;
+}
+.slide.is-active .artist-photo { transform: scale(1.08); }
+.slide::before {
+	position: absolute;
+	inset: 0;
+	z-index: 1;
+	background: linear-gradient(180deg, rgba(0,0,0,.22), rgba(0,0,0,.26) 55%, rgba(0,0,0,.46));
+	content: "";
+	pointer-events: none;
+}
+.slide.is-active { opacity: 1; }
+.artist-name {
+	position: absolute;
+	z-index: 2;
+	right: 0;
+	bottom: 64px;
+	left: 0;
+	margin: 0;
+	color: var(--paper);
+	font: 400 clamp(2.1rem, 3.6vw, 2.9rem)/1.2 var(--display);
+	letter-spacing: .24em;
+	text-align: center;
+	text-transform: uppercase;
+	transform: translateY(24px);
+	transition: transform 900ms cubic-bezier(.77, 0, .18, 1);
+	text-shadow: 0 2px 20px rgba(0,0,0,.8);
+}
+.artist-name::after {
+	display: block;
+	width: 42px;
+	height: 2px;
+	margin: 14px auto 0;
+	background: var(--accent);
+	content: "";
+}
+.slide.is-active .artist-name { transform: translateY(0); }
+
+.not-found {
+	position: absolute;
+	inset: 64px 0 44px;
+	display: grid;
+	align-content: center;
+	justify-items: center;
+	padding: 24px;
+	text-align: center;
+}
+.not-found-code { margin: 0 0 14px; color: var(--muted); font-size: 12px; letter-spacing: .3em; }
+.not-found h1 { margin: 0 0 24px; font: 800 48px/1.1 'Bricolage Grotesque', sans-serif; }
+.not-found a { padding: 14px 20px; border: 1px solid var(--paper); font-size: 13px; }
+.not-found a:hover { border-color: var(--accent); background: var(--accent); color: var(--paper); }
+
+.brand {
+	position: absolute;
+	z-index: 10;
+	top: 0;
+	left: 50vw;
+	display: grid;
+	justify-items: center;
+	padding: 7px 26px 9px;
+	border: 1px solid var(--rule);
+	border-top: 0;
+	border-radius: 0 0 16px 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	box-shadow: 0 6px 24px rgba(0,0,0,.18);
+	font: 800 14px/1.4 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .3em;
+	text-transform: uppercase;
+	transform: translateX(-50%);
+	pointer-events: auto;
+}
+.brand small {
+	color: var(--muted);
+	font-size: 10px;
+	font-weight: 500;
+	letter-spacing: .45em;
+}
+
+.menu-toggle {
+	position: fixed;
+	z-index: 61;
+	top: 0;
+	left: 0;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border: 0;
+	border-right: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	border-radius: 0 0 16px 0;
+	background: rgba(0,0,0,.3);
+	color: var(--paper);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	transition: background .2s, color .2s, border-color .2s;
+}
+.menu-toggle--open { color: var(--accent); }
+.menu-toggle:hover { border-color: var(--accent); color: var(--paper); background: var(--accent); }
+.menu-toggle--close { left: min(420px, calc(85vw - 64px)); font-size: 30px; line-height: 1; }
+.home-link {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 62;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border-left: 1px solid var(--rule);
+	border-bottom: 1px solid var(--rule);
+	border-radius: 0 0 0 16px;
+	background: rgba(0,0,0,.3);
+	color: var(--paper);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	pointer-events: auto;
+}
+.home-link:hover { background: rgba(255,255,255,.06); color: var(--paper); }
+.site-menu {
+	position: fixed;
+	z-index: 60;
+	inset: 0 auto 0 0;
+	width: min(420px, 85vw);
+	overflow: auto;
+	padding: 64px 32px 32px 64px;
+	background: #000;
+	transform: translateX(-100%);
+	transition: transform 260ms ease;
+}
+.site-menu.is-open { transform: translateX(0); }
+.site-menu > a {
+	display: block;
+	padding: 18px 24px 18px 0;
+	border-bottom: 3px solid #2a2a28;
+	font: 500 21px/1.2 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.site-menu > a[aria-current="page"] { color: var(--accent); }
+.site-menu > a span { color: var(--muted); font: 14px Inter, sans-serif; }
+.menu-contact {
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: 1px solid var(--rule);
+	color: var(--muted);
+	font-size: 11px;
+	letter-spacing: .2em;
+	line-height: 1.9;
+	text-transform: uppercase;
+}
+.menu-contact a { text-transform: none; }
+
+.slide-controls {
+	position: absolute;
+	z-index: 20;
+	top: 50%;
+	right: 0;
+	display: flex;
+	width: 56px;
+	flex-direction: column;
+	transform: translateY(-50%);
+	overflow: hidden;
+	border: 1px solid rgba(255,255,255,.1);
+	border-right: 0;
+	border-radius: 16px 0 0 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+.slide-controls button {
+	height: 40px;
+	border: 0;
+	border-bottom: 1px solid rgba(255,255,255,.09);
+	background: transparent;
+	font-size: 20px;
+}
+.slide-controls button:last-child { border-bottom: 0; }
+.slide-controls button:hover { background: rgba(255,255,255,.1); color: var(--paper); }
+
+.site-footer {
+	position: absolute;
+	z-index: 10;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	justify-content: space-between;
+	border-top: 1px solid rgba(255,255,255,.09);
+	background: rgba(0,0,0,.34);
+	color: var(--muted);
+	font-size: 11px;
+	-webkit-backdrop-filter: blur(10px);
+	backdrop-filter: blur(10px);
+}
+.copyright, .legal-links { flex: 1; padding: 0 20px; }
+.legal-links { text-align: right; white-space: nowrap; }
+.legal-links a:hover { color: var(--accent); }
+.fandom-link {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	gap: 10px;
+	padding: 0 20px;
+	border-right: 1px solid var(--rule);
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+	font-size: 12px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+.grain {
+	position: fixed;
+	z-index: 50;
+	inset: 0;
+	pointer-events: none;
+	opacity: .012;
+	background-image: repeating-radial-gradient(circle at 17% 32%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 83% 68%, #000 0 1px, transparent 1px 4px);
+}
+
+@media (max-width: 700px) {
+	.stage { min-height: 560px; }
+	.artist-name { bottom: 92px; padding: 0 58px; font-size: clamp(1.35rem, 6vw, 1.8rem); letter-spacing: .12em; }
+	.site-footer { min-height: 80px; flex-wrap: wrap; justify-content: center; }
+	.copyright { order: 2; flex: 1 0 100%; padding: 0 12px 10px; text-align: center; }
+	.fandom-link { order: 0; min-height: 40px; border: 0; }
+	.legal-links { order: 1; flex: 0 1 auto; padding: 0 12px; font-size: 10px; }
+	.site-menu { padding-left: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+
+
+.site-header { height: 50px; }
+.brand { font-size: clamp(.7rem, 2.8vw, .86rem); }
+.menu-toggle { width: 44px; height: 44px; }
+.menu-toggle--close { left: min(420px, calc(85vw - 44px)); }
+.home-link { width: 44px; height: 44px; }
+.site-footer { min-height: 36px; font-size: .72rem; }
+.copyright, .legal-links { padding: 0 12px; }
+.fandom-link { min-height: 36px; font-size: .72rem; }
+
+@media (max-width: 700px) {
+	.site-footer { min-height: 80px; }
+	.copyright { padding: 0 1rem 10px; font-size: .68rem; }
+	.fandom-link { min-height: 36px; }
+	.legal-links { padding: 0 1rem; font-size: .68rem; }
+}
+</style>
+	
+</head>
+<body>
+	<main class="stage" aria-label="Śliska Music Group">
+		<div class="slides" aria-live="polite"></div>
+
+		<button class="menu-toggle menu-toggle--open" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="site-menu">
+			<svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2" /></svg>
+		</button>
+
+		<header class="site-header">
+			<a class="brand" href="/smg" aria-label="Śliska Music Group, strona główna">
+				<span>Śliska</span>
+				<small>Music Group</small>
+			</a>
+			<a class="home-link" href="https://sliska.pl/" aria-label="Strona główna sliska.pl" title="Strona główna sliska.pl">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+			</a>
+		</header>
+
+		<nav class="site-menu" id="site-menu" aria-label="Menu" inert>
+			<a href="/smg" aria-current="page">Strona Główna</a>
+			<a href="/smg/artysci/">Artyści</a>
+			<a href="/smg/kontakt/">Kontakt</a>
+			<a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Wikipedia <span aria-hidden="true">↗</span></a>
+			<div class="menu-contact">Warszawa<br><a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a></div>
+		</nav>
+		<button class="menu-toggle menu-toggle--close" type="button" aria-label="Zamknij menu" aria-expanded="true" aria-controls="site-menu" hidden>×</button>
+
+		<div class="slide-controls" aria-label="Sterowanie slajdami">
+			<button type="button" data-step="-1" aria-label="Poprzedni artysta">‹</button>
+			<button type="button" data-step="1" aria-label="Następny artysta">›</button>
+		</div>
+
+		<footer class="site-footer">
+			<span class="copyright">© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.</span>
+			<a class="fandom-link" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener noreferrer" aria-label="Wiki Fandom">
+				<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+				Wiki Fandom
+			</a>
+			<div class="legal-links"><a href="/smg/regulamin/">Regulamin</a> / <a href="/smg/prywatnosc/">Prywatność</a> / <a href="/smg/cookies/">Cookies</a></div>
+		</footer>
+		<div class="grain" aria-hidden="true"></div>
+	</main>
+<script>
+(()=>{const b=atob("Y29uc3QgYXJ0aXN0cyA9IFsKCXsgbmFtZTogJ1RhbWFyYSBLZW5hcnlja2EnLCBpbWFnZTogJy9zbWcvaW1nL3RhbWFyYWtlbmFyeWNrYS5qcGcnIH0sCgl7IG5hbWU6ICdWaW9sZXR0YSBMQycsIGltYWdlOiAnL3NtZy9pbWcvdmlvbGV0dGFsYy5qcGcnIH0sCgl7IG5hbWU6ICdMdWN5bmEgS3JlZGthJywgaW1hZ2U6ICcvc21nL2ltZy9sdWN5bmFrcmVka2EuanBnJyB9LAoJeyBuYW1lOiAnR0FFTk9WRUZBJywgaW1hZ2U6ICcvc21nL2ltZy9nYWVub3ZlZmEuanBnJyB9LAoJeyBuYW1lOiAnTWlzcyBUYW1pemEnLCBpbWFnZTogJy9zbWcvaW1nL21pc3N0YW1pemEuanBnJyB9LAoJeyBuYW1lOiAnRXJvbmEgUXVlZW4nLCBpbWFnZTogJy9zbWcvaW1nL2Vyb25hcXVlZW4uanBnJyB9LAoJeyBuYW1lOiAnRmlvbmEgRmlrdW5vdmEnLCBpbWFnZTogJy9zbWcvaW1nL2Zpb25hZmlrdW5vdmEuanBnJyB9LAoJeyBuYW1lOiAnTGVqZGkgTHVuYScsIGltYWdlOiAnL3NtZy9pbWcvbGVqZGlsdW5hLmpwZycgfSwKCXsgbmFtZTogJ01hcmlrYSBEdXBvZGFqa2EnLCBpbWFnZTogJy9zbWcvaW1nL21hcmlrYWR1cG9kYWprYS5qcGcnIH0sCgl7IG5hbWU6ICdiaXVzdHluYScsIGltYWdlOiAnL3NtZy9pbWcvYml1c3R5bmEuanBnJyB9Cl07Cgpjb25zdCBzbGlkZXMgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcuc2xpZGVzJyk7CmNvbnN0IG1lbnUgPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcuc2l0ZS1tZW51Jyk7CmNvbnN0IG9wZW5CdXR0b24gPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcubWVudS10b2dnbGUtLW9wZW4nKTsKY29uc3QgY2xvc2VCdXR0b24gPSBkb2N1bWVudC5xdWVyeVNlbGVjdG9yKCcubWVudS10b2dnbGUtLWNsb3NlJyk7CmxldCBhY3RpdmVJbmRleCA9IDA7CgphcnRpc3RzLmZvckVhY2goKGFydGlzdCwgaW5kZXgpID0+IHsKCWNvbnN0IHNsaWRlID0gZG9jdW1lbnQuY3JlYXRlRWxlbWVudCgnc2VjdGlvbicpOwoJc2xpZGUuY2xhc3NOYW1lID0gJ3NsaWRlJzsKCXNsaWRlLnNldEF0dHJpYnV0ZSgnYXJpYS1oaWRkZW4nLCBTdHJpbmcoaW5kZXggIT09IGFjdGl2ZUluZGV4KSk7CglzbGlkZS5pbm5lckhUTUwgPSBgPGltZyBjbGFzcz0iYXJ0aXN0LXBob3RvIiBzcmM9IiR7YXJ0aXN0LmltYWdlfSIgYWx0PSIiIGRlY29kaW5nPSJhc3luYyI+PGgxIGNsYXNzPSJhcnRpc3QtbmFtZSI+JHthcnRpc3QubmFtZX08L2gxPmA7CglzbGlkZXMuYXBwZW5kKHNsaWRlKTsKfSk7Cgpjb25zdCBzbGlkZUVsZW1lbnRzID0gWy4uLnNsaWRlcy5jaGlsZHJlbl07CgpmdW5jdGlvbiBzaG93U2xpZGUoaW5kZXgpIHsKCWFjdGl2ZUluZGV4ID0gKGluZGV4ICsgYXJ0aXN0cy5sZW5ndGgpICUgYXJ0aXN0cy5sZW5ndGg7CglzbGlkZUVsZW1lbnRzLmZvckVhY2goKHNsaWRlLCBzbGlkZUluZGV4KSA9PiB7CgkJY29uc3QgYWN0aXZlID0gc2xpZGVJbmRleCA9PT0gYWN0aXZlSW5kZXg7CgkJc2xpZGUuY2xhc3NMaXN0LnRvZ2dsZSgnaXMtYWN0aXZlJywgYWN0aXZlKTsKCQlzbGlkZS5zZXRBdHRyaWJ1dGUoJ2FyaWEtaGlkZGVuJywgU3RyaW5nKCFhY3RpdmUpKTsKCX0pOwp9CgpmdW5jdGlvbiBzZXRNZW51T3Blbihpc09wZW4pIHsKCW1lbnUuaW5lcnQgPSAhaXNPcGVuOwoJbWVudS5jbGFzc0xpc3QudG9nZ2xlKCdpcy1vcGVuJywgaXNPcGVuKTsKCW9wZW5CdXR0b24uaGlkZGVuID0gaXNPcGVuOwoJY2xvc2VCdXR0b24uaGlkZGVuID0gIWlzT3BlbjsKCW9wZW5CdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJY2xvc2VCdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJKGlzT3BlbiA/IGNsb3NlQnV0dG9uIDogb3BlbkJ1dHRvbikuZm9jdXMoKTsKfQoKZG9jdW1lbnQucXVlcnlTZWxlY3RvckFsbCgnW2RhdGEtc3RlcF0nKS5mb3JFYWNoKChidXR0b24pID0+IHsKCWJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHsKCQlzaG93U2xpZGUoYWN0aXZlSW5kZXggKyBOdW1iZXIoYnV0dG9uLmRhdGFzZXQuc3RlcCkpOwoJCXJlc2V0QXV0b0FkdmFuY2VUaW1lcigpOwoJfSk7Cn0pOwoKb3BlbkJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNldE1lbnVPcGVuKHRydWUpKTsKY2xvc2VCdXR0b24uYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLCAoKSA9PiBzZXRNZW51T3BlbihmYWxzZSkpOwpkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCdrZXlkb3duJywgKGV2ZW50KSA9PiB7CglpZiAoZXZlbnQua2V5ID09PSAnRXNjYXBlJyAmJiAhbWVudS5pbmVydCkgc2V0TWVudU9wZW4oZmFsc2UpOwoJaWYgKGV2ZW50LmtleSA9PT0gJ0Fycm93TGVmdCcpIHsKCQlzaG93U2xpZGUoYWN0aXZlSW5kZXggLSAxKTsKCQlyZXNldEF1dG9BZHZhbmNlVGltZXIoKTsKCX0KCWlmIChldmVudC5rZXkgPT09ICdBcnJvd1JpZ2h0JykgewoJCXNob3dTbGlkZShhY3RpdmVJbmRleCArIDEpOwoJCXJlc2V0QXV0b0FkdmFuY2VUaW1lcigpOwoJfQp9KTsKCmxldCBhdXRvQWR2YW5jZVRpbWVyOwoKZnVuY3Rpb24gcmVzZXRBdXRvQWR2YW5jZVRpbWVyKCkgewoJd2luZG93LmNsZWFySW50ZXJ2YWwoYXV0b0FkdmFuY2VUaW1lcik7CglhdXRvQWR2YW5jZVRpbWVyID0gd2luZG93LnNldEludGVydmFsKCgpID0+IHNob3dTbGlkZShhY3RpdmVJbmRleCArIDEpLCA1MDAwKTsKfQoKcmVzZXRBdXRvQWR2YW5jZVRpbWVyKCk7CgpzaG93U2xpZGUoYWN0aXZlSW5kZXgpOwo=");const x=Uint8Array.from(b,c=>c.charCodeAt(0));const s=document.createElement("script");s.textContent=new TextDecoder().decode(x);document.currentScript.replaceWith(s)})();
+</script>
+</body>
+</html>

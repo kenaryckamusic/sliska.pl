@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#0a0a0a">
+	<title>Śliska Music Group — Artyści</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<style>
+:root {
+	color-scheme: dark;
+	--ink: #0a0a0a;
+	--paper: #f4f4f0;
+	--muted: #9a9a96;
+	--accent: #d53088;
+	--rule: rgba(255, 255, 255, 0.15);
+	font-family: Inter, sans-serif;
+	background: var(--ink);
+	color: var(--paper);
+}
+
+* { box-sizing: border-box; }
+body { min-width: 320px; min-height: 100vh; margin: 0; background: var(--ink); }
+button, a { color: inherit; }
+button { font: inherit; cursor: pointer; }
+a { text-decoration: none; }
+a:hover, button:hover { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--paper); outline-offset: 4px; }
+[hidden] { display: none !important; }
+
+.site-header { position: relative; z-index: 40; height: 64px; border-bottom: 1px solid var(--rule); }
+.brand {
+	position: absolute;
+	top: 50%;
+	left: 50vw;
+	display: grid;
+	justify-items: center;
+	font: 800 14px/1.4 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .3em;
+	text-transform: uppercase;
+	transform: translate(-50%, -50%);
+}
+.brand small { color: var(--muted); font-size: 10px; font-weight: 500; letter-spacing: .45em; }
+.menu-toggle {
+	position: fixed;
+	top: 0;
+	left: 0;
+	z-index: 61;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border: 0;
+	background: var(--accent);
+	color: var(--paper);
+}
+.menu-toggle:hover { color: var(--paper); background: #b82270; }
+.menu-toggle--close { left: min(420px, calc(85vw - 64px)); font-size: 30px; line-height: 1; }
+.home-link {
+	position: absolute;
+	top: 0;
+	right: 0;
+	z-index: 62;
+	display: grid;
+	width: 64px;
+	height: 64px;
+	place-items: center;
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+}
+.home-link:hover { background: rgba(255,255,255,.06); color: var(--paper); }
+.site-menu {
+	position: fixed;
+	z-index: 60;
+	inset: 0 auto 0 0;
+	width: min(420px, 85vw);
+	overflow: auto;
+	padding: 64px 32px 32px 64px;
+	background: #000;
+	transform: translateX(-100%);
+	transition: transform 260ms ease;
+}
+.site-menu.is-open { transform: translateX(0); }
+.site-menu > a {
+	display: block;
+	padding: 18px 24px 18px 0;
+	border-bottom: 3px solid #2a2a28;
+	font: 500 21px/1.2 'Bricolage Grotesque', sans-serif;
+	letter-spacing: .06em;
+	text-transform: uppercase;
+}
+.site-menu > a[aria-current="page"] { color: var(--accent); }
+.site-menu > a span { color: var(--muted); font: 14px Inter, sans-serif; }
+.menu-contact {
+	margin-top: 36px;
+	padding-top: 20px;
+	border-top: 1px solid var(--rule);
+	color: var(--muted);
+	font-size: 11px;
+	letter-spacing: .2em;
+	line-height: 1.9;
+	text-transform: uppercase;
+}
+.menu-contact a { text-transform: none; }
+
+.roster-intro { padding: 56px 56px 56px; text-align: center; }
+.roster-intro h1 {
+	margin: 0;
+	font: 800 112px/.9 'Bricolage Grotesque', sans-serif;
+	text-transform: uppercase;
+}
+.roster-intro h1 span { color: transparent; -webkit-text-stroke: 1px var(--paper); }
+.roster { padding: 0 56px 96px; }
+.artist-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; }
+.artist-card { min-width: 0; }
+.artist-portrait {
+	position: relative;
+	aspect-ratio: 4 / 5;
+	overflow: hidden;
+	border: 1px solid var(--rule);
+	background: #222220;
+}
+.artist-photo { width: 100%; height: 100%; object-fit: cover; filter: grayscale(1); transition: transform 400ms ease; }
+.artist-card:hover .artist-photo { transform: scale(1.035); }
+.artist-placeholder {
+	position: absolute;
+	inset: 0;
+	display: none;
+	align-items: flex-end;
+	padding: 14px;
+	background: linear-gradient(145deg, #191918, #30302d 55%, #1b1b1a);
+	color: var(--muted);
+	font-size: 10px;
+	letter-spacing: .2em;
+	text-transform: uppercase;
+}
+.artist-portrait.is-missing .artist-placeholder { display: flex; }
+.artist-details { padding: 16px 12px 18px; background: var(--paper); color: var(--ink); text-align: center; }
+.artist-details h2 {
+	min-height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0;
+	font: 700 17px/1.15 'Bricolage Grotesque', sans-serif;
+	text-transform: uppercase;
+}
+.artist-socials { display: flex; justify-content: center; gap: 16px; margin-top: 12px; }
+.artist-socials a { display: flex; width: 18px; height: 18px; color: var(--ink); }
+.artist-socials a:hover { color: var(--accent); }
+.artist-socials svg { width: 18px; height: 18px; }
+
+.site-footer {
+	position: relative;
+	min-height: 44px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	border-top: 1px solid var(--rule);
+	background: var(--ink);
+	color: var(--muted);
+	font-size: 11px;
+}
+.copyright, .legal-links { flex: 1; padding: 0 20px; }
+.legal-links { text-align: right; white-space: nowrap; }
+.legal-links a:hover { color: var(--accent); }
+.fandom-link {
+	display: flex;
+	min-height: 44px;
+	align-items: center;
+	gap: 10px;
+	padding: 0 20px;
+	border-right: 1px solid var(--rule);
+	border-left: 1px solid var(--rule);
+	color: var(--paper);
+	font-size: 12px;
+	letter-spacing: .12em;
+	text-transform: uppercase;
+}
+.grain {
+	position: fixed;
+	z-index: 50;
+	inset: 0;
+	pointer-events: none;
+	opacity: .045;
+	background-image: repeating-radial-gradient(circle at 17% 32%, #fff 0 1px, transparent 1px 3px), repeating-radial-gradient(circle at 83% 68%, #000 0 1px, transparent 1px 4px);
+}
+
+@media (max-width: 1100px) {
+	.artist-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+	.artist-card { max-width: none; }
+	.roster-intro h1 { font-size: 88px; }
+}
+@media (max-width: 700px) {
+	.roster-intro { padding: 40px 24px; }
+	.roster-intro h1 { font-size: 64px; }
+	.roster { padding: 0 20px 56px; }
+	.artist-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+	.artist-details { padding: 12px 8px 14px; }
+	.artist-details h2 { font-size: 14px; }
+	.site-menu { padding-left: 32px; }
+	.site-footer { min-height: 80px; flex-wrap: wrap; justify-content: center; }
+	.copyright { order: 2; flex: 1 0 100%; padding: 0 12px 10px; text-align: center; }
+	.fandom-link { order: 0; min-height: 40px; border: 0; }
+	.legal-links { order: 1; flex: 0 1 auto; padding: 0 12px; font-size: 10px; }
+}
+@media (max-width: 380px) {
+	.artist-grid { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) {
+	*, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; }
+}
+.site-header { height: 44px; }
+.brand { font-size: clamp(.7rem, 2.8vw, .86rem); }
+.menu-toggle { width: 44px; height: 44px; }
+.menu-toggle--close { left: min(420px, calc(85vw - 44px)); }
+.home-link { width: 44px; height: 44px; }
+.site-footer { min-height: 36px; font-size: .72rem; }
+.copyright, .legal-links { padding-right: clamp(1rem, 4vw, 2.5rem); padding-left: clamp(1rem, 4vw, 2.5rem); }
+.fandom-link { min-height: 36px; font-size: .72rem; }
+
+@media (max-width: 700px) {
+	.site-footer { min-height: 80px; }
+	.copyright { padding: 0 1rem 10px; font-size: .68rem; }
+	.fandom-link { min-height: 36px; }
+	.legal-links { padding: 0 1rem; font-size: .68rem; }
+}
+.site-header { height: 50px; border-bottom: 0; }
+.brand {
+	top: 0;
+	padding: 7px 26px 9px;
+	border: 1px solid var(--rule);
+	border-top: 0;
+	border-radius: 0 0 16px 16px;
+	background: rgba(0,0,0,.3);
+	-webkit-backdrop-filter: blur(14px) saturate(1.15);
+	backdrop-filter: blur(14px) saturate(1.15);
+	transform: translateX(-50%);
+}
+.menu-toggle { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); border-radius: 0 0 16px 0; }
+.menu-toggle--open { color: var(--accent); background: rgba(0,0,0,.3); -webkit-backdrop-filter: blur(14px) saturate(1.15); backdrop-filter: blur(14px) saturate(1.15); }
+.home-link { border-bottom: 1px solid var(--rule); border-radius: 0 0 0 16px; }
+.site-menu { border-right: 1px solid var(--rule); border-radius: 0 0 20px 0; }
+.artist-card { overflow: hidden; border: 1px solid var(--rule); border-radius: 16px; }
+.artist-portrait { border: 0; border-radius: 0; }
+.artist-details { border-radius: 0; }
+@media (max-width: 700px) {
+	.fandom-link { min-height: 36px; }
+}
+</style>
+	
+</head>
+<body>
+	<header class="site-header">
+		<button class="menu-toggle menu-toggle--open" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="site-menu">
+			<svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2" /></svg>
+		</button>
+		<a class="brand" href="/smg" aria-label="Śliska Music Group, strona główna">
+			<span>Śliska</span>
+			<small>Music Group</small>
+		</a>
+		<a class="home-link" href="https://sliska.pl/" aria-label="Strona główna sliska.pl" title="Strona główna sliska.pl">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+		</a>
+	</header>
+
+	<nav class="site-menu" id="site-menu" aria-label="Menu" inert>
+		<a href="/smg">Strona Główna</a>
+		<a href="./" aria-current="page">Artyści</a>
+		<a href="../kontakt/">Kontakt</a>
+		<a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Wikipedia <span aria-hidden="true">↗</span></a>
+		<div class="menu-contact">Warszawa<br><a href="mailto:ssmlabel.kontakt@gmail.com">ssmlabel.kontakt@gmail.com</a></div>
+	</nav>
+	<button class="menu-toggle menu-toggle--close" type="button" aria-label="Zamknij menu" aria-expanded="true" aria-controls="site-menu" hidden>×</button>
+
+	<main>
+		<section class="roster-intro" aria-labelledby="page-title">
+			<h1 id="page-title">Arty<span>ści</span></h1>
+		</section>
+		<section class="roster" aria-label="Artyści Śliska Music Group">
+			<div class="artist-grid" id="artist-grid">
+				<article class="artist-card" id="lejdi-luna-card">
+					<div class="artist-portrait">
+						<div class="artist-placeholder" aria-hidden="true">Zdjęcie czarno-białe</div>
+						<img class="artist-photo" src="img/lejdiluna.jpg" alt="Portret: Lejdi Luna" loading="lazy" decoding="async">
+					</div>
+					<div class="artist-details">
+						<h2>Lejdi Luna</h2>
+						<div class="artist-socials">
+							<a href="https://instagram.com/lejdi.luna" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.2" fill="currentColor"/></svg>
+							</a>
+							<a href="https://open.spotify.com/artist/7hMfcbO7h4DFQDdaoBNZOG" target="_blank" rel="noopener noreferrer" aria-label="Spotify">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="currentColor"/><path d="M6.5 9.5c3.5-1 7.5-.7 11 1.2M7 12.7c3-.8 6-.5 8.8 1M7.5 15.7c2.4-.6 4.7-.3 6.9.9" stroke="#f4f4f0" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+							</a>
+							<a href="https://music.youtube.com/channel/UCt2u1DQ-HGDM83KrU-GNMNA" target="_blank" rel="noopener noreferrer" aria-label="YouTube Music">
+								<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M22 8.2c-.2-1.2-1-2-2.2-2.2C18 5.6 12 5.6 12 5.6s-6 0-7.8.4C3 6.2 2.2 7 2 8.2 1.7 10 1.7 12 1.7 12s0 2 .3 3.8c.2 1.2 1 2 2.2 2.2 1.8.4 7.8.4 7.8.4s6 0 7.8-.4c1.2-.2 2-1 2.2-2.2.3-1.8.3-3.8.3-3.8s0-2-.3-3.8z"/><path d="M10 9.2v5.6l5-2.8z" fill="#f4f4f0"/></svg>
+							</a>
+						</div>
+					</div>
+				</article>
+			</div>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<span class="copyright">© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.</span>
+		<a class="fandom-link" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener noreferrer" aria-label="Wiki Fandom">
+			<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			Wiki Fandom
+		</a>
+		<div class="legal-links"><a href="../regulamin/">Regulamin</a> / <a href="../prywatnosc/">Prywatność</a> / <a href="../cookies/">Cookies</a></div>
+	</footer>
+	<div class="grain" aria-hidden="true"></div>
+<script>
+(()=>{const b=atob("Y29uc3QgYXJ0aXN0cyA9IFsKCXsKCQluYW1lOiAnVGFtYXJhIEtlbmFyeWNrYScsCgkJaW1hZ2U6ICdpbWcvdGFtYXJha2VuYXJ5Y2thLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20va2VuYXJ5Y2thbXVzaWMnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC8wTFN0d3o1WDlybUVkeWg0Qkxyb1pOJywKCQkJeW91dHViZTogJ2h0dHBzOi8vd3d3LnlvdXR1YmUuY29tL0B0YW1hcmFrZW5hcnlja2EnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvVGFtYXJhX0tlbmFyeWNrYScKCQl9Cgl9LAoJewoJCW5hbWU6ICdMdWN5bmEgS3JlZGthJywKCQlpbWFnZTogJ2ltZy9sdWN5bmFrcmVka2EuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJycsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzVSM0RZYUp2TlZQRG4wQmRZWVcxbWI/c2k9S3VqMllTTXVScC15bUZLMm1KY0dsQScsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNMcklIYXJYVW9sOWJEd2pUZHNhdFFBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL0x1Y3luYV9LcmVka2EnCgkJfQoJfSwKCXsKCQluYW1lOiAnTWlzcyBUYW1pemEnLAoJCWltYWdlOiAnaW1nL21pc3N0YW1pemEuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9taXNzX3RhbWl6YScsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzdKdld5Q1ZOSFFBQmNrZjdINDA1U1A/c2k9ZWYyMjA2OTFkMjI3NDM4YicsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUN0YUZlQ1Q2LTQtWFVyVUpUaURNN3FnJywKCQkJZmFuZG9tOiAnJwoJCX0KCX0sCgl7CgkJbmFtZTogJ2JpdXN0eW5hJywKCQlpbWFnZTogJ2ltZy9iaXVzdHluYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNW1CNUxFWU1WZ3d3enYwVXpxZUtTTz9zaT03ZjU3OGMxMDkyMmI0MThjJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ2lPR3hQc3NuUVZlM3ZoNUEwaXpqOEEnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvQml1c3R5bmEnCgkJfQoJfSwKCXsKCQluYW1lOiAnVmlvbGV0dGEgTEMnLAoJCWltYWdlOiAnaW1nL3Zpb2xldHRhbGMuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS92aW9sZXR0YWxlY29xJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvMmxjVWpFeGxHVVFleDI4ZDQ1U1FPdj9zaT1kOGY1MDNjYjUyZWQ0NDQ4JywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQy12bUV6TjZ1NG9QZy1JSjVOdDZnT1EnLAoJCQlmYW5kb206ICcnCgkJfQoJfSwKCXsKCQluYW1lOiAnTG9yZXR0YSBTem1hdG/FvGVybmEnLAoJCWltYWdlOiAnaW1nL2xvcmV0dGFzem1hdG96ZXJuYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2xvcmV0dGNpYScsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0Lzd6NXJsYzd6RjZTUkJSZzBGR3UwUnE/c2k9MzAxM2M1N2UxM2UwNDFmMCcsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNmTU9kd1ZPUV9OcGhzMHQwZ0VMRnd3JywKCQkJZmFuZG9tOiAnJwoJCX0KCX0sCgl7CgkJbmFtZTogJ0Zpb25hIEZpa3Vub3ZhJywKCQlpbWFnZTogJ2ltZy9maW9uYWZpa3Vub3ZhLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vODA4ZmlrdW5vdmEnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC83ZzQ3YnU3N3YzdEJ0WWxYR3BiV3M2P3NpPTFkYmY5YWY4MjEzYjQ4OGUnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDa0pid1pna0NNOUFEREFxYjBkaERJUScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS9GaW9uYV9GaWt1bm92YScKCQl9Cgl9LAoJewoJCW5hbWU6ICdHQUVOT1ZFRkEnLAoJCWltYWdlOiAnaW1nL2dhZW5vdmVmYS5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2FtZXJpY2FzbmV4dHN1cGVybW9kZWwnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC82ZE5uZ2RZRFJLekZIOHJmWlhHMmJoP3NpPTMxYjAyNmVjMzFjMDQ4OTcnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9AR0FFTk9WRUZBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL0dBRU5PVkVGQScKCQl9Cgl9LAoJewoJCW5hbWU6ICdNYXJpa2EgRHVwb2RhamthJywKCQlpbWFnZTogJ2ltZy9tYXJpa2FkdXBvZGFqa2EuanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9wYW5pcHJvd29rYXRvcicsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzB5M0h6MlRCYmo0Q1NXN1BzWkIweGg/c2k9YWNmYjRhYTIwYzZkNDMyNScsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL0BNYXJpa2FEdXBvZGFqa2EnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvTWFyaWthX0R1cG9kYWprYScKCQl9Cgl9LAoJewoJCW5hbWU6ICdTaGVtcmVsJywKCQlpbWFnZTogJ2ltZy9zaGVtcmVsLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vc2hlbXJlbC5vZmZpY2lhbCcsCgkJCXNwb3RpZnk6ICdodHRwczovL29wZW4uc3BvdGlmeS5jb20vYXJ0aXN0LzJwclBBQjk3am5RNUVPSlR2SXhzV04/c2k9OTFlNGEzNWM5ZGVmNDllNycsCgkJCXlvdXR1YmU6ICdodHRwczovL211c2ljLnlvdXR1YmUuY29tL2NoYW5uZWwvVUNsek96R1JYWHhMenFtOUtZRjc5Q3lBJywKCQkJZmFuZG9tOiAnaHR0cHM6Ly9zdW5vcGVkaWEuZmFuZG9tLmNvbS9wbC93aWtpL1NoZW1yZWwnCgkJfQoJfSwKCXsKCQluYW1lOiAnR2Vqb3dpIEdlamUgR2Vqb3p5JywKCQlpbWFnZTogJ2ltZy9nZWpvd2lnZWplZ2Vqb3p5LmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZ2Vqb3dpLmdlamVfZ2Vqb3p5JywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvMGJ6aXpRRFp1aHZJZ0tJMmQxMWlDUT9zaT05ZTY2YWIxN2FjOWM0NzkzJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ3NMdHZEY25YZFpyek1OQUd1U1NaS2cnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvR2Vqb3dpX0dlamVfR2Vqb3p5JwoJCX0KCX0sCgl7CgkJbmFtZTogJ0Vyb25hIFF1ZWVuJywKCQlpbWFnZTogJ2ltZy9lcm9uYXF1ZWVuLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZXJvbmFxdWVlbm9mZmljaWFsJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNW0xcFRoRm82SUFWQTVTNzNPWmJKWT9zaT1mNzk0MDI0ZjUzOTU0NzNiJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vQEVyb25hUXVlZW4nLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvRXJvbmFfUXVlZW4nCgkJfQoJfSwKCXsKCQluYW1lOiAnRGFuaWVsbGEgU3RvaXBhxYJhJywKCQlpbWFnZTogJ2ltZy9kYW5pZWxsYXN0b2lwYWxhLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vZGFuaWVsbGFzdG9pcGFsYW9mZmljaWFsJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvN2I2VXhERXlWYkdlNHFHZ1dyeFl2cj9zaT1jNjc1MDAzM2YxNTE0NTE0JywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ2N2aGhwMWI4bjZtZjhSZ0ZGVUtoaFEnLAoJCQlmYW5kb206ICdodHRwczovL3N1bm9wZWRpYS5mYW5kb20uY29tL3BsL3dpa2kvRGFuaWVsbGFfU3RvaXBhxYJhJwoJCX0KCX0sCgl7CgkJbmFtZTogJ8W7YW5ldGEgUG9jaXNrJywKCQlpbWFnZTogJ2ltZy96YW5ldGFwb2Npc2suanBnJywKCQlzb2NpYWxzOiB7CgkJCWluc3RhZ3JhbTogJ2h0dHBzOi8vaW5zdGFncmFtLmNvbS9wb2Npc2t6YW5ldGEnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC83b2o2dXg5eUJBSklBc3RqcWJEbGFUP3NpPWE3NjEzNzg0ZGRmYTRmYTMnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDZER4TkVmY1QzZEVBdS1CQ0FqOXh6UScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS/Fu2FuZXRhX1BvY2lzaycKCQl9Cgl9LAoJewoJCW5hbWU6ICdMaWwgVmV4eCcsCgkJaW1hZ2U6ICdpbWcvbGlsdmV4eC5qcGcnLAoJCXNvY2lhbHM6IHsKCQkJaW5zdGFncmFtOiAnaHR0cHM6Ly9pbnN0YWdyYW0uY29tL2xpbHZleHgub2ZmaWNpYWwnLAoJCQlzcG90aWZ5OiAnaHR0cHM6Ly9vcGVuLnNwb3RpZnkuY29tL2FydGlzdC8zM0hoUm5Wc2FRUVBBbFBXNzVKaWluP3NpPWRjMzYxZTA3MTk1YTQzYmEnLAoJCQl5b3V0dWJlOiAnaHR0cHM6Ly9tdXNpYy55b3V0dWJlLmNvbS9jaGFubmVsL1VDczRCRzFHcEsybFNQNUZlUlFNZUZZQScsCgkJCWZhbmRvbTogJ2h0dHBzOi8vc3Vub3BlZGlhLmZhbmRvbS5jb20vcGwvd2lraS9MaWxfVmV4eCcKCQl9Cgl9LAoJewoJCW5hbWU6ICdCYXNpYSBMYXRla3MnLAoJCWltYWdlOiAnaW1nL2Jhc2lhbGF0ZWtzLmpwZycsCgkJc29jaWFsczogewoJCQlpbnN0YWdyYW06ICdodHRwczovL2luc3RhZ3JhbS5jb20vYmJhc2lhbGF0ZWtzJywKCQkJc3BvdGlmeTogJ2h0dHBzOi8vb3Blbi5zcG90aWZ5LmNvbS9hcnRpc3QvNjJvdjZ5bUtHakh1Y2ZZQzlxTDBIUT9zaT1lYmE1NGQ0YWQ5ZmY0NWFlJywKCQkJeW91dHViZTogJ2h0dHBzOi8vbXVzaWMueW91dHViZS5jb20vY2hhbm5lbC9VQ1hYTW4wZThfNTlvRzdtVDJlUmxiVlEnLAoJCQlmYW5kb206ICcnCgkJfQoJfQpdOwoKY29uc3QgYXJ0aXN0R3JpZCA9IGRvY3VtZW50LnF1ZXJ5U2VsZWN0b3IoJyNhcnRpc3QtZ3JpZCcpOwpjb25zdCBtZW51ID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLnNpdGUtbWVudScpOwpjb25zdCBvcGVuQnV0dG9uID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLm1lbnUtdG9nZ2xlLS1vcGVuJyk7CmNvbnN0IGNsb3NlQnV0dG9uID0gZG9jdW1lbnQucXVlcnlTZWxlY3RvcignLm1lbnUtdG9nZ2xlLS1jbG9zZScpOwoKY29uc3Qgc29jaWFsUGxhdGZvcm1zID0gewoJaW5zdGFncmFtOiB7CgkJbGFiZWw6ICdJbnN0YWdyYW0nLAoJCWljb246ICc8c3ZnIHZpZXdCb3g9IjAgMCAyNCAyNCIgYXJpYS1oaWRkZW49InRydWUiPjxyZWN0IHg9IjMiIHk9IjMiIHdpZHRoPSIxOCIgaGVpZ2h0PSIxOCIgcng9IjUiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjIiLz48Y2lyY2xlIGN4PSIxMiIgY3k9IjEyIiByPSI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIi8+PGNpcmNsZSBjeD0iMTcuNSIgY3k9IjYuNSIgcj0iMS4yIiBmaWxsPSJjdXJyZW50Q29sb3IiLz48L3N2Zz4nCgl9LAoJc3BvdGlmeTogewoJCWxhYmVsOiAnU3BvdGlmeScsCgkJaWNvbjogJzxzdmcgdmlld0JveD0iMCAwIDI0IDI0IiBhcmlhLWhpZGRlbj0idHJ1ZSI+PGNpcmNsZSBjeD0iMTIiIGN5PSIxMiIgcj0iMTAiIGZpbGw9ImN1cnJlbnRDb2xvciIvPjxwYXRoIGQ9Ik02LjUgOS41YzMuNS0xIDcuNS0uNyAxMSAxLjJNNyAxMi43YzMtLjggNi0uNSA4LjggMU03LjUgMTUuN2MyLjQtLjYgNC43LS4zIDYuOS45IiBzdHJva2U9IiNmNGY0ZjAiIHN0cm9rZS13aWR0aD0iMS42IiBmaWxsPSJub25lIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz48L3N2Zz4nCgl9LAoJeW91dHViZTogewoJCWxhYmVsOiAnWW91VHViZScsCgkJaWNvbjogJzxzdmcgdmlld0JveD0iMCAwIDI0IDI0IiBhcmlhLWhpZGRlbj0idHJ1ZSI+PHBhdGggZmlsbD0iY3VycmVudENvbG9yIiBkPSJNMjIgOC4yYy0uMi0xLjItMS0yLTIuMi0yLjJDMTggNS42IDEyIDUuNiAxMiA1LjZzLTYgMC03LjguNEMzIDYuMiAyLjIgNyAyIDguMiAxLjcgMTAgMS43IDEyIDEuNyAxMnMwIDIgLjMgMy44Yy4yIDEuMiAxIDIgMi4yIDIuMiAxLjguNCA3LjguNCA3LjguNHM2IDAgNy44LS40YzEuMi0uMiAyLTEgMi4yLTIuMi4zLTEuOC4zLTMuOC4zLTMuOHMwLTItLjMtMy44eiIvPjxwYXRoIGQ9Ik0xMCA5LjJ2NS42bDUtMi44eiIgZmlsbD0iI2Y0ZjRmMCIvPjwvc3ZnPicKCX0sCglmYW5kb206IHsKCQlsYWJlbDogJ1dpa2kgRmFuZG9tJywKCQlpY29uOiAnPHN2ZyB2aWV3Qm94PSIwIDAgMjQgMjQiIGFyaWEtaGlkZGVuPSJ0cnVlIj48cGF0aCBkPSJNMyA1LjJjMy4yLS45IDYuNC0uMiA5IDJ2MTJjLTIuNi0yLjItNS44LTIuOS05LTJ6TTIxIDUuMmMtMy4yLS45LTYuNC0uMi05IDJ2MTJjMi42LTIuMiA1LjgtMi45IDktMnoiIGZpbGw9Im5vbmUiIHN0cm9rZT0iY3VycmVudENvbG9yIiBzdHJva2Utd2lkdGg9IjEuOCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPjxwYXRoIGQ9Ik02IDloM002IDEyaDNtNi0zaDNtLTMgM2gzIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPjwvc3ZnPicKCX0KfTsKCmZ1bmN0aW9uIHJlbmRlclNvY2lhbExpbmtzKHNvY2lhbHMgPSB7fSkgewoJY29uc3QgbGlua3MgPSBPYmplY3QuZW50cmllcyhzb2NpYWxQbGF0Zm9ybXMpLmZsYXRNYXAoKFtwbGF0Zm9ybSwgc29jaWFsXSkgPT4gewoJCWNvbnN0IGhyZWYgPSBzb2NpYWxzW3BsYXRmb3JtXTsKCQlpZiAodHlwZW9mIGhyZWYgIT09ICdzdHJpbmcnIHx8ICFocmVmLnRyaW0oKSkgcmV0dXJuIFtdOwoKCQlsZXQgdXJsOwoJCXRyeSB7CgkJCXVybCA9IG5ldyBVUkwoaHJlZik7CgkJfSBjYXRjaCB7CgkJCXJldHVybiBbXTsKCQl9CgkJaWYgKCFbJ2h0dHA6JywgJ2h0dHBzOiddLmluY2x1ZGVzKHVybC5wcm90b2NvbCkpIHJldHVybiBbXTsKCgkJcmV0dXJuIFtgPGEgaHJlZj0iJHt1cmwuaHJlZn0iIHRhcmdldD0iX2JsYW5rIiByZWw9Im5vb3BlbmVyIG5vcmVmZXJyZXIiIGFyaWEtbGFiZWw9IiR7c29jaWFsLmxhYmVsfSI+JHtzb2NpYWwuaWNvbn08L2E+YF07Cgl9KS5qb2luKCcnKTsKCglyZXR1cm4gbGlua3MgPyBgPGRpdiBjbGFzcz0iYXJ0aXN0LXNvY2lhbHMiPiR7bGlua3N9PC9kaXY+YCA6ICcnOwp9CgphcnRpc3RzLmZvckVhY2goKGFydGlzdCkgPT4gewoJY29uc3QgY2FyZCA9IGRvY3VtZW50LmNyZWF0ZUVsZW1lbnQoJ2FydGljbGUnKTsKCWNhcmQuY2xhc3NOYW1lID0gJ2FydGlzdC1jYXJkJzsKCWNvbnN0IHBvcnRyYWl0ID0gYAoJCTxkaXYgY2xhc3M9ImFydGlzdC1wbGFjZWhvbGRlciIgYXJpYS1oaWRkZW49InRydWUiPlpkasSZY2llIGN6YXJuby1iaWHFgmU8L2Rpdj4KCQk8aW1nIGNsYXNzPSJhcnRpc3QtcGhvdG8iIHNyYz0iJHthcnRpc3QuaW1hZ2V9IiBhbHQ9IlBvcnRyZXQ6ICR7YXJ0aXN0Lm5hbWV9IiBsb2FkaW5nPSJsYXp5IiBkZWNvZGluZz0iYXN5bmMiPgoJYDsKCgljYXJkLmlubmVySFRNTCA9IGAKCQk8ZGl2IGNsYXNzPSJhcnRpc3QtcG9ydHJhaXQiPiR7cG9ydHJhaXR9PC9kaXY+CgkJPGRpdiBjbGFzcz0iYXJ0aXN0LWRldGFpbHMiPgoJCQk8aDI+JHthcnRpc3QubmFtZX08L2gyPgoJCQkke3JlbmRlclNvY2lhbExpbmtzKGFydGlzdC5zb2NpYWxzKX0KCQk8L2Rpdj4KCWA7Cgljb25zdCBpbWFnZSA9IGNhcmQucXVlcnlTZWxlY3RvcignLmFydGlzdC1waG90bycpOwoJaW1hZ2UuYWRkRXZlbnRMaXN0ZW5lcignZXJyb3InLCAoKSA9PiB7CgkJaW1hZ2UuaGlkZGVuID0gdHJ1ZTsKCQljYXJkLnF1ZXJ5U2VsZWN0b3IoJy5hcnRpc3QtcG9ydHJhaXQnKS5jbGFzc0xpc3QuYWRkKCdpcy1taXNzaW5nJyk7Cgl9LCB7IG9uY2U6IHRydWUgfSk7CglhcnRpc3RHcmlkLmFwcGVuZChjYXJkKTsKfSk7CgpmdW5jdGlvbiBzZXRNZW51T3Blbihpc09wZW4pIHsKCW1lbnUuaW5lcnQgPSAhaXNPcGVuOwoJbWVudS5jbGFzc0xpc3QudG9nZ2xlKCdpcy1vcGVuJywgaXNPcGVuKTsKCW9wZW5CdXR0b24uaGlkZGVuID0gaXNPcGVuOwoJY2xvc2VCdXR0b24uaGlkZGVuID0gIWlzT3BlbjsKCW9wZW5CdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJY2xvc2VCdXR0b24uc2V0QXR0cmlidXRlKCdhcmlhLWV4cGFuZGVkJywgU3RyaW5nKGlzT3BlbikpOwoJKGlzT3BlbiA/IGNsb3NlQnV0dG9uIDogb3BlbkJ1dHRvbikuZm9jdXMoKTsKfQoKb3BlbkJ1dHRvbi5hZGRFdmVudExpc3RlbmVyKCdjbGljaycsICgpID0+IHNldE1lbnVPcGVuKHRydWUpKTsKY2xvc2VCdXR0b24uYWRkRXZlbnRMaXN0ZW5lcignY2xpY2snLCAoKSA9PiBzZXRNZW51T3BlbihmYWxzZSkpOwpkb2N1bWVudC5hZGRFdmVudExpc3RlbmVyKCdrZXlkb3duJywgKGV2ZW50KSA9PiB7CglpZiAoZXZlbnQua2V5ID09PSAnRXNjYXBlJyAmJiAhbWVudS5pbmVydCkgc2V0TWVudU9wZW4oZmFsc2UpOwp9KTsK");const x=Uint8Array.from(b,c=>c.charCodeAt(0));const s=document.createElement("script");s.textContent=new TextDecoder().decode(x);document.currentScript.replaceWith(s)})();
+</script>
+<script>
+	document.querySelector('#artist-grid').append(document.querySelector('#lejdi-luna-card'));
+</script>
+</body>
+</html>
