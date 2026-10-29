@@ -31,6 +31,7 @@ a{color:inherit}
 .title{position:absolute;left:clamp(1rem,4vw,2.5rem);bottom:calc(3.2rem + env(safe-area-inset-bottom,0px));margin:0;max-width:calc(100% - 2rem);
   font-family:var(--display);font-weight:400;font-size:clamp(2.1rem,3.6vw,2.9rem);line-height:1.2;letter-spacing:.24em;text-align:left;color:var(--frost);
   text-shadow:0 1px 2px rgba(0,0,0,.28),0 4px 22px rgba(0,0,0,.4);opacity:0;animation:title-appear .9s ease-out .15s forwards}
+.title__mobile{display:none}
 @keyframes title-appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
 /* cienki szklany panel u góry */
@@ -58,7 +59,9 @@ a{color:inherit}
 @media (max-width:560px){
   .nav{gap:.75rem;padding-left:.8rem;padding-right:.8rem}
   .nav a{font-size:clamp(.66rem,3vw,.8rem)}
-  .title{font-size:2.1rem;letter-spacing:.2em;bottom:calc(3rem + env(safe-area-inset-bottom,0px))}
+  .title{right:0;left:0;bottom:calc(12rem + env(safe-area-inset-bottom,0px));max-width:none;font-size:clamp(1.65rem,8.5vw,2.4rem);letter-spacing:.12em;text-align:center}
+  .title__desktop{display:none}
+  .title__mobile{display:inline}
   .stage__video{display:none}
   .stage__mobile-image{display:block;object-position:42% 36%}
   .bar{justify-content:center;text-align:center;font-size:.68rem}
@@ -85,7 +88,7 @@ a{color:inherit}
     <source data-src="sliska.mp4" type="video/mp4">
   </video>
   <img class="stage__img stage__mobile-image" src="img/sliska2.jpg" alt="" draggable="false">
-  <h1 class="title">WITAMY<br>NA ŚLISKIEJ</h1>
+  <h1 class="title"><span class="title__desktop">WITAMY<br>NA ŚLISKIEJ</span><span class="title__mobile">WITAMY NA<br>ŚLISKIEJ</span></h1>
 </main>
 
 <footer class="bar">
