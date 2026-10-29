@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="pl">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="theme-color" content="#0a0a0a">
+	<title>Śliska Music Group — Kontakt</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@500;700;800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+	<link rel="stylesheet" href="styles.css">
+	<script src="script.js" defer></script>
+</head>
+<body>
+	<header class="site-header">
+		<button class="menu-toggle menu-toggle--open" type="button" aria-label="Otwórz menu" aria-expanded="false" aria-controls="site-menu">
+			<svg width="22" height="16" viewBox="0 0 22 16" aria-hidden="true"><path d="M0 1h22M0 8h22M0 15h22" stroke="currentColor" stroke-width="2" /></svg>
+		</button>
+		<a class="brand" href="../index.html" aria-label="Śliska Music Group, strona główna">
+			<span>Śliska</span>
+			<small>Music Group</small>
+		</a>
+		<a class="home-link" href="https://sliska.pl/" aria-label="Strona główna sliska.pl" title="Strona główna sliska.pl">
+			<svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="m3 10 9-7 9 7M5 9v12h14V9M9 21v-7h6v7" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter"/></svg>
+		</a>
+	</header>
+
+	<nav class="site-menu" id="site-menu" aria-label="Menu" inert>
+		<a href="../index.html">Strona Główna</a>
+		<a href="../Artysci/">Artyści</a>
+		<a href="./" aria-current="page">Kontakt</a>
+		<a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Wikipedia <span aria-hidden="true">↗</span></a>
+		<div class="menu-contact">Warszawa<br><a href="mailto:ssmlabel@gmail.com">ssmlabel@gmail.com</a></div>
+	</nav>
+	<button class="menu-toggle menu-toggle--close" type="button" aria-label="Zamknij menu" aria-expanded="true" aria-controls="site-menu" hidden>×</button>
+
+	<main>
+		<section class="contact-hero" aria-labelledby="page-title">
+			<img class="contact-hero-photo" src="https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&amp;fit=crop&amp;w=2400&amp;q=85&amp;sat=-100" alt="" aria-hidden="true" fetchpriority="high">
+			<p class="eyebrow">Kontakt / Warszawa</p>
+			<h1 id="page-title">Kon<span>takt</span></h1>
+		</section>
+
+		<section class="contact-summary" aria-label="Dane kontaktowe">
+			<div>
+				<p class="eyebrow">Email</p>
+				<a class="email-link" href="mailto:ssmlabel@gmail.com">ssmlabel@gmail.com</a>
+			</div>
+			<p class="company-address">SMG Entertainment Sp. z o.o.<br>ul. Śliska 10, Warszawa</p>
+		</section>
+
+		<section class="contact-form-section" aria-labelledby="form-title">
+			<div class="form-heading">
+				<p class="eyebrow">Wiadomości i współpraca</p>
+				<h2 id="form-title">Napisz do nas</h2>
+			</div>
+
+			<form id="contact-form">
+				<div class="field">
+					<label for="topic">Temat <span aria-hidden="true">*</span></label>
+					<select id="topic" name="topic" required>
+						<option value="Demo">Demo</option>
+						<option value="Współpraca">Współpraca</option>
+						<option value="Sync & Licensing">Sync &amp; Licensing</option>
+						<option value="Inne">Inne</option>
+					</select>
+				</div>
+				<div class="field-grid">
+					<div class="field">
+						<label for="first-name">Imię <span aria-hidden="true">*</span></label>
+						<input id="first-name" name="firstName" type="text" autocomplete="given-name" required>
+					</div>
+					<div class="field">
+						<label for="last-name">Nazwisko</label>
+						<input id="last-name" name="lastName" type="text" autocomplete="family-name">
+					</div>
+				</div>
+				<div class="field">
+					<label for="email">E-mail <span aria-hidden="true">*</span></label>
+					<input id="email" name="email" type="email" autocomplete="email" required>
+				</div>
+				<div class="field">
+					<label for="message">Wiadomość <span aria-hidden="true">*</span></label>
+					<div class="demo-guidance">
+						<strong>Wyślij nam swoje demo</strong>
+						<p>Chcesz, aby Twoja muzyka trafiła do Śliska Music Group? Opisz się krótko i wklej link do materiału.</p>
+						<ul>
+							<li><b>Format:</b> link do materiału (np. YouTube, SoundCloud, Google Drive, Dropbox, WeTransfer).</li>
+							<li><b>Ustawienia prywatności:</b> upewnij się, że link jest aktywny i nie wymaga dodatkowych zgód na dostęp.</li>
+						</ul>
+					</div>
+					<textarea id="message" name="message" required></textarea>
+				</div>
+				<label class="consent" for="privacy-consent">
+					<input id="privacy-consent" name="privacyConsent" type="checkbox" required>
+					<span>Akceptuję wymagane warunki dotyczące <a href="../Prywatnosc/">prywatności</a> <span aria-hidden="true">*</span></span>
+				</label>
+				<button class="submit-button" type="submit" disabled>Wyślij</button>
+				<p class="form-note" id="form-note" aria-live="polite">Przycisk „Wyślij” otworzy Twoją aplikację pocztową z gotową wiadomością do ssmlabel@gmail.com.</p>
+			</form>
+		</section>
+	</main>
+
+	<footer class="site-footer">
+		<span class="copyright">© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.</span>
+		<a class="fandom-link" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener noreferrer" aria-label="Wiki Fandom">
+			<svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M6 9h3M6 12h3m6-3h3m-3 3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			Wiki Fandom
+		</a>
+		<div class="legal-links"><a href="../Regulamin/">Regulamin</a> / <a href="../Prywatnosc/">Prywatność</a> / <a href="../Cookies/">Cookies</a></div>
+	</footer>
+	<div class="grain" aria-hidden="true"></div>
+</body>
+</html>
