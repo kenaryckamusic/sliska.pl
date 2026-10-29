@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
@@ -21,17 +21,18 @@ a{color:inherit}
 .stage{position:fixed;inset:0;display:grid;place-items:center;overflow:hidden;padding:5rem 1.5rem;background:#000}
 .stage::before{content:"";position:absolute;inset:0;background:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("/sliska.jpg") center 36%/cover;filter:grayscale(1)}
 .content{position:relative;width:min(100%,36rem);text-align:center}
-.section-label{display:block;margin-bottom:1.25rem;color:rgba(255,255,255,.72);font-size:.75rem;letter-spacing:.28em;text-transform:uppercase}
 .code{margin:0;font-family:var(--display);font-size:clamp(7rem,25vw,13rem);font-weight:400;line-height:.9;letter-spacing:.08em;text-shadow:0 4px 24px rgba(0,0,0,.4)}
 .message{margin:1.5rem 0 0;font-size:clamp(1rem,3vw,1.2rem);line-height:1.6;color:rgba(255,255,255,.82)}
 .home{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin-top:2rem;padding:.7rem 1.25rem;border:1px solid rgba(255,255,255,.55);border-radius:999px;background:rgba(0,0,0,.28);font-size:.95rem;text-decoration:none;transition:background .2s,border-color .2s,color .2s}
 .home:hover{background:rgba(255,255,255,.14);border-color:#fff}
 .home:focus-visible{outline:2px solid #fff;outline-offset:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:.65rem 1rem calc(.65rem + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.09);background:rgba(0,0,0,.34);text-align:center;font-size:.72rem;color:rgba(244,246,241,.72)}
-body.smg-page .section-label{color:#d53088;font-weight:700}
-body.smg-page .stage::before{background-image:radial-gradient(ellipse at center,rgba(213,48,136,.2),transparent 65%),linear-gradient(145deg,#141412,#000 70%)}
-body.smg-page .home{border-color:#d53088}
-body.smg-page .home:hover{background:#d53088;color:#fff}
+body.smg-page{font-family:Inter,sans-serif}
+body.smg-page .stage::before{background:linear-gradient(180deg,rgba(0,0,0,.36),transparent 34%,rgba(0,0,0,.58)),url("/smg/tamarakenarycka1.jpg") center 38%/cover;filter:grayscale(1) brightness(.62);transform:scale(1.02)}
+body.smg-page .code{margin-bottom:14px;color:#9a9a96;font:400 12px/1.4 Inter,sans-serif;letter-spacing:.3em;text-shadow:none}
+body.smg-page .message{margin:0 auto 24px;max-width:32rem;color:#f4f4f0;font:800 clamp(1.75rem,5vw,3rem)/1.1 'Bricolage Grotesque',sans-serif}
+body.smg-page .home{min-height:0;margin-top:0;padding:14px 20px;border:1px solid #f4f4f0;border-radius:0;font-size:13px;transition:background .2s,border-color .2s,color .2s}
+body.smg-page .home:hover{border-color:#d53088;background:#d53088;color:#f4f4f0}
 @media (max-width:560px){.stage::before{background-image:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("/sliska2.jpg")}}
 @media (prefers-reduced-motion:reduce){.home{transition:none}}
 </style>
@@ -39,7 +40,6 @@ body.smg-page .home:hover{background:#d53088;color:#fff}
 <body>
 <main class="stage">
   <section class="content" aria-labelledby="error-title">
-    <span class="section-label" id="section-label" hidden></span>
     <h1 class="code" id="error-title">404</h1>
     <p class="message" id="error-message">Wygląda na to, że ta strona nie istnieje albo została przeniesiona.</p>
     <a class="home" id="home-link" href="/">Wróć na stronę główną</a>
@@ -51,16 +51,7 @@ const isSmgPage = /^\/smg(?:\/|$)/.test(window.location.pathname);
 
 if (isSmgPage) {
   document.body.classList.add('smg-page');
-  document.title = '404 — Nie znaleziono strony | Śliska Music Group';
-  document.getElementById('section-label').textContent = 'Śliska Music Group';
-  document.getElementById('section-label').hidden = false;
-  document.getElementById('error-message').textContent =
-    'Nie znaleźliśmy tej strony w Śliska Music Group.';
-  const homeLink = document.getElementById('home-link');
-  homeLink.href = '/smg/';
-  homeLink.textContent = 'Wróć do Śliska Music Group';
-  document.getElementById('footer').textContent =
-    '© 2026 Śliska Music Group. Wszelkie prawa zastrzeżone.';
+  document.getElementById('home-link').href = '/smg/';
 }
 </script>
 </body>
