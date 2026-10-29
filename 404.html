@@ -7,7 +7,7 @@
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
@@ -27,12 +27,11 @@ a{color:inherit}
 .home:hover{background:rgba(255,255,255,.14);border-color:#fff}
 .home:focus-visible{outline:2px solid #fff;outline-offset:4px}
 .bar{position:fixed;left:0;right:0;bottom:0;padding:.65rem 1rem calc(.65rem + env(safe-area-inset-bottom,0px));border-top:1px solid rgba(255,255,255,.09);background:rgba(0,0,0,.34);text-align:center;font-size:.72rem;color:rgba(244,246,241,.72)}
-body.smg-page{font-family:Inter,sans-serif}
-body.smg-page .stage::before{background:linear-gradient(180deg,rgba(0,0,0,.36),transparent 34%,rgba(0,0,0,.58)),url("/smg/tamarakenarycka1.jpg") center 38%/cover;filter:grayscale(1) brightness(.62);transform:scale(1.02)}
-body.smg-page .code{margin-bottom:14px;color:#9a9a96;font:400 12px/1.4 Inter,sans-serif;letter-spacing:.3em;text-shadow:none}
-body.smg-page .message{margin:0 auto 24px;max-width:32rem;color:#f4f4f0;font:800 clamp(1.75rem,5vw,3rem)/1.1 'Bricolage Grotesque',sans-serif}
-body.smg-page .home{min-height:0;margin-top:0;padding:14px 20px;border:1px solid #f4f4f0;border-radius:0;font-size:13px;transition:background .2s,border-color .2s,color .2s}
-body.smg-page .home:hover{border-color:#d53088;background:#d53088;color:#f4f4f0}
+body.smg-page .stage::before{background:linear-gradient(180deg,rgba(0,0,0,.4),rgba(0,0,0,.42) 55%,rgba(0,0,0,.68)),url("/smg/tamarakenarycka1.jpg") center 38%/cover;filter:grayscale(1) brightness(.72)}
+body.smg-page .code{color:#d53088;text-shadow:0 4px 24px rgba(213,48,136,.35)}
+body.smg-page .home{border-color:#d53088}
+body.smg-page .home:hover{border-color:#d53088;background:#d53088;color:#fff}
+body.smg-page .bar{border-top-color:rgba(213,48,136,.35)}
 @media (max-width:560px){.stage::before{background-image:linear-gradient(rgba(0,0,0,.52),rgba(0,0,0,.62)),url("/sliska2.jpg")}}
 @media (prefers-reduced-motion:reduce){.home{transition:none}}
 </style>
