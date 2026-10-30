@@ -214,7 +214,7 @@ function renderArticleBody(a) {
           <div class="review-year">Ocena: ${esc(String(review.score).replace('.', ','))} / 10${review.year ? ' · ' + esc(review.year) : ''}</div>
         </div></section>`
     : '';
-  const hero = mainImg && !review
+  const hero = mainImg
     ? `<figure class="article-hero"><div class="media-wrap"><img src="${esc(mainImg)}" alt="${esc(a.title)}"></div>${a.imageCaption ? `<figcaption>${esc(a.imageCaption)}</figcaption>` : ''}</figure>`
     : '';
   return `<div class="article-top"><a class="btn" href="${esc(BASE_PATH)}">← Powrót do strony głównej</a></div>
@@ -224,10 +224,11 @@ function renderArticleBody(a) {
         <h1>${esc(a.title)}</h1>
         <div class="article-meta"><span>Autor: <strong>${esc(a.author)}</strong></span><span>Opublikowano: <time datetime="${esc(a.createdAt)}">${esc(plDate(a.createdAt))}</time></span></div>
       </header>
-      ${reviewHtml}${hero}
+      ${hero}
       <div class="article-layout"><div class="article-main">
         <p class="article-lead">${esc(a.lead)}</p>
         <div class="article-body">${body}</div>
+        ${reviewHtml}
         ${tags.length ? `<div class="article-tags">${tags.map(t => `<span class="tag">#${esc(t)}</span>`).join('')}</div>` : ''}
       </div></div>
     </article>`;
