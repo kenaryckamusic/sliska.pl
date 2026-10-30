@@ -1167,6 +1167,7 @@ function adminButtons(id) {
   const safe = Utils.esc(id);
   return `<span class="admin-actions">
     <button type="button" class="btn btn-sm" data-action="edit" data-id="${safe}">Edytuj</button>
+    <button type="button" class="btn btn-sm" data-action="ig-post" data-id="${safe}" title="Pobierz grafikę na Instagrama i skopiuj opis posta">Post IG</button>
     <button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="${safe}">Usuń</button>
   </span>`;
 }
@@ -1545,6 +1546,182 @@ function renderArticleView(id) {
     ${relatedHtml}`;
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
+}
+
+/* =========================================================
+   Post na Instagram: grafika 1080×1350 + opis w schowku (przycisk „Post IG” obok „Edytuj”)
+   ========================================================= */
+const APP_BASE = (() => { try { return document.currentScript ? new URL('.', document.currentScript.src).href : ''; } catch { return ''; } })();
+
+function loadImage(src, cors) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    if (cors) img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => reject(new Error('Nie udało się wczytać obrazu'));
+    img.src = src;
+  });
+}
+
+/** Opis do wklejenia pod postem. */
+function instagramCaption(a) {
+  const lead = (a.lead || '').replace(/\s+/g, ' ').trim();
+  const tags = Utils.tagsOf(a).slice(0, 6).map(t => '#' + t.replace(/[^\p{L}\p{N}]+/gu, '')).filter(t => t.length > 1);
+  const cats = Utils.catsOf(a).map(c => '#' + c.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ''));
+  const all = [...new Set([...tags, ...cats, '#śliskanews', '#śliska'])];
+  const score = a.review && a.review.score != null ? `\n⭐ Ocena: ${String(a.review.score).replace('.', ',')}/10` : '';
+  return `${a.title}\n\n${lead}${score}\n\nCałość na sliska.pl/news (link w bio) ⭐\n\n${all.join(' ')}`;
+}
+
+/** Zawija tekst do szerokości; zwraca linie. */
+function wrapLines(ctx, text, maxW) {
+  const words = text.split(/\s+/).filter(Boolean);
+  const lines = [];
+  let cur = '';
+  for (const w of words) {
+    const t = cur ? cur + ' ' + w : w;
+    if (ctx.measureText(t).width <= maxW || !cur) cur = t; else { lines.push(cur); cur = w; }
+  }
+  if (cur) lines.push(cur);
+  return lines;
+}
+
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
+async function renderInstagramImage(a) {
+  const W = 1080, H = 1350, PAD = 72;
+  const family = getComputedStyle(document.body).fontFamily;
+  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  let photoOk = true;
+
+  // tło: zdjęcie (przycięte jak „cover”) albo kolorowy wzór kategorii
+  ctx.fillStyle = '#111';
+  ctx.fillRect(0, 0, W, H);
+  const src = getImage(a);
+  let img = null;
+  try { img = await loadImage(src, !src.startsWith('data:')); }
+  catch { photoOk = !a.image; try { img = await loadImage(Utils.placeholder(Utils.catsOf(a)[0])); } catch {} }
+  if (img) {
+    const iw = img.naturalWidth || W, ih = img.naturalHeight || H;
+    const k = Math.max(W / iw, H / ih);
+    ctx.drawImage(img, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+  }
+  // przyciemnienie: lekko u góry, mocno na dole (pod tytułem)
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(0,0,0,.45)');
+  g.addColorStop(.28, 'rgba(0,0,0,.05)');
+  g.addColorStop(.5, 'rgba(0,0,0,.35)');
+  g.addColorStop(1, 'rgba(0,0,0,.92)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  // logo (białe) w lewym górnym rogu
+  try {
+    const logo = await loadImage(APP_BASE + 'logo-biale.svg');
+    const lw = 330, lh = lw * 128 / 732;
+    ctx.drawImage(logo, PAD, PAD, lw, lh);
+  } catch {
+    ctx.fillStyle = '#fff'; ctx.font = `800 44px ${family}`; ctx.textBaseline = 'top'; ctx.fillText('śliska news', PAD, PAD);
+  }
+
+  // ocena w kółku (recenzje) – prawy górny róg
+  if (a.review && a.review.score != null) {
+    const r = 82, cx = W - PAD - r, cy = PAD + r - 6;
+    ctx.fillStyle = '#d6001c';
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `800 74px ${family}`;
+    ctx.fillText(String(a.review.score).replace('.', ','), cx, cy + 3);
+    ctx.textAlign = 'left';
+  }
+
+  // dół: kategoria (plakietka), tytuł, adres
+  const maxW = W - PAD * 2;
+  let size = 96, lines;
+  for (; size >= 52; size -= 4) {
+    ctx.font = `800 ${size}px ${family}`;
+    lines = wrapLines(ctx, a.title, maxW);
+    if (lines.length <= 5 && lines.every(l => ctx.measureText(l).width <= maxW)) break;
+  }
+  const lh = Math.round(size * 1.1);
+  const bottomY = H - 150;
+  const titleTop = bottomY - lines.length * lh;
+  ctx.fillStyle = '#fff';
+  ctx.textBaseline = 'top';
+  lines.forEach((l, i) => ctx.fillText(l, PAD, titleTop + i * lh));
+
+  const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
+  ctx.font = `800 30px ${family}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
+  const cw = ctx.measureText(cat).width + 44;
+  const chipY = titleTop - 28 - 56;
+  ctx.fillStyle = '#d6001c';
+  roundRect(ctx, PAD, chipY, cw, 56, 28); ctx.fill();
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
+  ctx.fillText(cat, PAD + 22, chipY + 29);
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+
+  ctx.fillStyle = 'rgba(255,255,255,.35)';
+  ctx.fillRect(PAD, H - 108, maxW, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = `700 32px ${family}`;
+  ctx.textBaseline = 'middle';
+  ctx.fillText('sliska.pl/news', PAD, H - 66);
+  ctx.textAlign = 'right';
+  ctx.fillText('Link w bio →', W - PAD, H - 66);
+  ctx.textAlign = 'left';
+
+  const blob = await new Promise((res, rej) => canvas.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
+  return { blob, photoOk };
+}
+
+async function makeInstagramPost(id, btn) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  // opis kopiujemy od razu (w momencie kliknięcia), zanim przeglądarka zdąży wycofać zgodę na schowek
+  let copied = false;
+  const caption = instagramCaption(a);
+  const copyPromise = (navigator.clipboard && navigator.clipboard.writeText)
+    ? navigator.clipboard.writeText(caption).then(() => { copied = true; }, () => {})
+    : Promise.resolve();
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
+  try {
+    const { blob, photoOk } = await renderInstagramImage(a);
+    await copyPromise;
+    const name = `sliska-news-${Utils.slugify(a.title).slice(0, 50) || a.id}.png`;
+    const file = new File([blob], name, { type: 'image/png' });
+    let shared = false;
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); shared = true; } catch (e) { if (e && e.name === 'AbortError') shared = true; }
+    }
+    if (!shared) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+    toast((shared ? 'Grafika gotowa' : 'Grafika pobrana') + (copied ? ', opis skopiowany do schowka.' : '. Nie udało się skopiować opisu – skopiuj go ręcznie.')
+      + (photoOk ? '' : ' Zdjęcia z innej strony nie dało się wczytać, użyto tła zastępczego.'));
+    if (!copied) prompt('Opis posta (skopiuj):', caption);
+  } catch (e) {
+    toast('Nie udało się utworzyć grafiki: ' + (e && e.message ? e.message : 'błąd'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
 }
 
 async function shareArticle(id) {
@@ -3642,6 +3819,7 @@ function handleAction(action, id) {
     return;
   }
   if (action === 'share') { shareArticle(id); return; }
+  if (action === 'ig-post') { makeInstagramPost(id, document.activeElement && document.activeElement.dataset && document.activeElement.dataset.action === 'ig-post' ? document.activeElement : null); return; }
   if (action === 'copy-link') { copyLink(id); return; }
   if (action === 'clear-search') {
     state.query = '';
