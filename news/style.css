@@ -1613,3 +1613,33 @@ input[type="file"]::file-selector-button:hover { border-color: var(--accent); co
 .hero-tags .chips { display: inline-flex; flex-wrap: nowrap; gap: 6px; }
 .hero-tags .chip { white-space: nowrap; }
 .article-body p::first-letter { font-weight: inherit; }
+
+/* Pasek formatowania w edytorze (pogrubienie, cytat…) zostaje na ekranie podczas przewijania */
+:root { --hdr-h: 64px; --edhead-h: 0px; }
+.editor-head { top: var(--hdr-h); }
+#editor-container .ql-toolbar.ql-snow {
+  position: sticky;
+  top: calc(var(--hdr-h) + var(--edhead-h) + 6px);
+  z-index: 25;
+  box-shadow: 0 6px 10px -8px rgba(0, 0, 0, .35);
+}
+@media (max-width: 1000px) {
+  /* na telefonie/tablecie panel z przyciskami nie jest przyklejony – miejsca jest za mało; zostaje tylko pasek formatowania */
+  .editor-head { position: static; }
+  #editor-container .ql-toolbar.ql-snow { position: sticky; top: var(--hdr-h); }
+}
+
+/* ---------- Szlify: nawigacja między artykułami, dostępność, dotyk ---------- */
+.article-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; max-width: 760px; margin: 36px auto 8px; }
+.pager-link { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border: 1px solid var(--border); border-radius: var(--r-lg, 12px); background: var(--card); color: inherit; text-decoration: none; transition: border-color .15s, transform .15s, box-shadow .15s; min-width: 0; }
+.pager-link:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-hover, var(--shadow)); }
+.pager-newer { text-align: right; align-items: flex-end; }
+.pager-label { font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.pager-title { font-weight: 700; line-height: 1.3; text-wrap: balance; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+@media (max-width: 600px) { .article-pager { grid-template-columns: 1fr; } .pager-newer { text-align: left; align-items: flex-start; } }
+
+html { scroll-padding-top: calc(var(--hdr-h, 64px) + 12px); }
+a, button, .chip, .chip-btn, summary { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.article-body p, .card-lead, .hero-lead, .legal p { text-wrap: pretty; }
+@media print { .article-pager { display: none !important; } }

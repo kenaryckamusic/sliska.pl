@@ -1240,7 +1240,7 @@ function cardHtml(a, opts = {}) {
   const id = encodeURIComponent(a.id);
   return `<article class="card" data-id="${Utils.esc(a.id)}">
     <a class="card-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true">
-      <img src="${Utils.esc(thumbFor(a, opts.cover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy">
+      <img src="${Utils.esc(thumbFor(a, opts.cover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     </a>
     <div class="card-body">
       <div class="card-tags">
@@ -1260,7 +1260,7 @@ function cardHtml(a, opts = {}) {
 function heroHtml(a, useCover) {
   const id = encodeURIComponent(a.id);
   return `<section class="hero" data-id="${Utils.esc(a.id)}" aria-label="Temat dnia">
-    <img class="hero-img" src="${Utils.esc(thumbFor(a, useCover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">
+    <img class="hero-img" fetchpriority="high" decoding="async" src="${Utils.esc(thumbFor(a, useCover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">
     <div class="hero-content">
       <div class="hero-tags"><span class="hero-flag">Temat dnia</span>${Utils.chipsHtml(a)}</div>
       <h2 class="hero-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h2>
@@ -1276,7 +1276,7 @@ function heroHtml(a, useCover) {
 function tileHtml(a) {
   const id = encodeURIComponent(a.id);
   return `<article class="tile" data-id="${Utils.esc(a.id)}">
-    <img class="tile-img" src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy">
+    <img class="tile-img" src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     <div class="tile-content">
       <div>${Utils.chipsHtml(a)}</div>
       <h3 class="tile-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
@@ -1373,7 +1373,7 @@ function renderSideList() {
   $('#side-list').innerHTML = list.map(a => {
     const id = encodeURIComponent(a.id);
     return `<article class="side-item" data-id="${Utils.esc(a.id)}">
-      <a class="side-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy"></a>
+      <a class="side-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async"></a>
       <div class="side-body">
         <div class="card-tags">${Utils.chipsHtml(a)}${a.urgent ? '<span class="badge-urgent">PILNE</span>' : ''}</div>
         <h3 class="side-item-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
@@ -1516,6 +1516,16 @@ function renderArticleView(id) {
     : '';
 
   const rel = relatedArticles(a);
+  const pub = publishedArticles();
+  const idx = pub.findIndex(x => x.id === a.id);
+  const newer = idx > 0 ? pub[idx - 1] : null;
+  const older = idx >= 0 && idx < pub.length - 1 ? pub[idx + 1] : null;
+  const pagerHtml = (newer || older)
+    ? `<nav class="article-pager" aria-label="Inne artykuły">
+        ${older ? `<a class="pager-link pager-older" href="#/artykul/${encodeURIComponent(older.id)}" rel="prev"><span class="pager-label">← Starszy artykuł</span><span class="pager-title">${Utils.esc(older.title)}</span></a>` : '<span></span>'}
+        ${newer ? `<a class="pager-link pager-newer" href="#/artykul/${encodeURIComponent(newer.id)}" rel="next"><span class="pager-label">Nowszy artykuł →</span><span class="pager-title">${Utils.esc(newer.title)}</span></a>` : '<span></span>'}
+      </nav>`
+    : '';
   const relatedHtml = rel.length
     ? `<section class="related" aria-label="Czytaj dalej"><h2 class="section-title">Czytaj dalej</h2><div class="related-grid">${rel.map(x => cardHtml(x, { noAdmin: true })).join('')}</div></section>`
     : '';
@@ -1531,6 +1541,7 @@ function renderArticleView(id) {
     </div>
     ${notice}
     ${articleHtml(a, state.plain.get(a.id))}
+    ${pagerHtml}
     ${relatedHtml}`;
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
@@ -1599,7 +1610,7 @@ function renderRanking() {
     const id = encodeURIComponent(a.id);
     return `<li class="rank-row${best ? ' is-best' : ''}">
       <span class="rank-pos">${i + 1}</span>
-      <a class="rank-cover" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(cover)}" alt="" loading="lazy" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}"></a>
+      <a class="rank-cover" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(cover)}" alt="" loading="lazy" decoding="async" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}"></a>
       <div class="rank-main">
         <span class="rank-meta">${Utils.esc([r.kind, reviewYearOf(a)].filter(Boolean).join(' · '))}</span>
         <a class="rank-work" href="#/artykul/${id}">${Utils.esc(r.work)}</a>
@@ -3427,7 +3438,27 @@ function normalizeStaticPath(r) {
   }
 }
 
+/** Pamięta miejsce na liście: po wejściu w artykuł i cofnięciu wracasz dokładnie tam, gdzie byłeś. */
+const ScrollMemory = { cur: location.hash || '#/', prev: '', n: 0, pos: {} };
+const LIST_ROUTES = /^#\/($|kategoria|tag|artysta|ranking|zapisane)/;
+
 function route() {
+  const key = location.hash || '#/';
+  ScrollMemory.pos[ScrollMemory.cur] = window.scrollY;
+  const revisit = !!(history.state && history.state.sn);   // wejście z przycisku Wstecz/Dalej
+  ScrollMemory.prev = ScrollMemory.cur;
+  ScrollMemory.cur = key;
+  routeCore();
+  if (!history.state || !history.state.sn) { try { history.replaceState({ sn: ++ScrollMemory.n }, ''); } catch {} }
+  const y = ScrollMemory.pos[key];
+  if (revisit && y > 0) {
+    const go = () => window.scrollTo({ top: y, behavior: 'instant' });
+    requestAnimationFrame(go);
+    setTimeout(() => { if (Math.abs(window.scrollY - y) > 40) go(); }, 300);
+  }
+}
+
+function routeCore() {
   leaveEditor();
   const r = currentRoute();
   normalizeStaticPath(r);
@@ -3940,6 +3971,13 @@ function bindEvents() {
     app.focus();
   });
 
+  // „← Powrót do strony głównej” w artykule: jeśli przyszliśmy z listy, cofnij historię (wracamy w to samo miejsce)
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('.article-top a[href="#/"]');
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+    if (history.length > 1 && LIST_ROUTES.test(ScrollMemory.prev || '') ) { e.preventDefault(); history.back(); }
+  });
+
   // Skrót: „/” ustawia kursor w wyszukiwarce
   document.addEventListener('keydown', e => {
     if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -4044,6 +4082,7 @@ async function main() {
     history.replaceState(null, '', location.pathname + location.search + '#/artykul/' + encodeURIComponent(staticId));
   }
   renderBreaking();
+  initStickyVars();
   route();
   maybeShowNewsBar();
 
@@ -4057,6 +4096,26 @@ async function main() {
     state.lastTick = now;
     if (crossed) refreshViews();
   }, 15000);
+}
+
+/** Wysokości przyklejonych pasków (nagłówek, tytuł edytora) → zmienne CSS, żeby pasek formatowania
+ *  w edytorze zawsze zatrzymywał się dokładnie pod nimi i nie znikał podczas przewijania. */
+function initStickyVars() {
+  const root = document.documentElement;
+  const header = $('.site-header');
+  const head = $('.editor-head');
+  const update = () => {
+    root.style.setProperty('--hdr-h', Math.round(header ? header.getBoundingClientRect().height : 64) + 'px');
+    root.style.setProperty('--edhead-h', Math.round(head ? head.getBoundingClientRect().height : 0) + 'px');
+  };
+  update();
+  window.addEventListener('resize', update);
+  window.addEventListener('hashchange', () => requestAnimationFrame(update));
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(update);
+    if (header) ro.observe(header);
+    if (head) ro.observe(head);
+  }
 }
 
 document.addEventListener('DOMContentLoaded', main);
