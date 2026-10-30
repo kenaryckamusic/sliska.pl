@@ -770,18 +770,22 @@ const FirebaseProvider = {
 
   async getDrafts() {
     if (!this.auth.currentUser) return [];
-    const snap = await this.dcol().orderBy('savedAt', 'desc').limit(50).get();
-    return snap.docs.map(d => d.data());
+    // tylko wersje robocze zalogowanego redaktora (reguły Firestore też to wymuszają)
+    const snap = await this.dcol().where('ownerUid', '==', this.auth.currentUser.uid).limit(100).get();
+    return snap.docs.map(d => d.data()).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt))).slice(0, 50);
   },
 
   async getDraft(id) {
     if (!this.auth.currentUser) return null;
-    const snap = await this.dcol().doc(id).get();
-    return snap.exists ? snap.data() : null;
+    let snap;
+    try { snap = await this.dcol().doc(id).get(); } catch (err) { return null; }   // cudza wersja robocza: reguły odmawiają dostępu
+    const d = snap.exists ? snap.data() : null;
+    return d && (!d.ownerUid || d.ownerUid === this.auth.currentUser.uid) ? d : null;
   },
 
   async saveDraft(draft) {
     if (!this.auth.currentUser) throw new Error('Zaloguj się, aby zapisywać wersje robocze.');
+    draft = { ...draft, ownerUid: this.auth.currentUser.uid };
     this._checkSize(draft);
     try {
       await this.dcol().doc(draft.id).set(draft);
@@ -874,6 +878,15 @@ function authError(code) {
 
 const Auth = {
   mode: 'local',
+
+  /** Identyfikator zalogowanego redaktora – wersje robocze są przypisane do niego. */
+  uid() {
+    if (this.mode === 'firebase') {
+      const user = FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
+      return user ? user.uid : '';
+    }
+    return 'local';
+  },
 
   get useFirebase() { return this.mode === 'firebase'; },
 
@@ -2072,13 +2085,27 @@ async function importBackup(file) {
 }
 
 /* ---------- Panel redakcji: wersje robocze i zaplanowane ---------- */
+/** Id wersji roboczej edytowanego artykułu – osobne dla każdego redaktora. */
+function editDraftId(articleId) { return `edit_${Auth.uid() || 'anon'}_${articleId}`; }
+/** Wskaźnik „ostatni nowy artykuł w trakcie pisania” – osobny dla każdego redaktora. */
+function newPointerKey() { return `${CONFIG.NEW_POINTER_KEY}_${Auth.uid() || 'anon'}`; }
+
+/** Kopie robocze w tej przeglądarce: każdy wpis ma właściciela, cudzych nie widać (wpisy sprzed tej zmiany są widoczne dla wszystkich). */
 const Buffers = {
-  _all() {
+  _raw() {
     try { return JSON.parse(localStorage.getItem(CONFIG.BUFFER_KEY)) || {}; } catch { return {}; }
+  },
+  _mine(e) { return !!e && (!e.ownerUid || e.ownerUid === Auth.uid()); },
+  _all() {
+    const raw = this._raw();
+    const out = {};
+    for (const k of Object.keys(raw)) if (this._mine(raw[k])) out[k] = raw[k];
+    return out;
   },
   get(id) { return this._all()[id] || null; },
   set(id, entry) {
-    const all = this._all();
+    const all = this._raw();
+    entry = { ...entry, ownerUid: Auth.uid() };
     all[id] = entry;
     try {
       localStorage.setItem(CONFIG.BUFFER_KEY, JSON.stringify(all));
@@ -2095,8 +2122,8 @@ const Buffers = {
     }
   },
   remove(id) {
-    const all = this._all();
-    if (id in all) {
+    const all = this._raw();
+    if (id in all && this._mine(all[id])) {
       delete all[id];
       try { localStorage.setItem(CONFIG.BUFFER_KEY, JSON.stringify(all)); } catch { /* ignoruj */ }
     }
@@ -2106,7 +2133,7 @@ const Buffers = {
 
 function clearPointer(draftId) {
   try {
-    if (localStorage.getItem(CONFIG.NEW_POINTER_KEY) === draftId) localStorage.removeItem(CONFIG.NEW_POINTER_KEY);
+    if (localStorage.getItem(newPointerKey()) === draftId) localStorage.removeItem(newPointerKey());
   } catch { /* ignoruj */ }
 }
 
@@ -2221,8 +2248,8 @@ async function unpublishToDraft(id) {
     await DataService.saveDraft(draft);
     await DataService.remove(id);
     setArticles(state.articles.filter(x => x.id !== id));
-    DataService.removeDraft('edit_' + id).catch(() => {});
-    Buffers.remove('edit_' + id);
+    DataService.removeDraft(editDraftId(id)).catch(() => {});
+    Buffers.remove(editDraftId(id));
     toast('Artykuł schowany do wersji roboczych.');
     if (currentRoute().name === 'article') location.hash = '#/panel';
     else refreshViews();
@@ -2238,8 +2265,8 @@ async function deleteArticle(id) {
   try {
     await DataService.remove(id);
     setArticles(state.articles.filter(x => x.id !== id));
-    DataService.removeDraft('edit_' + id).catch(() => {});
-    Buffers.remove('edit_' + id);
+    DataService.removeDraft(editDraftId(id)).catch(() => {});
+    Buffers.remove(editDraftId(id));
     toast('Artykuł został usunięty.');
     if (currentRoute().name === 'article') location.hash = '#/';
     else refreshViews();
@@ -2706,7 +2733,7 @@ function writeBuffer() {
   }
   Buffers.set(ctx.draftId, { data: ctx.data, articleId: ctx.articleId, savedAt: new Date().toISOString() });
   if (!ctx.articleId) {
-    try { localStorage.setItem(CONFIG.NEW_POINTER_KEY, ctx.draftId); } catch { /* ignoruj */ }
+    try { localStorage.setItem(newPointerKey(), ctx.draftId); } catch { /* ignoruj */ }
   }
 }
 
@@ -3071,7 +3098,7 @@ async function openEditor(articleId, draftParam) {
       mode = 'edit';
       base = state.articles.find(a => a.id === articleId) || null;
       if (!base) throw new Error('not-found');
-      draftId = 'edit_' + articleId;
+      draftId = editDraftId(articleId);
       const cloud = await DataService.getDraft(draftId).catch(() => null);
       const buf = Buffers.get(draftId);
       const baseTime = base.updatedAt || base.createdAt || '';
@@ -3080,7 +3107,7 @@ async function openEditor(articleId, draftParam) {
     } else {
       mode = 'new';
       let pointer = null;
-      try { pointer = localStorage.getItem(CONFIG.NEW_POINTER_KEY); } catch { /* ignoruj */ }
+      try { pointer = localStorage.getItem(newPointerKey()); } catch { /* ignoruj */ }
       const buf = pointer ? Buffers.get(pointer) : null;
       if (buf && !buf.articleId) {
         draftId = pointer;
