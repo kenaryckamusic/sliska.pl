@@ -1581,3 +1581,9 @@ a, button, .chip, .chip-btn, summary { touch-action: manipulation; -webkit-tap-h
 
 /* Recenzja (ocena + okładka) pod tekstem artykułu */
 .article-main .review { margin: 36px 0 8px; }
+
+/* Stopka zawsze przy dolnej krawędzi ekranu – bez jasnego paska pod nią, gdy treści jest mało */
+body { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; }
+#layout { flex: 1 0 auto; }
+.site-footer { margin-top: auto; }
+body > .site-header, body > .site-footer { flex: none; }
