@@ -19,7 +19,6 @@ const CONFIG = {
   // Adres, pod którym stoi strona (z ukośnikiem na końcu). Służy do linków do osobnych stron artykułów.
   SITE_URL: 'https://sliska.pl/news/',
   // Po ilu minutach od publikacji osobna strona artykułu na pewno już istnieje (generator działa co 30 min)
-  STATIC_PAGE_DELAY_MIN: 45,
 
   // true  = Firebase Firestore (artykuły widoczne dla wszystkich odwiedzających)
   // false = localStorage (tryb demonstracyjny, dane tylko w tej przeglądarce)
@@ -50,9 +49,6 @@ const CONFIG = {
   BUFFER_KEY: 'sliska_editor_buffers_v1',
   NEW_POINTER_KEY: 'sliska_editor_new_pointer',
   AUTHOR_KEY: 'sliska_last_author',
-  LOCAL_SUBS_KEY: 'sliska_subscribers_v1',
-  SUBSCRIBED_KEY: 'sliska_subscribed_emails',
-  FIREBASE_SUBS_COLLECTION: 'subscribers',
   LOCAL_TIPS_KEY: 'sliska_tips_v1',
   FIREBASE_TIPS_COLLECTION: 'tips',
 
@@ -62,7 +58,6 @@ const CONFIG = {
     ADMIN_NAME: 'SMG Entertainment Sp. z o.o. (NIP 3789021824)',
     ADMIN_ADDRESS: 'ul. Śliska 10, Warszawa',
     CONTACT_EMAIL: 'sliska10@wp.pl',
-    NEWSLETTER_TOOL: '',   // np. 'MailerLite' albo 'Brevo' – wpisz, gdy zaczniesz wysyłać newsletter
     UPDATED: '30 października 2026'
   },
 
@@ -606,11 +601,6 @@ const LocalProvider = {
 
   async getAllArticles() { return this._get(CONFIG.LOCAL_KEY); },
 
-  async addSubscriber(email) {
-    const list = this._get(CONFIG.LOCAL_SUBS_KEY);
-    list.push({ email, createdAt: new Date().toISOString() });
-    this._set(CONFIG.LOCAL_SUBS_KEY, list);
-  },
   async addTip(tip) {
     const list = this._get(CONFIG.LOCAL_TIPS_KEY);
     list.push(tip);
@@ -621,9 +611,6 @@ const LocalProvider = {
   },
   async removeTip(id) {
     this._set(CONFIG.LOCAL_TIPS_KEY, this._get(CONFIG.LOCAL_TIPS_KEY).filter(t => t.id !== id));
-  },
-  async getSubscribers() {
-    return this._get(CONFIG.LOCAL_SUBS_KEY).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
   },
 
   async getDrafts() {
@@ -749,18 +736,6 @@ const FirebaseProvider = {
     return snap.docs.map(d => d.data());
   },
 
-  // Zapis do newslettera: dokument tylko do utworzenia (reguły nie pozwalają odczytu publicznie)
-  async addSubscriber(email) {
-    try {
-      await this.db.collection(CONFIG.FIREBASE_SUBS_COLLECTION).add({ email, createdAt: new Date().toISOString() });
-    } catch (err) {
-      if (err && err.code === 'permission-denied') {
-        throw new Error('Zapisy do newslettera są chwilowo niedostępne.');
-      }
-      throw err;
-    }
-  },
-
   async addTip(tip) {
     try {
       await this.db.collection(CONFIG.FIREBASE_TIPS_COLLECTION).doc(tip.id).set(tip);
@@ -777,11 +752,6 @@ const FirebaseProvider = {
   async removeTip(id) {
     if (!this.auth.currentUser) throw new Error('Zaloguj się, aby usuwać zgłoszenia.');
     try { await this.db.collection(CONFIG.FIREBASE_TIPS_COLLECTION).doc(id).delete(); } catch (err) { throw this._wrap(err); }
-  },
-  async getSubscribers() {
-    if (!this.auth.currentUser) return [];
-    const snap = await this.db.collection(CONFIG.FIREBASE_SUBS_COLLECTION).orderBy('createdAt', 'desc').limit(5000).get();
-    return snap.docs.map(d => d.data());
   },
 
   async getProfile() {
@@ -843,8 +813,6 @@ const OfflineProvider = {
   async saveDraft() { throw new Error('Brak połączenia z bazą danych.'); },
   async removeDraft() {},
   async getAllArticles() { return []; },
-  async addSubscriber() { throw new Error('Brak połączenia z bazą danych.'); },
-  async getSubscribers() { return []; },
   async addTip() { throw new Error('Brak połączenia z bazą danych.'); },
   async getTips() { return []; },
   async removeTip() { throw new Error('Brak połączenia z bazą danych.'); }
@@ -888,8 +856,6 @@ const DataService = {
   saveDraft(draft) { return this.provider.saveDraft(draft); },
   removeDraft(id) { return this.provider.removeDraft(id); },
   getAllArticles() { return this.provider.getAllArticles(); },
-  addSubscriber(email) { return this.provider.addSubscriber(email); },
-  getSubscribers() { return this.provider.getSubscribers(); },
   addTip(t) { return this.provider.addTip(t); },
   getTips() { return this.provider.getTips(); },
   removeTip(id) { return this.provider.removeTip(id); }
@@ -996,7 +962,6 @@ const state = {
   tag: '',
   artist: '',
   rank: { kind: 'Wszystkie', year: 'Wszystkie' },
-  subs: [],
   tips: [],
   query: '',
   visible: CONFIG.PAGE_SIZE,
@@ -1443,15 +1408,8 @@ function tagsBlockHtml(a) {
     `<a class="tag" href="#/tag/${encodeURIComponent(t)}">#${Utils.esc(t)}</a>`).join('')}</div>`;
 }
 
-/**
- * Adres do udostępniania. Na stronie na żywo i dla artykułu starszego niż STATIC_PAGE_DELAY_MIN
- * to osobna strona (z podglądem dla Facebooka i Google). Świeży artykuł dostaje adres z „#”,
- * który działa od razu.
- */
+/** Adres do udostępniania artykułu. */
 function articleUrl(a) {
-  const onSite = CONFIG.SITE_URL && location.href.startsWith(CONFIG.SITE_URL);
-  const old = Date.now() - Date.parse(a.createdAt) > CONFIG.STATIC_PAGE_DELAY_MIN * 60000;
-  if (onSite && old) return `${CONFIG.SITE_URL}artykul/${Utils.slugify(a.title)}-${a.id}/`;
   return location.href.split('#')[0] + '#/artykul/' + encodeURIComponent(a.id);
 }
 
@@ -1943,7 +1901,6 @@ function legalHtml(doc) {
   const admin = legalVal(L.ADMIN_NAME);
   const addr = legalVal(L.ADMIN_ADDRESS);
   const mail = legalVal(L.CONTACT_EMAIL);
-  const tool = L.NEWSLETTER_TOOL ? `, ${Utils.esc(L.NEWSLETTER_TOOL)} (narzędzie do wysyłki newslettera)` : '';
   if (doc === 'o-nas') {
     const cats = CATEGORIES.map(c => `<a class="chip" href="#/kategoria/${encodeURIComponent(c)}">${Utils.esc(c)}</a>`).join(' ');
     return `<h1>O nas i kontakt</h1>
@@ -1956,9 +1913,7 @@ function legalHtml(doc) {
       <h2>Sprostowania</h2>
       <p>Jeśli zauważysz błąd w artykule, napisz do nas na ${mail}. Poprawiamy pomyłki i w razie potrzeby publikujemy sprostowanie.</p>
       <h2>Kontakt z redakcją</h2>
-      <p>E-mail: ${mail}<br>Instagram: <a href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer">@sliska.pl</a><br>Wydawca: ${admin}<br>Adres: ${addr}</p>
-      <h2>Na bieżąco</h2>
-      <p>Zapisz się do newslettera w stopce strony.</p>`;
+      <p>E-mail: ${mail}<br>Instagram: <a href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer">@sliska.pl</a><br>Wydawca: ${admin}<br>Adres: ${addr}</p>`;
   }
   if (doc === 'regulamin') {
     return `<h1>Regulamin serwisu Śliska News</h1>
@@ -1969,16 +1924,14 @@ function legalHtml(doc) {
       <h2>2. Treści Serwisu</h2>
       <p>Artykuły, zdjęcia, grafiki, logo i inne treści w Serwisie są chronione prawem autorskim. Kopiowanie i rozpowszechnianie ich w całości lub w części wymaga zgody redakcji, z wyjątkiem przypadków dozwolonych przez prawo (np. prawo cytatu, z podaniem źródła i linkiem do Serwisu).</p>
       <p>Recenzje i oceny liczbowe wyrażają subiektywną opinię autora. Teksty mają charakter informacyjny i publicystyczny. Dokładamy starań, aby informacje były rzetelne, ale nie możemy zagwarantować, że są wolne od błędów. O pomyłkach prosimy informować pod adresem ${mail} – poprawiamy je i w razie potrzeby publikujemy sprostowanie.</p>
-      <h2>3. Newsletter</h2>
-      <p>Zapis do newslettera jest dobrowolny i bezpłatny. Zapisując się, podajesz adres e-mail i wyrażasz zgodę na otrzymywanie wiadomości z informacjami o nowych artykułach. Z newslettera możesz zrezygnować w każdej chwili – przez link w wiadomości albo pisząc na ${mail}. Zasady przetwarzania danych opisuje <a href="#/prywatnosc">Polityka prywatności</a>.</p>
-      <h2>4. Zgłaszanie tematów</h2>
+      <h2>3. Zgłaszanie tematów</h2>
       <p>Każdy może przesłać redakcji zgłoszenie przez formularz „Zgłoś temat”. Wysyłając zgłoszenie, oświadczasz, że masz prawo przekazać zawarte w nim informacje i materiały oraz że nie naruszają one praw osób trzecich ani przepisów prawa. Prosimy nie przesyłać treści bezprawnych, obraźliwych ani danych wrażliwych.</p>
       <p>Redakcja nie gwarantuje odpowiedzi ani publikacji. Nadesłane informacje mogą posłużyć jako inspiracja do własnych tekstów. Przekazanie zgłoszenia nie oznacza przeniesienia autorskich praw majątkowych, a ewentualne wykorzystanie nadesłanych materiałów wymaga odrębnej zgody ich autora.</p>
-      <h2>5. Odpowiedzialność</h2>
+      <h2>4. Odpowiedzialność</h2>
       <p>Redakcja nie odpowiada za treść zewnętrznych stron, do których prowadzą linki w Serwisie, ani za przerwy w działaniu Serwisu wynikające z przyczyn niezależnych od niej.</p>
-      <h2>6. Reklamacje i kontakt</h2>
+      <h2>5. Reklamacje i kontakt</h2>
       <p>Uwagi i reklamacje dotyczące działania Serwisu można zgłaszać na adres ${mail}. Odpowiadamy w rozsądnym terminie, zwykle do 14 dni.</p>
-      <h2>7. Zmiany regulaminu</h2>
+      <h2>6. Zmiany regulaminu</h2>
       <p>Regulamin może się zmieniać. Aktualna wersja jest zawsze dostępna w Serwisie, a data jej obowiązywania podana na początku dokumentu.</p>`;
   }
   return `<h1>Polityka prywatności</h1>
@@ -1987,21 +1940,18 @@ function legalHtml(doc) {
     <p>Administratorem Twoich danych osobowych jest ${admin}, ${addr}. Kontakt w sprawach danych osobowych: ${mail}.</p>
     <h2>2. Jakie dane przetwarzamy i po co</h2>
     <ul>
-      <li><strong>Newsletter</strong> – adres e-mail i data zapisu. Cel: wysyłanie informacji o nowych artykułach. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Dane przechowujemy do czasu wycofania zgody.</li>
       <li><strong>Zgłoś temat</strong> – treść zgłoszenia, opcjonalnie link i adres e-mail. Cel: rozpatrzenie zgłoszenia i ewentualny kontakt zwrotny. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Dane przechowujemy do czasu rozpatrzenia zgłoszenia, nie dłużej niż 12 miesięcy.</li>
       <li><strong>Dane techniczne</strong> – podczas wizyty w Serwisie serwery (hosting i usługi Google Firebase) mogą zapisywać w dziennikach adres IP, rodzaj przeglądarki i czas wizyty. Cel: zapewnienie działania i bezpieczeństwa Serwisu. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO).</li>
     </ul>
-    <p>Podanie danych jest dobrowolne, ale bez adresu e-mail nie możemy zapisać Cię do newslettera.</p>
+    <p>Podanie danych jest dobrowolne.</p>
     <h2>3. Komu przekazujemy dane</h2>
-    <p>Dane przetwarzają w naszym imieniu dostawcy usług: Google (usługa Firebase – baza danych oraz dostarczanie skryptów strony)${tool} oraz dostawca hostingu strony. Dane mogą być przetwarzane poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych lub innych zabezpieczeń przewidzianych w RODO. Nie sprzedajemy danych i nie przekazujemy ich reklamodawcom.</p>
+    <p>Dane przetwarzają w naszym imieniu dostawcy usług: Google (usługa Firebase – baza danych oraz dostarczanie skryptów strony) oraz dostawca hostingu strony. Dane mogą być przetwarzane poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych lub innych zabezpieczeń przewidzianych w RODO. Nie sprzedajemy danych i nie przekazujemy ich reklamodawcom.</p>
     <h2>4. Pliki cookies i pamięć przeglądarki</h2>
-    <p>Serwis nie używa własnych plików cookies reklamowych ani analitycznych. W pamięci Twojej przeglądarki (localStorage) zapisujemy wyłącznie dane techniczne potrzebne do działania strony: wybrany motyw jasny/ciemny, informację o zamknięciu okna newslettera i o zapisie do newslettera oraz licznik ograniczający liczbę zgłoszeń. Zapisane na później artykuły również pamiętamy tylko w Twojej przeglądarce. Niektóre artykuły zawierają osadzone odtwarzacze YouTube (w trybie rozszerzonej prywatności youtube-nocookie.com) lub Spotify; po ich uruchomieniu dane przetwarza odpowiednio Google lub Spotify na własnych zasadach. Możesz je usunąć w ustawieniach przeglądarki. Jeśli w przyszłości dodamy narzędzia analityczne, zaktualizujemy tę politykę.</p>
+    <p>Serwis nie używa własnych plików cookies reklamowych ani analitycznych. W pamięci Twojej przeglądarki (localStorage) zapisujemy wyłącznie dane techniczne potrzebne do działania strony: wybrany motyw jasny/ciemny oraz licznik ograniczający liczbę zgłoszeń. Zapisane na później artykuły również pamiętamy tylko w Twojej przeglądarce. Niektóre artykuły zawierają osadzone odtwarzacze YouTube (w trybie rozszerzonej prywatności youtube-nocookie.com) lub Spotify; po ich uruchomieniu dane przetwarza odpowiednio Google lub Spotify na własnych zasadach. Możesz je usunąć w ustawieniach przeglądarki. Jeśli w przyszłości dodamy narzędzia analityczne, zaktualizujemy tę politykę.</p>
     <h2>5. Twoje prawa</h2>
     <p>Masz prawo do: dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia oraz sprzeciwu wobec przetwarzania opartego na uzasadnionym interesie. Zgodę możesz wycofać w dowolnym momencie – nie wpływa to na zgodność z prawem przetwarzania, którego dokonano przed jej wycofaniem. Aby skorzystać z praw, napisz na ${mail}.</p>
     <p>Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa).</p>
-    <h2>6. Rezygnacja z newslettera</h2>
-    <p>Kliknij link „Wypisz się” w stopce otrzymanej wiadomości albo napisz na ${mail}. Po rezygnacji usuniemy Twój adres z listy wysyłkowej.</p>
-    <h2>7. Zmiany polityki</h2>
+    <h2>6. Zmiany polityki</h2>
     <p>Polityka może być aktualizowana. Aktualna wersja jest zawsze dostępna w Serwisie.</p>`;
 }
 
@@ -2050,71 +2000,7 @@ function renderSaved() {
       : '<div class="empty-state"><p>Nic tu jeszcze nie ma. Na stronie artykułu kliknij „Zapisz”, a wróci tutaj.</p></div>'}`;
 }
 
-/* ---------- Newsletter ---------- */
 function validEmail(v) { return v.length <= 120 && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v); }
-
-function newsMessage(form, text, kind) {
-  const m = $('.news-msg', form);
-  m.textContent = text;
-  m.className = 'news-msg' + (kind ? ' is-' + kind : '');
-}
-
-async function subscribeNewsletter(e) {
-  e.preventDefault();
-  const form = e.currentTarget;
-  if ($('.hp-field', form).value) return; // pole-pułapka dla botów
-  const emailEl = $('.news-email', form);
-  const email = emailEl.value.trim().toLowerCase();
-  if (!validEmail(email)) { newsMessage(form, 'Wpisz poprawny adres e-mail.', 'error'); return; }
-  let known = [];
-  try { known = JSON.parse(localStorage.getItem(CONFIG.SUBSCRIBED_KEY)) || []; } catch { /* ignoruj */ }
-  const btn = $('.news-btn', form);
-  if (known.includes(email)) { newsMessage(form, 'Ten adres jest już zapisany. Dziękujemy!', 'ok'); finishNewsBar(form); return; }
-  btn.disabled = true;
-  try {
-    await DataService.addSubscriber(email);
-    try { localStorage.setItem(CONFIG.SUBSCRIBED_KEY, JSON.stringify([...known, email].slice(-20))); } catch { /* ignoruj */ }
-    emailEl.value = '';
-    newsMessage(form, 'Dziękujemy! Adres został zapisany.', 'ok');
-    finishNewsBar(form);
-  } catch (err) {
-    console.warn(err);
-    newsMessage(form, err.message || 'Nie udało się zapisać. Spróbuj później.', 'error');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-/* Pasek newslettera na dole ekranu: pokazuje się po wejściu, można go zamknąć */
-const NEWS_BAR_KEY = 'sliska_news_bar_until';
-
-function newsBarSnooze(days) {
-  try { localStorage.setItem(NEWS_BAR_KEY, String(Date.now() + days * 864e5)); } catch { /* ignoruj */ }
-}
-
-function hideNewsBar() {
-  $('#news-bar').hidden = true;
-  document.body.classList.remove('has-news-bar');
-}
-
-function finishNewsBar(form) {
-  if (form.id !== 'news-bar-form') return;
-  newsBarSnooze(365);
-  setTimeout(hideNewsBar, 2500);
-}
-
-function maybeShowNewsBar() {
-  let until = 0;
-  let subscribed = false;
-  try { until = Number(localStorage.getItem(NEWS_BAR_KEY)) || 0; } catch { /* ignoruj */ }
-  try { subscribed = (JSON.parse(localStorage.getItem(CONFIG.SUBSCRIBED_KEY)) || []).length > 0; } catch { /* ignoruj */ }
-  if (until > Date.now() || subscribed) return;
-  setTimeout(() => {
-    if (Auth.isAdmin() || currentRoute().name === 'editor' || $$('.modal').some(m => !m.hidden)) return;
-    $('#news-bar').hidden = false;
-    document.body.classList.add('has-news-bar');
-  }, 1200);
-}
 
 function downloadFile(name, text, mime) {
   const blob = new Blob([text], { type: mime });
@@ -2128,51 +2014,15 @@ function downloadFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-function uniqueSubs(list) {
-  const seen = new Set();
-  return list.filter(s => {
-    const k = String(s.email || '').toLowerCase();
-    if (!k || seen.has(k)) return false;
-    seen.add(k);
-    return true;
-  });
-}
-
-async function renderSubs() {
-  const el = $('#panel-subs');
-  el.innerHTML = '<p class="muted">Ładowanie…</p>';
-  try {
-    const list = uniqueSubs(await DataService.getSubscribers());
-    state.subs = list;
-    if (currentRoute().name !== 'panel') return;
-    el.innerHTML = `<div class="panel-item">
-      <div class="panel-item-main">
-        <strong>Zapisane adresy: ${list.length}</strong>
-        <span class="muted">${list.length ? 'Ostatni zapis: ' + Utils.formatDate(list[0].createdAt) : 'Na razie nikt się nie zapisał.'}</span>
-      </div>
-      <div class="panel-item-actions"><button type="button" class="btn btn-sm" data-action="subs-csv"${list.length ? '' : ' disabled'}>Pobierz CSV</button></div>
-    </div>`;
-  } catch (err) {
-    console.warn(err);
-    el.innerHTML = '<p class="form-error">Nie udało się wczytać subskrybentów. Sprawdź reguły Firestore dla kolekcji „subscribers”.</p>';
-  }
-}
-
-function downloadSubsCsv() {
-  const rows = ['email,data_zapisu', ...state.subs.map(s => `${String(s.email).replace(/[",\n]/g, '')},${s.createdAt || ''}`)];
-  downloadFile('subskrybenci-' + new Date().toISOString().slice(0, 10) + '.csv', rows.join('\n'), 'text/csv;charset=utf-8');
-}
-
 /* ---------- Kopia zapasowa ---------- */
 async function exportBackup() {
   const btn = $('#backup-export');
   btn.disabled = true;
   try {
-    const [articles, cloudDrafts, profile, subscribers, tips] = await Promise.all([
+    const [articles, cloudDrafts, profile, tips] = await Promise.all([
       DataService.getAllArticles(),
       DataService.getDrafts().catch(() => []),
       DataService.getProfile().catch(() => null),
-      DataService.getSubscribers().catch(() => []),
       DataService.getTips().catch(() => [])
     ]);
     // do kopii trafiają też robocze kopie z tej przeglądarki, których nie ma jeszcze w bazie
@@ -2181,7 +2031,7 @@ async function exportBackup() {
       .filter(([id, b]) => !cloudIds.has(id) && b && b.data)
       .map(([id, b]) => ({ id, articleId: b.articleId || null, savedAt: b.savedAt, ...b.data }));
     const drafts = [...cloudDrafts, ...localDrafts];
-    const data = { app: 'sliska-news', version: 1, exportedAt: new Date().toISOString(), articles, drafts, profile, subscribers, tips };
+    const data = { app: 'sliska-news', version: 1, exportedAt: new Date().toISOString(), articles, drafts, profile, tips };
     downloadFile('sliska-kopia-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(data), 'application/json');
     toast(`Kopia zapisana: ${articles.length} art., ${drafts.length} rob.`);
   } catch (err) {
@@ -2261,7 +2111,6 @@ function clearPointer(draftId) {
 }
 
 async function renderPanel() {
-  renderSubs();
   renderTips();
   const dEl = $('#panel-drafts');
   const sEl = $('#panel-scheduled');
@@ -3606,15 +3455,6 @@ function refreshViews() {
   else if (route.name === 'panel') renderPanel();
 }
 
-/** Strona artykułu otwarta z osobnego adresu: po przejściu gdzie indziej wracamy do adresu głównego. */
-const STATIC_BASE = (() => { try { return new URL(CONFIG.SITE_URL).pathname; } catch { return ''; } })();
-function normalizeStaticPath(r) {
-  if (!document.documentElement.dataset.articleId || !STATIC_BASE) return;
-  if (r.name !== 'article' && location.pathname !== STATIC_BASE && location.pathname.startsWith(STATIC_BASE)) {
-    history.replaceState(null, '', STATIC_BASE + location.search + location.hash);
-  }
-}
-
 /** Pamięta miejsce na liście: po wejściu w artykuł i cofnięciu wracasz dokładnie tam, gdzie byłeś. */
 const ScrollMemory = { cur: location.hash || '#/', prev: '', n: 0, pos: {} };
 const LIST_ROUTES = /^#\/($|kategoria|tag|artysta|ranking|zapisane)/;
@@ -3638,11 +3478,9 @@ function route() {
 function routeCore() {
   leaveEditor();
   const r = currentRoute();
-  normalizeStaticPath(r);
   window.scrollTo({ top: 0, behavior: 'instant' });
   void document.body.offsetHeight;
   document.title = `${CONFIG.SITE_NAME} – najświeższe wiadomości`;
-  if ((r.name === 'legal' || r.name === 'saved') && !$('#news-bar').hidden) hideNewsBar();
 
   if ((r.name === 'editor' || r.name === 'panel' || r.name === 'settings') && !Auth.isAdmin()) {
     location.hash = '#/';
@@ -3828,7 +3666,6 @@ function handleAction(action, id) {
     return;
   }
   if (!Auth.isAdmin()) return;
-  if (action === 'subs-csv') { downloadSubsCsv(); return; }
   if (action === 'delete-tip') { deleteTip(id); return; }
   if (action === 'edit') location.hash = '#/edytor/' + encodeURIComponent(id);
   else if (action === 'delete') openRemoveModal(id);
@@ -4115,12 +3952,6 @@ function bindEvents() {
   $('#view-tip').addEventListener('submit', e => { if (e.target.id === 'tip-form') submitTip(e); });
   $('#view-tip').addEventListener('input', e => { if (e.target.id === 'tip-message') $('#tip-count').textContent = e.target.value.length; });
 
-  // Newsletter i kopia zapasowa
-  $('#news-form').addEventListener('submit', subscribeNewsletter);
-  $('#news-bar-form').addEventListener('submit', subscribeNewsletter);
-  $('#news-bar-close').addEventListener('click', () => { hideNewsBar(); newsBarSnooze(7); });
-  $('#news-bar').addEventListener('click', e => { if (e.target.id === 'news-bar') { hideNewsBar(); newsBarSnooze(7); } });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#news-bar').hidden) { hideNewsBar(); newsBarSnooze(7); } });
   $('#remove-draft').addEventListener('click', () => { const id = removeTarget; closeModal('remove-modal'); unpublishToDraft(id); });
   $('#remove-forever').addEventListener('click', () => { const id = removeTarget; closeModal('remove-modal'); deleteArticle(id); });
   $('#tag-chips').addEventListener('click', e => {
@@ -4254,15 +4085,9 @@ async function main() {
       ? 'Tryb demonstracyjny: dane tylko w tej przeglądarce'
       : 'Brak połączenia z bazą danych';
 
-  // Osobna strona artykułu (news/artykul/…): przejdź na widok aplikacji dla tego artykułu
-  const staticId = document.documentElement.dataset.articleId;
-  if (staticId && !location.hash) {
-    history.replaceState(null, '', location.pathname + location.search + '#/artykul/' + encodeURIComponent(staticId));
-  }
   renderBreaking();
   initStickyVars();
   route();
-  maybeShowNewsBar();
 
   // Zaplanowane artykuły pojawiają się same, gdy nadejdzie ich czas
   setInterval(() => {

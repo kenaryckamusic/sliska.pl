@@ -168,15 +168,12 @@
       <h2 class="section-title">Zaplanowane publikacje</h2>
       <div id="panel-scheduled" class="panel-list"></div>
 
-      <h2 class="section-title">Subskrybenci newslettera</h2>
-      <div id="panel-subs" class="panel-list"></div>
-
       <h2 class="section-title">Zgłoszone tematy</h2>
       <div id="panel-tips" class="panel-list"></div>
 
       <h2 class="section-title">Kopia zapasowa</h2>
       <div class="panel backup-box">
-        <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i listę subskrybentów do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
+        <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i zgłoszone tematy do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
         <div class="backup-actions">
           <button type="button" class="btn btn-primary" id="backup-export">Pobierz kopię (JSON)</button>
           <button type="button" class="btn" id="backup-import">Przywróć z pliku…</button>
@@ -397,19 +394,6 @@
   </div>
 
   <footer class="site-footer">
-    <div class="container wide footer-news">
-      <div class="footer-news-text">
-        <strong>Bądź na bieżąco</strong>
-        <p>Zostaw e-mail, a damy znać o najważniejszych tekstach.</p>
-      </div>
-      <form id="news-form" class="news-form" novalidate>
-        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <input type="text" class="news-email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="Twój adres e-mail" aria-label="Adres e-mail do newslettera">
-        <button type="submit" class="btn btn-primary news-btn">Zapisz mnie</button>
-        <p class="news-msg" aria-live="polite"></p>
-        <p class="news-consent">Zapisując się, wyrażasz zgodę na otrzymywanie wiadomości e-mail od Śliska News. Zgodę możesz wycofać w każdej chwili. <a href="#/prywatnosc">Polityka prywatności</a></p>
-      </form>
-    </div>
     <div class="container wide footer-inner">
       <span>© <span id="year"></span> Śliska News. Wszelkie prawa zastrzeżone.</span>
       <nav class="footer-links" aria-label="Informacje">
@@ -423,7 +407,6 @@
     </div>
   </footer>
 
-  <!--SEO-LINKS--><!--/SEO-LINKS-->
 
   <!-- MODAL: LOGOWANIE -->
   <div class="modal" id="login-modal" hidden>
@@ -557,21 +540,6 @@
         </button>
       </div>
       <div class="modal-actions"><button type="button" class="btn" data-close="remove-modal">Anuluj</button></div>
-    </div>
-  </div>
-
-  <!-- PASEK NEWSLETTERA (do zamknięcia) -->
-  <div class="news-bar" id="news-bar" hidden role="region" aria-label="Zapis do newslettera">
-    <div class="container wide news-bar-inner">
-      <div class="news-bar-text"><strong>Bądź na bieżąco</strong><span>Zostaw e-mail – damy znać o najważniejszych tekstach.</span></div>
-      <form class="news-form" id="news-bar-form" novalidate>
-        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
-        <input type="text" class="news-email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="Twój adres e-mail" aria-label="Adres e-mail do newslettera">
-        <button type="submit" class="btn btn-primary news-btn">Zapisz mnie</button>
-        <p class="news-msg" aria-live="polite"></p>
-        <p class="news-consent">Zapisując się, wyrażasz zgodę na otrzymywanie wiadomości e-mail od Śliska News. Zgodę możesz wycofać w każdej chwili. <a href="#/prywatnosc">Polityka prywatności</a></p>
-      </form>
-      <button type="button" class="news-bar-close" id="news-bar-close" aria-label="Zamknij" title="Zamknij">×</button>
     </div>
   </div>
 
