@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Śliska News – najświeższe wiadomości</title>
+  <meta name="description" content="Śliska News – wiadomości z muzyki, kontrowersji i dram. Codziennie najświeższe informacje.">
+  <meta name="theme-color" content="#d6001c">
+  <meta property="og:site_name" content="Śliska News">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Śliska News">
+  <meta property="og:description" content="Wiadomości z muzyki, kontrowersji i dram.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:url" content="https://sliska.pl/news/">
+  <meta property="og:image" content="https://sliska.pl/news/og-image.png">
+  <link rel="canonical" href="https://sliska.pl/news/">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Śliska News","url":"https://sliska.pl/news/","inLanguage":"pl-PL"}</script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon-48.png" type="image/png" sizes="48x48">
+
+  <!-- Edytor WYSIWYG Quill.js (CDN) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
+    try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+</head>
+<body>
+  <a class="skip-link" id="skip-link" href="#app">Przejdź do treści</a>
+  <div class="read-progress" id="read-progress" hidden></div>
+
+  <!-- PASEK PILNE -->
+  <div id="breaking-bar" class="breaking" hidden>
+    <div class="container breaking-inner">
+      <span class="breaking-label">PILNE</span>
+      <div class="ticker" id="ticker" aria-live="off"><div class="ticker-track" id="ticker-track"></div></div>
+    </div>
+  </div>
+
+  <!-- NAGŁÓWEK -->
+  <header class="site-header">
+    <div class="container wide header-top">
+      <a class="logo" id="logo" href="#/" aria-label="Śliska News – strona główna"><svg viewBox="44 42 732 128" role="img" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path class="logo-ink" d="M97.32,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43ZM85.58,79.27h19.13l22.17-22.29h-26.67l-14.64,22.29ZM161.98,58.14h-28.98v101.86h28.98V58.14ZM163.31,160h28.98v-72.19h-28.98v72.19ZM229.72,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43ZM265.4,160h28.98v-20.03l4.2-4.92,16.23,24.95h32.9l-27.82-40.47,26.96-31.72h-32.75l-19.42,23.52h-.29v-53.18h-28.98v101.86ZM364.84,161.3c9.78,0,16.96-2.8,22.03-11.42h.29v10.12h28.26v-48.26c0-16.41-12.61-25.57-36.23-25.57s-36.01,9.16-37.24,25.57h26.52c.51-4.24,3.84-6.56,9.56-6.56,5.29,0,8.7,2.05,8.7,5.2v.27c0,3.96-5.07,5.47-18.55,6.29-16.52,1.03-29.42,6.97-29.42,23.11,0,14.36,10.72,21.26,26.09,21.26ZM374.26,144.28c-4.93,0-8.41-2.19-8.41-5.88s3.62-6.15,9.56-7.11c5.36-.89,8.7-1.64,11.59-2.6v5.74c0,6.43-6.52,9.84-12.75,9.84ZM445.74,121.72c0-8.34,3.84-12.44,10.65-12.44s10.65,4.1,10.65,11.35v39.38h28.98v-45.53c0-17.36-8.77-28.3-25.8-28.3-12.03,0-19.78,5.4-24.85,13.67v-12.03h-28.62v72.19h28.98v-38.28ZM535.11,161.64c20.14,0,36.38-10.46,39.2-25.22h-25.65c-1.59,3.9-6.23,6.22-12.39,6.22-8.41,0-13.48-4.51-13.7-12.17h52.03v-7.31c0-21.67-16.59-36.98-40.07-36.98s-40.07,15.65-40.07,37.73,16.81,37.73,40.65,37.73ZM522.79,115.16c1.01-5.95,5.51-9.43,12.54-9.43s11.52,3.49,12.54,9.43h-25.07ZM589.7,160h29.85l7.9-25.16c1.38-4.51,2.68-9.3,3.99-14.15,1.3,4.85,2.61,9.64,3.99,14.15l7.9,25.16h29.85l23.48-72.19h-31.01l-4.49,19.69c-1.88,8.27-3.55,17.23-5.29,26.11-2.17-8.89-4.35-17.84-6.52-26.11l-5.29-19.69h-25.22l-5.29,19.69c-2.17,8.2-4.35,17.16-6.52,25.98-1.81-8.82-3.62-17.77-5.58-25.98l-4.78-19.69h-30.43l23.48,72.19ZM727.55,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43Z"/><path class="logo-star" transform="translate(181.5 82) scale(1.25) translate(-178.5 -84)" d="M180.88,53.81l2.09,11.29,11.22,2.49-10.1,5.49,1.1,11.43-8.33-7.91-10.53,4.58,4.94-10.37-7.61-8.61,11.39,1.5,5.83-9.9Z"/></svg></a>
+
+      <nav class="main-nav" aria-label="Główna nawigacja">
+        <a class="nav-link" id="nav-home" href="#/"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></a>
+        <a class="nav-link" id="nav-ranking" href="#/ranking"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-7"/></svg><span>Ranking</span></a>
+        <a class="nav-link" id="nav-saved" href="#/zapisane"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Zapisane</span><b class="nav-badge" id="saved-count" hidden></b></a>
+      </nav>
+
+      <div class="search">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="search-input" placeholder="Szukaj w artykułach…" aria-label="Szukaj artykułów" autocomplete="off">
+      </div>
+
+      <div class="auth">
+        <button type="button" class="btn btn-icon theme-toggle" id="btn-theme" aria-label="Przełącz motyw jasny/ciemny" title="Przełącz motyw jasny/ciemny"><svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+        <button type="button" class="btn btn-icon guest-only" id="btn-login" aria-label="Logowanie redakcji" title="Logowanie redakcji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 8.65-8.65"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2.5 2.5"/></svg></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- TREŚĆ (SPA) -->
+  <div class="container wide layout" id="layout" data-view="home">
+
+  <aside class="side-left" id="side-left">
+    <div class="profile-card" id="profile-card">
+      <div class="profile-top">
+        <div class="avatar" id="profile-avatar"></div>
+        <div class="profile-info">
+          <strong id="profile-name">Redaktor</strong>
+          <span class="muted">Zalogowany jako redaktor</span>
+        </div>
+      </div>
+      <div class="profile-actions">
+        <button type="button" class="btn btn-primary btn-block" id="btn-new">+ Napisz artykuł</button>
+        <button type="button" class="btn btn-block" id="btn-panel">Robocze i zaplanowane</button>
+        <button type="button" class="btn btn-block" id="btn-settings">Ustawienia konta</button>
+        <button type="button" class="btn btn-block btn-ghost" id="btn-logout">Wyloguj</button>
+      </div>
+    </div>
+    <div class="side-card">
+      <h2 class="side-title">Kategorie</h2>
+      <nav class="cat-list" id="category-nav" aria-label="Kategorie"></nav>
+    </div>
+    <a class="tip-card" href="#/zglos">
+      <strong>Masz temat?</strong>
+      <span>Podeślij nam newsa albo wskazówkę.</span>
+      <em>Zgłoś temat →</em>
+    </a>
+  </aside>
+
+  <main class="app" id="app">
+
+    <!-- WIDOK: STRONA GŁÓWNA -->
+    <section id="view-home" aria-live="polite">
+      <div id="home-status" class="home-status">Ładowanie wiadomości…</div>
+      <div id="hero-slot"></div>
+      <h2 class="section-title" id="grid-title" hidden>Najnowsze wiadomości</h2>
+        <p class="grid-desc" id="grid-desc" hidden></p>
+      <div class="grid" id="news-grid"></div>
+      <div class="load-more" id="load-more" hidden>
+        <button type="button" class="btn" id="btn-load-more">Pokaż więcej</button>
+      </div>
+    </section>
+
+    <!-- WIDOK: ARTYKUŁ -->
+    <section id="view-article" hidden></section>
+
+    <!-- WIDOK: USTAWIENIA KONTA -->
+    <section id="view-settings" hidden>
+      <div class="article-top">
+        <a class="btn" href="#/">← Powrót do strony głównej</a>
+      </div>
+      <h1 class="panel-title">Ustawienia konta</h1>
+      <form id="settings-form" class="panel settings-form" novalidate>
+        <div class="field">
+          <span class="field-label">Zdjęcie profilowe</span>
+          <div class="settings-avatar">
+            <div class="avatar avatar-lg" id="st-avatar"></div>
+            <div class="settings-avatar-actions">
+              <input type="file" id="st-avatar-file" accept="image/*">
+              <button type="button" class="btn btn-sm btn-danger" id="st-avatar-remove">Usuń zdjęcie</button>
+            </div>
+          </div>
+        </div>
+        <label class="field">
+          <span class="field-label">Nazwa użytkownika</span>
+          <input type="text" id="st-name" maxlength="60" placeholder="Imię i nazwisko / pseudonim" autocomplete="off">
+          <small class="hint">Wyświetlana w panelu bocznym i wstawiana jako domyślny autor nowych artykułów.</small>
+        </label>
+        <p class="form-error" id="st-error" hidden></p>
+        <div><button type="submit" class="btn btn-primary" id="st-save">Zapisz ustawienia</button></div>
+      </form>
+    </section>
+
+    <!-- WIDOK: RANKING OCEN -->
+    <section id="view-ranking" hidden></section>
+
+    <!-- WIDOK: ZAPISANE -->
+    <section id="view-saved" hidden></section>
+
+    <!-- WIDOK: ZGŁOŚ TEMAT -->
+    <section id="view-tip" hidden></section>
+
+    <!-- WIDOK: POLITYKA / REGULAMIN -->
+    <section id="view-legal" hidden></section>
+
+    <!-- WIDOK: 404 -->
+    <section id="view-notfound" hidden></section>
+
+    <!-- WIDOK: PANEL REDAKCJI (robocze i zaplanowane) -->
+    <section id="view-panel" hidden>
+      <div class="article-top">
+        <a class="btn" href="#/">← Powrót do strony głównej</a>
+        <button type="button" class="btn btn-primary" id="panel-new">+ Napisz artykuł</button>
+      </div>
+      <h1 class="panel-title">Robocze i zaplanowane</h1>
+
+      <h2 class="section-title">Wersje robocze</h2>
+      <div id="panel-drafts" class="panel-list"></div>
+
+      <h2 class="section-title">Zaplanowane publikacje</h2>
+      <div id="panel-scheduled" class="panel-list"></div>
+
+      <h2 class="section-title">Subskrybenci newslettera</h2>
+      <div id="panel-subs" class="panel-list"></div>
+
+      <h2 class="section-title">Zgłoszone tematy</h2>
+      <div id="panel-tips" class="panel-list"></div>
+
+      <h2 class="section-title">Kopia zapasowa</h2>
+      <div class="panel backup-box">
+        <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i listę subskrybentów do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
+        <div class="backup-actions">
+          <button type="button" class="btn btn-primary" id="backup-export">Pobierz kopię (JSON)</button>
+          <button type="button" class="btn" id="backup-import">Przywróć z pliku…</button>
+          <input type="file" id="backup-file" accept="application/json,.json" hidden>
+        </div>
+      </div>
+    </section>
+
+    <!-- WIDOK: EDYTOR -->
+    <section id="view-editor" hidden>
+      <form id="editor-form" class="editor" novalidate>
+        <div class="editor-head">
+          <div>
+            <h1 id="editor-heading">Nowy artykuł</h1>
+            <p class="save-status" id="save-status" aria-live="polite"></p>
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="btn btn-ghost" id="btn-focus" title="Ukryj panel boczny i skup się na pisaniu">Tryb pisania</button>
+            <button type="button" class="btn" id="btn-preview">Podgląd</button>
+            <button type="button" class="btn" id="btn-save-draft" title="Ctrl+S">Zapisz roboczą</button>
+            <button type="button" class="btn" id="editor-cancel">Wyjdź</button>
+            <button type="submit" class="btn btn-primary" id="editor-save">Opublikuj</button>
+          </div>
+        </div>
+
+        <div class="editor-banner" id="editor-banner" hidden>
+          <span id="banner-text"></span>
+          <button type="button" class="btn btn-sm" id="banner-discard">Odrzuć</button>
+        </div>
+
+        <div class="editor-grid">
+          <div class="editor-col-main">
+            <div class="field">
+              <div class="field-head">
+                <label class="field-label" for="f-title">Tytuł artykułu *</label>
+                <span class="counter" id="c-title">0/200</span>
+              </div>
+              <input type="text" id="f-title" maxlength="200" placeholder="Wpisz tytuł…" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <div class="field-head">
+                <label class="field-label" for="f-lead">Lead (zajawka) *</label>
+                <span class="field-head-right">
+                  <button type="button" class="link-btn" id="btn-gen-lead" title="Wygeneruj lead na podstawie tytułu i treści – każde kliknięcie daje inną propozycję">Wygeneruj lead</button>
+                  <span class="counter" id="c-lead">0/400</span>
+                </span>
+              </div>
+              <textarea id="f-lead" rows="3" maxlength="400" placeholder="Krótkie wprowadzenie widoczne na stronie głównej i na początku tekstu…"></textarea>
+            </div>
+
+            <div class="field">
+              <span class="field-label">Treść artykułu *</span>
+              <div id="editor-container">
+                <div id="quill"></div>
+              </div>
+              <div class="editor-stats" id="editor-stats"></div>
+              <div class="editor-size" id="editor-size" aria-live="polite"></div>
+              <small class="hint">
+                Skróty: <kbd>##</kbd> + spacja = nagłówek, <kbd>###</kbd> + spacja = podnagłówek, <kbd>&gt;</kbd> + spacja = cytat
+                (Enter na pustej linii kończy cytat), <kbd>-</kbd> + spacja = lista, <kbd>1.</kbd> + spacja = lista numerowana,
+                <kbd>Ctrl</kbd>+<kbd>S</kbd> = zapis wersji roboczej. Zdjęcia możesz wkleić (Ctrl+V) lub przeciągnąć prosto do tekstu. Kliknij zdjęcie lub cytat w tekście, aby je edytować.
+              </small>
+            </div>
+          </div>
+
+          <aside class="editor-col-side">
+            <fieldset class="panel checklist-panel">
+              <legend>Gotowość artykułu</legend>
+              <ul class="checklist" id="checklist"></ul>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Publikacja</legend>
+              <label class="check">
+                <input type="checkbox" id="f-schedule-on">
+                <span>Zaplanuj publikację na później</span>
+              </label>
+              <label class="field" id="schedule-field" hidden>
+                <span class="field-label">Data i godzina publikacji</span>
+                <input type="datetime-local" id="f-schedule-at">
+              </label>
+              <p class="hint" id="publish-hint"></p>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Ustawienia</legend>
+              <div class="field">
+                <span class="field-label">Kategorie * (można wybrać kilka)</span>
+                <div class="cat-picker" id="f-categories"></div>
+              </div>
+              <label class="field">
+                <span class="field-label">Tagi</span>
+                <input type="text" id="f-tags" list="tag-suggest" maxlength="240" placeholder="np. Elizka Sztos, album, premiera" autocomplete="off">
+                <datalist id="tag-suggest"></datalist>
+                <small class="hint">Oddziel przecinkami albo kliknij propozycje poniżej.</small>
+              </label>
+              <div class="tag-chips" id="tag-chips"></div>
+              <label class="field">
+                <span class="field-label">Autor *</span>
+                <input type="text" id="f-author" maxlength="80" placeholder="Imię i nazwisko / Redakcja">
+              </label>
+              <label class="check">
+                <input type="checkbox" id="f-urgent">
+                <span>Oznacz jako PILNE (pasek na górze)</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" id="f-featured">
+                <span>Temat dnia (poprzedni zostanie automatycznie odznaczony)</span>
+              </label>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Zdjęcie główne</legend>
+              <label class="field">
+                <span class="field-label">Adres URL zdjęcia</span>
+                <input type="url" id="f-image-url" placeholder="https://…">
+              </label>
+              <label class="field">
+                <span class="field-label">…lub plik z dysku</span>
+                <input type="file" id="f-image-file" accept="image/*">
+              </label>
+              <label class="field">
+                <span class="field-label">Podpis pod zdjęciem (opcjonalnie)</span>
+                <input type="text" id="f-image-caption" maxlength="200" placeholder="Np. Artysta podczas koncertu">
+              </label>
+              <label class="field">
+                <span class="field-label">Źródło – mały napis na zdjęciu (opcjonalnie)</span>
+                <input type="text" id="f-image-source" maxlength="80" placeholder="Np. Instagram / PAP / fot. Jan Kowalski">
+              </label>
+              <div class="image-preview" id="f-image-preview" hidden>
+                <img alt="Podgląd zdjęcia głównego">
+                <button type="button" class="btn btn-sm btn-danger" id="f-image-remove">Usuń zdjęcie</button>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Recenzja – ocena w kółku</legend>
+              <label class="check">
+                <input type="checkbox" id="f-review-on">
+                <span>Dodaj ocenę (kółko z wynikiem na górze artykułu)</span>
+              </label>
+              <div id="review-fields" hidden>
+                <div class="panel-review-grid">
+                  <label class="field">
+                    <span class="field-label">Ocena (0–10) *</span>
+                    <input type="text" id="f-review-score" inputmode="decimal" placeholder="np. 6,4" maxlength="4">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Rodzaj</span>
+                    <select id="f-review-kind">
+                      <option value="Albumy">Albumy</option>
+                      <option value="Single">Single</option>
+                      <option value="Epki">Epki</option>
+                      <option value="Reedycje">Reedycje</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="field">
+                  <span class="field-label">Tytuł ocenianego dzieła *</span>
+                  <input type="text" id="f-review-work" maxlength="120" placeholder="Np. marroW">
+                </label>
+                <div class="panel-review-grid">
+                  <label class="field">
+                    <span class="field-label">Wykonawca / twórca</span>
+                    <input type="text" id="f-review-artist" maxlength="120" placeholder="Np. brakence">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Rok</span>
+                    <input type="text" id="f-review-year" maxlength="4" inputmode="numeric" placeholder="2026">
+                  </label>
+                </div>
+                <div class="field">
+                  <span class="field-label">Okładka (pojawi się po prawej stronie ramki) *</span>
+                  <label class="check">
+                    <input type="checkbox" id="f-review-cover-same">
+                    <span>Okładka taka sama jak zdjęcie główne artykułu</span>
+                  </label>
+                </div>
+                <div id="cover-fields">
+                  <label class="field">
+                    <span class="field-label">Adres URL okładki</span>
+                    <input type="url" id="f-review-cover-url" placeholder="https://…">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">…lub plik z dysku</span>
+                    <input type="file" id="f-review-cover-file" accept="image/*">
+                  </label>
+                  <div class="image-preview" id="f-review-cover-preview" hidden>
+                    <img alt="Podgląd okładki">
+                    <button type="button" class="btn btn-sm btn-danger" id="f-review-cover-remove">Usuń okładkę</button>
+                  </div>
+                </div>
+              </div>
+            </fieldset>
+
+            <fieldset class="panel">
+              <legend>Ramka faktów (opcjonalnie)</legend>
+              <p class="hint">Pary „Nagłówek – Wartość” wyświetlą się w ramce z boku artykułu (np. Miejsce: Warszawa, Źródło: PAP).</p>
+              <div id="infobox-rows"></div>
+              <button type="button" class="btn btn-sm" id="infobox-add">+ Dodaj wiersz</button>
+            </fieldset>
+          </aside>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <aside class="side-right" id="side-right">
+    <div class="side-head">
+      <h2 class="side-title" id="side-title">Pozostałe artykuły</h2>
+      <a class="side-all" href="#/">Wszystkie</a>
+    </div>
+    <div class="side-list" id="side-list"></div>
+  </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <div class="container wide footer-news">
+      <div class="footer-news-text">
+        <strong>Bądź na bieżąco</strong>
+        <p>Zostaw e-mail, a damy znać o najważniejszych tekstach.</p>
+      </div>
+      <form id="news-form" class="news-form" novalidate>
+        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="text" class="news-email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="Twój adres e-mail" aria-label="Adres e-mail do newslettera">
+        <button type="submit" class="btn btn-primary news-btn">Zapisz mnie</button>
+        <p class="news-msg" aria-live="polite"></p>
+        <p class="news-consent">Zapisując się, wyrażasz zgodę na otrzymywanie wiadomości e-mail od Śliska News. Zgodę możesz wycofać w każdej chwili. <a href="#/prywatnosc">Polityka prywatności</a></p>
+      </form>
+    </div>
+    <div class="container wide footer-inner">
+      <span>© <span id="year"></span> Śliska News. Wszelkie prawa zastrzeżone.</span>
+      <nav class="footer-links" aria-label="Informacje">
+        <a class="footer-ig" href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer" aria-label="Śliska News na Instagramie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>sliska.pl</span></a>
+        <a href="#/o-nas">O nas i kontakt</a>
+        <a href="#/zglos">Zgłoś temat</a>
+        <a href="#/prywatnosc">Polityka prywatności</a>
+        <a href="#/regulamin">Regulamin</a>
+      </nav>
+      <span id="data-mode" class="data-mode admin-only"></span>
+    </div>
+  </footer>
+
+  <!--SEO-LINKS--><!--/SEO-LINKS-->
+
+  <!-- MODAL: LOGOWANIE -->
+  <div class="modal" id="login-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <h2 id="login-title">Logowanie redaktora</h2>
+      <form id="login-form" novalidate>
+        <label class="field" id="login-email-field" hidden>
+          <span class="field-label">E-mail</span>
+          <input type="text" id="login-email" inputmode="email" autocomplete="username" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">Hasło</span>
+          <input type="password" id="login-password" autocomplete="current-password">
+        </label>
+        <p class="form-error" id="login-error" hidden>Nieprawidłowe hasło.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" data-close="login-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zaloguj</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ZDJĘCIE W TREŚCI (wstawianie / edycja) -->
+  <div class="modal" id="image-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="image-title">
+      <h2 id="image-title">Wstaw zdjęcie do tekstu</h2>
+      <form id="image-form" novalidate>
+        <label class="field">
+          <span class="field-label">Adres URL zdjęcia</span>
+          <input type="url" id="im-url" placeholder="https://…">
+        </label>
+        <label class="field">
+          <span class="field-label">…lub plik z dysku</span>
+          <input type="file" id="im-file" accept="image/*">
+        </label>
+        <div class="image-preview" id="im-preview" hidden>
+          <img alt="Podgląd zdjęcia">
+        </div>
+        <label class="field">
+          <span class="field-label">Podpis pod zdjęciem (opcjonalnie)</span>
+          <input type="text" id="im-caption" maxlength="200" placeholder="Np. Koncert na Stadionie Narodowym">
+        </label>
+        <label class="field">
+          <span class="field-label">Źródło – mały napis na zdjęciu (opcjonalnie)</span>
+          <input type="text" id="im-source" maxlength="80" placeholder="Np. PAP / Instagram / fot. Jan Kowalski">
+        </label>
+        <p class="form-error" id="im-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="im-delete" hidden>Usuń zdjęcie</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="image-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="im-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CYTAT (wstawianie / edycja) -->
+  <div class="modal" id="embed-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="embed-title">
+      <h2 id="embed-title">Wstaw film lub odtwarzacz</h2>
+      <form id="embed-form" novalidate>
+        <label class="field">
+          <span class="field-label">Link do YouTube lub Spotify *</span>
+          <input type="text" id="em-url" maxlength="300" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=… albo https://open.spotify.com/track/…">
+        </label>
+        <p class="field-hint">Działają linki do filmów YouTube oraz do utworów, albumów, playlist, artystów i odcinków Spotify.</p>
+        <p class="form-error" id="em-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="em-delete" hidden>Usuń</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="embed-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="em-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="quote-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="quote-title">
+      <h2 id="quote-title">Wstaw cytat</h2>
+      <form id="quote-form" novalidate>
+        <label class="field">
+          <span class="field-label">Treść cytatu *</span>
+          <textarea id="qm-text" rows="4" maxlength="800" placeholder="Wpisz cytat… (Enter = nowa linia w cytacie)"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Źródło cytatu (opcjonalnie)</span>
+          <input type="text" id="qm-source" maxlength="150" placeholder="Np. wywiad dla Radia Zet, post na Instagramie">
+        </label>
+        <label class="field">
+          <span class="field-label">Kto to powiedział (opcjonalnie)</span>
+          <input type="text" id="qm-author" maxlength="100" placeholder="Np. Jan Kowalski">
+        </label>
+        <p class="form-error" id="qm-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="qm-delete" hidden>Usuń cytat</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="quote-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="qm-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PODGLĄD ARTYKUŁU -->
+  <div class="modal" id="preview-modal" hidden>
+    <div class="modal-box modal-box-wide" role="dialog" aria-modal="true" aria-label="Podgląd artykułu">
+      <div class="preview-bar">
+        <strong>Podgląd – tak zobaczą to czytelnicy</strong>
+        <button type="button" class="btn btn-sm" data-close="preview-modal">Zamknij</button>
+      </div>
+      <div class="preview-body" id="preview-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: USUWANIE ARTYKUŁU -->
+  <div class="modal" id="remove-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="remove-title">
+      <h2 id="remove-title">Co zrobić z artykułem?</h2>
+      <p class="muted" id="remove-name"></p>
+      <div class="remove-choices">
+        <button type="button" class="remove-choice" id="remove-draft">
+          <strong>Schowaj do wersji roboczych</strong>
+          <span>Znika ze strony, ale zostaje w „Robocze i zaplanowane” – możesz go poprawić i opublikować ponownie.</span>
+        </button>
+        <button type="button" class="remove-choice is-danger" id="remove-forever">
+          <strong>Usuń na zawsze</strong>
+          <span>Artykuł znika bezpowrotnie (chyba że masz kopię zapasową).</span>
+        </button>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" data-close="remove-modal">Anuluj</button></div>
+    </div>
+  </div>
+
+  <!-- PASEK NEWSLETTERA (do zamknięcia) -->
+  <div class="news-bar" id="news-bar" hidden role="region" aria-label="Zapis do newslettera">
+    <div class="container wide news-bar-inner">
+      <div class="news-bar-text"><strong>Bądź na bieżąco</strong><span>Zostaw e-mail – damy znać o najważniejszych tekstach.</span></div>
+      <form class="news-form" id="news-bar-form" novalidate>
+        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <input type="text" class="news-email" inputmode="email" autocomplete="email" spellcheck="false" placeholder="Twój adres e-mail" aria-label="Adres e-mail do newslettera">
+        <button type="submit" class="btn btn-primary news-btn">Zapisz mnie</button>
+        <p class="news-msg" aria-live="polite"></p>
+        <p class="news-consent">Zapisując się, wyrażasz zgodę na otrzymywanie wiadomości e-mail od Śliska News. Zgodę możesz wycofać w każdej chwili. <a href="#/prywatnosc">Polityka prywatności</a></p>
+      </form>
+      <button type="button" class="news-bar-close" id="news-bar-close" aria-label="Zamknij" title="Zamknij">×</button>
+    </div>
+  </div>
+
+  <button type="button" class="to-top" id="to-top" aria-label="Przewiń na górę" hidden>↑</button>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
