@@ -36,6 +36,7 @@ const CONFIG = {
   // Jeśli go podasz, panel redaktora odblokuje się tylko dla tego konta.
   // Prawdziwą ochroną zapisu są i tak reguły Firestore.
   ADMIN_UID: '',
+  LEGACY_PROFILE_UID: 'BxuILURRczbzyR2SWZg4jMltO0B3',   // konto, które dostaje dotychczasowy wspólny profil (nazwa i zdjęcie)
 
   MAX_ARTICLES: 40,        // ile najnowszych artykułów pobierać z bazy (oszczędza limit odczytów)
   PAGE_SIZE: 12,           // ile kafli pokazywać na stronie głównej, zanim pojawi się „Pokaż więcej”
@@ -537,11 +538,16 @@ function seedArticles() {
    getDrafts, getDraft, saveDraft, removeDraft
    ========================================================= */
 const PROFILE_KEY = 'sliska_profile_v1';
+/** Profil (nazwa, zdjęcie) jest osobny dla każdego redaktora – także jego kopia w przeglądarce. */
+function profileCacheKey() {
+  const uid = Auth.uid();
+  return uid && uid !== 'local' ? `${PROFILE_KEY}_${uid}` : PROFILE_KEY;
+}
 function readLocalProfile() {
-  try { return JSON.parse(localStorage.getItem(PROFILE_KEY)); } catch { return null; }
+  try { return JSON.parse(localStorage.getItem(profileCacheKey())); } catch { return null; }
 }
 function writeLocalProfile(p) {
-  try { localStorage.setItem(PROFILE_KEY, JSON.stringify(p)); } catch { /* ignoruj */ }
+  try { localStorage.setItem(profileCacheKey(), JSON.stringify(p)); } catch { /* ignoruj */ }
 }
 
 const LocalProvider = {
@@ -755,14 +761,22 @@ const FirebaseProvider = {
   },
 
   async getProfile() {
-    const snap = await this.db.collection('meta').doc('profile').get();
-    return snap.exists ? snap.data() : null;
+    const user = this.auth.currentUser;
+    if (!user) return null;
+    const own = await this.db.collection('meta').doc('profile_' + user.uid).get();
+    if (own.exists) return own.data();
+    // dotychczasowy, wspólny profil przechodzi tylko na pierwsze konto redakcji; nowe konta zaczynają od pustego
+    if (CONFIG.LEGACY_PROFILE_UID && user.uid === CONFIG.LEGACY_PROFILE_UID) {
+      const old = await this.db.collection('meta').doc('profile').get();
+      return old.exists ? old.data() : null;
+    }
+    return null;
   },
 
   async saveProfile(p) {
     if (!this.auth.currentUser) throw new Error('Zaloguj się, aby zapisać ustawienia.');
     try {
-      await this.db.collection('meta').doc('profile').set(p);
+      await this.db.collection('meta').doc('profile_' + this.auth.currentUser.uid).set(p);
     } catch (err) {
       throw this._wrap(err);
     }
@@ -980,6 +994,7 @@ const state = {
   visible: CONFIG.PAGE_SIZE,
   profile: { name: '', avatar: '' },
   profileLoaded: false,
+  profileUid: '',
   lastTick: Date.now()
 };
 
@@ -2279,7 +2294,7 @@ async function deleteArticle(id) {
 /* ---------- Edytor: dane formularza ---------- */
 function defaultAuthor() {
   let last = '';
-  try { last = localStorage.getItem(CONFIG.AUTHOR_KEY) || ''; } catch { /* ignoruj */ }
+  try { last = localStorage.getItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid()) || ''; } catch { /* ignoruj */ }
   return state.profile.name || last;
 }
 
@@ -3257,7 +3272,7 @@ async function saveArticle(e) {
   try {
     await DataService.save(article);
     upsertLocalState(article);
-    try { localStorage.setItem(CONFIG.AUTHOR_KEY, author); } catch { /* ignoruj */ }
+    try { localStorage.setItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid(), author); } catch { /* ignoruj */ }
 
     rememberTags(article.tags);
 
@@ -3603,7 +3618,8 @@ function applyAuthUI() {
     location.hash = '#/';
     return;
   }
-  if (Auth.isAdmin()) loadProfile(); else renderProfile();
+  if (Auth.isAdmin()) loadProfile();
+  else { state.profile = { name: '', avatar: '' }; state.profileLoaded = false; state.profileUid = ''; renderProfile(); }
   refreshViews();
 }
 
@@ -3620,6 +3636,8 @@ function renderProfile() {
 }
 
 async function loadProfile() {
+  const uid = Auth.uid();
+  if (state.profileUid !== uid) { state.profile = { name: '', avatar: '' }; state.profileLoaded = false; state.profileUid = uid; }   // inne konto = inny profil
   if (state.profileLoaded) { renderProfile(); return; }
   state.profileLoaded = true;
   const cached = readLocalProfile();
