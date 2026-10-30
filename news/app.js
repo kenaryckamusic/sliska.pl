@@ -1262,8 +1262,7 @@ function heroHtml(a, useCover) {
   return `<section class="hero" data-id="${Utils.esc(a.id)}" aria-label="Temat dnia">
     <img class="hero-img" src="${Utils.esc(thumbFor(a, useCover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">
     <div class="hero-content">
-      <span class="hero-flag">Temat dnia</span>
-      <div>${Utils.chipsHtml(a)}</div>
+      <div class="hero-tags"><span class="hero-flag">Temat dnia</span>${Utils.chipsHtml(a)}</div>
       <h2 class="hero-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h2>
       <p class="hero-lead">${Utils.esc(a.lead)}</p>
       <div class="card-meta">

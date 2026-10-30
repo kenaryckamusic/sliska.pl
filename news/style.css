@@ -1481,7 +1481,6 @@ body.has-news-bar .toast { bottom: 110px; }
 .article-body p + p { margin-top: .9em; }
 .article-body p:empty { display: none; }
 .article-body h2 { border-bottom: 0; padding-bottom: 0; font-size: 1.6rem; letter-spacing: -.015em; margin-top: 1.6em; }
-.article-body > p:first-of-type::first-letter { font-weight: 800; }
 .article-top .btn, .article-top button { border-radius: 999px; }
 
 /* Stopka */
@@ -1607,3 +1606,10 @@ input[type="file"]::file-selector-button:hover { border-color: var(--accent); co
   .footer-links .footer-ig { padding: 11px 16px; margin-bottom: 6px; }
   .footer-inner > span:first-child { padding-top: 12px; margin-top: 4px; }
 }
+
+/* Temat dnia + kategoria w jednej linii; brak pogrubionej pierwszej litery w artykule */
+.hero-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.hero-tags .hero-flag { margin-bottom: 0; white-space: nowrap; }
+.hero-tags .chips { display: inline-flex; flex-wrap: nowrap; gap: 6px; }
+.hero-tags .chip { white-space: nowrap; }
+.article-body p::first-letter { font-weight: inherit; }

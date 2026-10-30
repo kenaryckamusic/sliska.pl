@@ -18,7 +18,7 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 
-export const CFG = {
+const CFG = {
   SITE_URL: 'https://sliska.pl/news/',     // adres folderu ze stroną (z ukośnikiem na końcu)
   SITE_NAME: 'Śliska News',
   SITE_DESC: 'Wiadomości z muzyki, kontrowersji i dram. Codziennie najświeższe informacje.',
@@ -49,7 +49,7 @@ export function slugify(text) {
 }
 
 const folderName = a => `${slugify(a.title)}-${a.id}`;
-export const articleUrl = a => `${CFG.SITE_URL}artykul/${folderName(a)}/`;
+const articleUrl = a => `${CFG.SITE_URL}artykul/${folderName(a)}/`;
 
 function writeIfChanged(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
@@ -84,7 +84,7 @@ export function fromFields(fields) {
   return out;
 }
 
-export async function loadArticles() {
+async function loadArticles() {
   if (process.env.NEWS_SOURCE_FILE) {
     return JSON.parse(fs.readFileSync(process.env.NEWS_SOURCE_FILE, 'utf8'));
   }
