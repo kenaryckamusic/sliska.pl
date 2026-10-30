@@ -1643,3 +1643,6 @@ a, button, .chip, .chip-btn, summary { touch-action: manipulation; -webkit-tap-h
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .article-body p, .card-lead, .hero-lead, .legal p { text-wrap: pretty; }
 @media print { .article-pager { display: none !important; } }
+
+/* Recenzja (ocena + okładka) pod tekstem artykułu */
+.article-main .review { margin: 36px 0 8px; }

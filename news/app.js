@@ -1129,7 +1129,7 @@ function reviewHtml(a) {
   const coverSrc = coverOf(a);
   const same = reviewSameCover(a);
   const cover = coverSrc
-    ? `<figure class="review-cover"><div class="media-wrap"><img src="${Utils.esc(coverSrc)}" alt="Okładka: ${Utils.esc(r.work)}" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">${same ? sourceTag(a.imageSource) : ''}</div>${same && a.imageCaption ? `<figcaption>${Utils.esc(a.imageCaption)}</figcaption>` : ''}</figure>`
+    ? `<figure class="review-cover"><div class="media-wrap"><img src="${Utils.esc(coverSrc)}" alt="Okładka: ${Utils.esc(r.work)}" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}"></div></figure>`
     : '';
   return `<section class="review ${cover ? '' : 'review-nocover'}" aria-label="Ocena">
     ${scoreHtml(r.score)}
@@ -1389,7 +1389,7 @@ function articleHtml(a, plain) {
   const minutes = Utils.readingTime(a, plain);
   const hasReview = !!(a.review && a.review.score !== null && a.review.score !== undefined);
   // Przy recenzji z osobną okładką zdjęcie główne też jest widoczne; gdy okładka = zdjęcie główne, pokazujemy je tylko w ramce oceny
-  const showHero = !hasReview || (a.image && !reviewSameCover(a));
+  const showHero = !hasReview || !!a.image;
   const heroFig = showHero
     ? `<figure class="article-hero">
         <div class="media-wrap"><img src="${Utils.esc(getImage(a))}" alt="${Utils.esc(a.title)}" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">${sourceTag(a.imageSource)}</div>
@@ -1421,12 +1421,12 @@ function articleHtml(a, plain) {
           <span>Czas czytania: ${minutes} min</span>
         </div>
       </header>
-      ${hasReview ? reviewHtml(a) : ''}
       ${heroFig}
       <div class="article-layout ${info.length ? 'has-infobox' : ''}">
         <div class="article-main">
           <p class="article-lead">${Utils.esc(a.lead)}</p>
           <div class="article-body">${Sanitizer.render(a.content)}</div>
+          ${hasReview ? reviewHtml(a) : ''}
           ${tagsBlockHtml(a)}
           ${shareBarHtml(a)}
         </div>
