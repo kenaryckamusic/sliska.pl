@@ -4,16 +4,32 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Spotted Śliska 10</title>
+<meta name="description" content="Witamy na Śliskiej – dom Spotted Śliska 10: Śliska Music Group, CRACK Recordings, Sunopedia i Śliska News z newsami ze sceny.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Spotted Śliska 10">
+<meta property="og:title" content="Spotted Śliska 10 – witamy na Śliskiej">
+<meta property="og:description" content="Śliska Music Group, CRACK Recordings, Sunopedia i Śliska News – wszystko, co dzieje się na Śliskiej.">
+<meta property="og:url" content="https://sliska.pl/">
+<meta property="og:image" content="https://sliska.pl/og-sliska.png?v=1">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Spotted Śliska 10 – witamy na Śliskiej">
+<meta name="twitter:description" content="Śliska Music Group, CRACK Recordings, Sunopedia i Śliska News.">
+<meta name="twitter:image" content="https://sliska.pl/og-sliska.png?v=1">
+<link rel="icon" type="image/svg+xml" href="/news/favicon.svg">
 <meta name="theme-color" content="#000000">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
   --forest:#000;
   --frost:#fff;
   --display:'Anton','Arial Narrow',sans-serif;
+  --news:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --accent:#d6001c;
   --ui:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box}
@@ -27,19 +43,27 @@ a{color:inherit}
 .stage__mobile-image{display:none}
 .stage::before{content:"";position:absolute;inset:0;background:linear-gradient(to bottom,rgba(0,0,0,.22),rgba(0,0,0,.26) 55%,rgba(0,0,0,.46))}
 
-/* napis w lewym dolnym rogu */
-.title{position:absolute;left:clamp(1rem,4vw,2.5rem);bottom:calc(3.2rem + env(safe-area-inset-bottom,0px));margin:0;max-width:calc(100% - 2rem);
-  font-family:var(--display);font-weight:400;font-size:clamp(2.1rem,3.6vw,2.9rem);line-height:1.2;letter-spacing:.24em;text-align:left;color:var(--frost);
-  text-shadow:0 1px 2px rgba(0,0,0,.28),0 4px 22px rgba(0,0,0,.4);opacity:0;animation:title-appear .9s ease-out .15s forwards}
+/* ramka jak na grafikach Śliska News */
+.frame{position:fixed;inset:18px;z-index:5;border:1.5px solid rgba(255,255,255,.22);border-radius:28px;pointer-events:none}
+
+/* blok w lewym dolnym rogu: kicker, napis i przycisk do Śliska News */
+.hero{position:absolute;left:clamp(1.6rem,5vw,3.4rem);bottom:calc(4.4rem + env(safe-area-inset-bottom,0px));max-width:calc(100% - 3rem);opacity:0;animation:title-appear .9s ease-out .15s forwards}
+.kicker{display:flex;align-items:center;gap:.9rem;margin:0 0 1rem;font-family:var(--news);font-weight:800;font-size:clamp(.62rem,1.5vw,.78rem);letter-spacing:.17em;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.4)}
+.kicker i{display:block;width:2.6rem;height:4px;background:var(--accent)}
+.title{margin:0;font-family:var(--news);font-weight:900;font-size:clamp(2.4rem,6.2vw,5.4rem);line-height:1.02;letter-spacing:-.025em;text-align:left;color:var(--frost);
+  text-shadow:0 1px 2px rgba(0,0,0,.28),0 4px 22px rgba(0,0,0,.4)}
 .title__mobile{display:none}
+.cta{display:inline-flex;align-items:center;gap:.6rem;margin-top:1.6rem;padding:.85rem 1.5rem;border-radius:999px;color:#fff;text-decoration:none;font-family:var(--news);font-weight:800;font-size:.95rem;letter-spacing:.01em;
+  background:linear-gradient(135deg,#f2002a,#8a0014);box-shadow:0 10px 30px rgba(214,0,28,.38);transition:transform .2s,box-shadow .2s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 14px 36px rgba(214,0,28,.5)}
+.cta:focus-visible{outline:2px solid #fff;outline-offset:4px}
 @keyframes title-appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 
-/* cienki szklany panel u góry */
-.nav{position:fixed;top:0;left:50%;transform:translateX(-50%);z-index:10;width:fit-content;max-width:calc(100% - 20px);
-  display:flex;justify-content:center;align-items:center;gap:clamp(.75rem,4vw,2.4rem);
-  padding:calc(.5rem + env(safe-area-inset-top,0px)) clamp(.8rem,3vw,1.4rem) .55rem;
-  background:rgba(0,0,0,.3);-webkit-backdrop-filter:blur(14px) saturate(1.15);backdrop-filter:blur(14px) saturate(1.15);
-  border:1px solid rgba(255,255,255,.1);border-top:0;border-radius:0 0 16px 16px}
+/* panel nawigacji: prosta szklana pigułka, osadzona na górnej linii ramki */
+.nav{position:fixed;top:calc(38px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);z-index:10;width:fit-content;max-width:calc(100% - 64px);
+  display:flex;justify-content:center;align-items:center;gap:clamp(.75rem,4vw,2.4rem);padding:.55rem clamp(1rem,3vw,1.8rem);
+  background:rgba(0,0,0,.88);-webkit-backdrop-filter:blur(14px) saturate(1.15);backdrop-filter:blur(14px) saturate(1.15);
+  border:1px solid rgba(255,255,255,.14);border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
 .nav a{position:relative;color:rgba(255,255,255,.94);text-decoration:none;font-weight:400;font-size:clamp(.7rem,2.8vw,.86rem);letter-spacing:0;white-space:nowrap;padding:.3rem 0}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:.1rem;height:1px;background:currentColor;opacity:0;transition:opacity .2s}
 .nav a:hover::after,.nav a:focus-visible::after{opacity:.8}
@@ -52,9 +76,9 @@ a{color:inherit}
 .nav__group .nav__sub-link{padding:0;font-size:.7em}
 
 /* cienki dolny pasek */
-.bar{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:0 1.5rem;flex-wrap:wrap;
-  padding:.15rem clamp(1rem,4vw,2.5rem) calc(.15rem + env(safe-area-inset-bottom,0px));
-  background:rgba(0,0,0,.34);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border-top:1px solid rgba(255,255,255,.09);
+.bar{position:fixed;left:18px;right:18px;bottom:18px;z-index:10;display:flex;justify-content:space-between;align-items:center;gap:0 1.5rem;flex-wrap:wrap;
+  padding:.35rem clamp(1.4rem,3.4vw,2.2rem) calc(.35rem + env(safe-area-inset-bottom,0px));
+  background:linear-gradient(to top,rgba(0,0,0,.45),rgba(0,0,0,0));border-radius:0 0 26px 26px;
   font-size:.72rem;color:rgba(244,246,241,.72)}
 .bar__ig{display:inline-flex;align-items:center;gap:.45rem;padding:.5rem 0;color:var(--frost);font-weight:400;text-decoration:none}
 .bar__ig:hover{opacity:.65}
@@ -63,22 +87,21 @@ a{color:inherit}
 .nav a:focus-visible,.bar__ig:focus-visible{outline:1px solid #fff;outline-offset:4px;border-radius:2px}
 
 /* komputery: logo dokładnie na środku panelu */
-@media (min-width:561px){
-  .nav{display:grid;grid-template-columns:9rem auto 9rem;justify-items:center}
-  .nav>.nav__group{justify-self:end}
-  .nav>a:last-child{justify-self:start}
-}
 /* telefony */
 @media (max-width:560px){
-  .nav{gap:.35rem .9rem;padding-left:.8rem;padding-right:.8rem;flex-wrap:wrap;width:calc(100% - 20px)}
-  .nav a.nav__logo{order:-1;flex:0 0 100%;justify-content:center}
-  .nav a{font-size:clamp(.66rem,3vw,.8rem)}
-  .title{right:0;left:0;bottom:calc(12rem + env(safe-area-inset-bottom,0px));max-width:none;font-size:clamp(1.65rem,8.5vw,2.4rem);letter-spacing:.12em;text-align:center}
+  .frame{inset:12px;border-radius:24px}
+  .nav{top:calc(28px + env(safe-area-inset-top,0px));gap:.7rem;padding:.5rem .95rem;max-width:calc(100% - 40px)}
+  .nav a{font-size:.66rem}
+  .nav__logo-svg{height:14px}
+  .hero{right:0;left:0;bottom:calc(4.6rem + env(safe-area-inset-bottom,0px));max-width:none;padding:0 1.6rem;text-align:center}
+  .kicker{justify-content:center;gap:.6rem}.kicker i{width:1.6rem}
+  .title{font-size:clamp(2.1rem,11vw,3.2rem);text-align:center}
+  .cta{margin-top:1.3rem}
   .title__desktop{display:none}
   .title__mobile{display:inline}
   .stage__video{display:none}
   .stage__mobile-image{display:block;object-position:42% 36%}
-  .bar{justify-content:center;text-align:center;font-size:.68rem}
+  .bar{left:12px;right:12px;bottom:12px;border-radius:0 0 22px 22px;justify-content:center;text-align:center;font-size:.68rem}
   .bar__rights{display:none}
 }
 @media (max-height:460px){
@@ -86,11 +109,12 @@ a{color:inherit}
 }
 @media (prefers-reduced-motion:reduce){
   .nav a::after{transition:none}
-  .title{opacity:1;animation:none}
+  .hero{opacity:1;animation:none}
 }
 </style>
 </head>
 <body>
+<div class="frame" aria-hidden="true"></div>
 
 <nav class="nav" aria-label="Główna nawigacja">
   <div class="nav__group">
@@ -109,7 +133,7 @@ a{color:inherit}
   <use href="#snw-ink" fill="#ffffff" mask="url(#snw-thin)"/>
   <path fill="#ffffff" transform="translate(181.5 82) scale(1.25) translate(-178.5 -84)" d="M180.88,53.81l2.09,11.29,11.22,2.49-10.1,5.49,1.1,11.43-8.33-7.91-10.53,4.58,4.94-10.37-7.61-8.61,11.39,1.5,5.83-9.9Z"/>
 </svg></a>
-  <a href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Fandom Wiki</a>
+  <a class="nav__ext" href="https://sunopedia.fandom.com/pl/wiki/Sunopedia_Wiki" target="_blank" rel="noopener">Fandom Wiki</a>
 </nav>
 
 <main class="stage">
@@ -117,7 +141,11 @@ a{color:inherit}
     <source data-src="sliska.mp4" type="video/mp4">
   </video>
   <img class="stage__img stage__mobile-image" src="img/sliska2.jpg" alt="" draggable="false">
-  <h1 class="title"><span class="title__desktop">WITAMY<br>NA ŚLISKIEJ</span><span class="title__mobile">WITAMY NA<br>ŚLISKIEJ</span></h1>
+  <div class="hero">
+    <p class="kicker"><i></i>MUZYKA · RECENZJE · KONTROWERSJE</p>
+    <h1 class="title"><span class="title__desktop">WITAMY<br>NA ŚLISKIEJ</span><span class="title__mobile">WITAMY NA<br>ŚLISKIEJ</span></h1>
+    <a class="cta" href="/news/">Czytaj Śliska News <span aria-hidden="true">→</span></a>
+  </div>
 </main>
 
 <footer class="bar">

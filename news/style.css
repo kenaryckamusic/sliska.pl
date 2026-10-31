@@ -1903,3 +1903,34 @@ figure.article-gallery figcaption { margin-top: 6px; font: .85rem/1.4 var(--font
 .quick-src-plain { color: var(--text); }
 .quick-src { overflow-wrap: anywhere; }
 .og-box { margin-top: 14px; }
+
+.profile-stats { grid-template-columns: repeat(2, 1fr); }
+/* Modale wyższe niż ekran: przewijanie w górę i w dół (bez ucinania nagłówka) */
+.modal { align-items: flex-start; }
+.modal-box { margin: auto; }
+
+/* Kategorie na górze zdjęcia – małe i smukłe (karty i kafle, jak w Temacie dnia) */
+.card, .tile { position: relative; }
+.img-tags { position: absolute; top: 10px; left: 12px; right: 12px; z-index: 2; display: flex; align-items: center; gap: 5px; overflow: hidden; pointer-events: none; }
+.img-tags a, .img-tags .badge-urgent { pointer-events: auto; }
+.img-tags .chips { display: inline-flex; flex-wrap: nowrap; gap: 5px; }
+.img-tags .chip, .img-tags .badge-urgent, .img-tags .badge-new, .img-tags .badge-status { font-size: .6rem; line-height: 1; padding: 5px 9px; border-radius: 999px; letter-spacing: .06em; white-space: nowrap; box-shadow: none; color: #fff; background: rgba(0, 0, 0, .42); backdrop-filter: blur(6px); }
+.img-tags .badge-urgent { background: var(--accent); }
+.img-tags .badge-new { background: var(--accent); }
+.card-media::after, .tile::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 64px; pointer-events: none; background: linear-gradient(to bottom, rgba(0, 0, 0, .38), transparent); }
+.tile::before { z-index: 1; }
+.card-media { position: relative; }
+.profile-stats b { font-size: 1.25rem; }
+.profile-stats div { background: transparent; border: 1px solid var(--border); padding: 9px 4px; }
+.profile-stats span { font-weight: 600; letter-spacing: 0; }
+
+/* Wybór zdjęcia do grafik */
+.ig-photo-box { margin: 4px 0 2px; }
+.ig-photo-list { display: flex; gap: 8px; overflow-x: auto; padding: 6px 2px 8px; }
+.ig-photo { flex: none; width: 92px; height: 64px; padding: 0; border: 2px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--soft); cursor: pointer; position: relative; }
+.ig-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ig-photo[aria-pressed="true"] { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(214, 0, 28, .25); }
+.ig-photo b { position: absolute; left: 4px; bottom: 4px; font-size: .6rem; font-weight: 800; padding: 2px 6px; border-radius: 99px; background: rgba(0, 0, 0, .65); color: #fff; }
+.ig-check { display: flex; align-items: center; gap: 10px; margin: 6px 2px 4px; font-weight: 700; font-size: .92rem; cursor: pointer; }
+.ig-check small { color: var(--muted); font-weight: 600; }
+.ig-check input { width: 18px; height: 18px; accent-color: var(--accent); }

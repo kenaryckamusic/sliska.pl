@@ -288,17 +288,16 @@ const Utils = {
   },
 
   placeholder(category) {
-    const hues = { 'Muzyka': 265, 'Kontrowersje': 8, 'Dramy': 330, 'Recenzje': 45, 'Inne': 205 };
+    const hues = { 'Muzyka': 265, 'Kontrowersje': 350, 'Dramy': 330, 'Recenzje': 28, 'Inne': 205 };
     const hue = hues[category] ?? 200;
-    // Bez napisu na obrazku (kategoria jest już w chipie) – tylko gradient i delikatny wzór
+    // Płaski kolor kategorii, cienka ramka i duża obrysowa gwiazda (spójnie z grafikami na social media)
+    const pts = Array.from({ length: 10 }, (_, i) => { const r = i % 2 ? 120 : 300, a = -Math.PI / 2 + i * Math.PI / 5; return (Math.cos(a) * r + 980).toFixed(1) + ',' + (Math.sin(a) * r + 300).toFixed(1); }).join(' ');
     const svg =
       `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">` +
-      `<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">` +
-      `<stop offset="0" stop-color="hsl(${hue},58%,38%)"/><stop offset="1" stop-color="hsl(${hue + 40},62%,16%)"/>` +
-      `</linearGradient><pattern id="p" width="48" height="48" patternUnits="userSpaceOnUse" patternTransform="rotate(30)">` +
-      `<rect width="2" height="48" fill="rgba(255,255,255,.05)"/></pattern></defs>` +
-      `<rect width="1280" height="720" fill="url(#g)"/><rect width="1280" height="720" fill="url(#p)"/>` +
-      `<circle cx="1060" cy="140" r="260" fill="rgba(255,255,255,.06)"/></svg>`;
+      `<rect width="1280" height="720" fill="hsl(${hue},48%,17%)"/>` +
+      `<polygon points="${pts}" fill="none" stroke="rgba(255,255,255,.14)" stroke-width="4" stroke-linejoin="round"/>` +
+      `<rect x="20" y="20" width="1240" height="680" rx="28" fill="none" stroke="rgba(255,255,255,.12)" stroke-width="2"/>` +
+      `<rect x="64" y="620" width="56" height="6" fill="hsl(${hue},85%,55%)"/></svg>`;
     return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
   }
 };
@@ -1311,14 +1310,11 @@ function filteredArticles() {
 function cardHtml(a, opts = {}) {
   const id = encodeURIComponent(a.id);
   return `<article class="card" data-id="${Utils.esc(a.id)}">
+    <div class="img-tags">${Utils.chipsHtml(a)}${a.urgent ? '<span class="badge-urgent">PILNE</span>' : ''}</div>
     <a class="card-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true">
       <img src="${Utils.esc(thumbFor(a, opts.cover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     </a>
     <div class="card-body">
-      <div class="card-tags">
-        ${Utils.chipsHtml(a)}
-        ${a.urgent ? '<span class="badge-urgent">PILNE</span>' : ''}
-      </div>
       <h3 class="card-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
       <p class="card-lead">${Utils.esc(a.lead)}</p>
       <div class="card-meta">
@@ -1349,8 +1345,8 @@ function tileHtml(a) {
   const id = encodeURIComponent(a.id);
   return `<article class="tile" data-id="${Utils.esc(a.id)}">
     <img class="tile-img" src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
+    <div class="img-tags">${Utils.chipsHtml(a)}</div>
     <div class="tile-content">
-      <div>${Utils.chipsHtml(a)}</div>
       <h3 class="tile-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
       <time class="tile-time" datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)}</time>
     </div>
@@ -1752,6 +1748,36 @@ function drawFooterStd(ctx, W, H, family, right, opts = {}) {
   ctx.textAlign = 'left';
 }
 
+/** Wspólna rama grafik (jak w karuzeli) + data w prawym górnym rogu, gdy nie ma kółka z oceną. */
+function drawFrame(ctx, W, H, o = {}) {
+  const inset = o.inset || 26, r = o.radius || 36;
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 2;
+  roundRect(ctx, inset, inset, W - inset * 2, H - inset * 2, r); ctx.stroke();
+  if (o.a && o.dateY != null) {
+    const d = new Date(o.a.createdAt || Date.now());
+    const txt = [String(d.getDate()).padStart(2, '0'), String(d.getMonth() + 1).padStart(2, '0'), d.getFullYear()].join('.');
+    ctx.fillStyle = '#fff'; ctx.font = `800 ${o.dateSize || 34}px ${o.family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillText(txt, W - (o.padRight || 72), o.dateY);
+  }
+  ctx.restore();
+}
+
+/** Redakcyjny „kicker”: krótka linia + rozstrzelony napis (zastępuje czerwone plakietki). */
+function drawKicker(ctx, text, x, yTop, o = {}) {
+  const size = o.size || 30, h = o.h || 56, family = o.family;
+  const cy = yTop + h / 2;
+  ctx.save();
+  ctx.fillStyle = o.line || '#d6001c';
+  ctx.fillRect(x, cy - 3, Math.round(size * 1.8), 6);
+  ctx.fillStyle = o.color || '#fff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.font = `800 ${size}px ${family}`;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = Math.round(size * 0.17) + 'px';
+  ctx.fillText(text, x + Math.round(size * 1.8) + 20, cy + 1);
+  ctx.restore();
+}
+
 async function drawLogoWhite(ctx, x, y, w, family) {
   try {
     const logo = await loadImage(APP_BASE + 'logo-biale.svg');
@@ -1794,13 +1820,8 @@ async function renderWideImage(a, format) {
   lines.forEach((l, i) => ctx.fillText(l, PAD, titleTop + i * lh));
   const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
   const chipH = wideX ? 48 : 40;
-  ctx.font = `800 ${wideX ? 26 : 22}px ${family}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const cw = ctx.measureText(cat).width + 36;
   const chipY = titleTop - 20 - chipH;
-  ctx.fillStyle = '#d6001c'; roundRect(ctx, PAD, chipY, cw, chipH, chipH / 2); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(cat, PAD + 18, chipY + chipH / 2 + 1);
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  drawKicker(ctx, cat, PAD, chipY, { size: wideX ? 26 : 22, h: chipH, family });
   ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - (wideX ? 40 : 32), W - PAD * 2, 2);
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.font = `700 ${wideX ? 30 : 24}px ${family}`;
@@ -1808,6 +1829,7 @@ async function renderWideImage(a, format) {
   ctx.textAlign = 'right';
   ctx.fillText(wideX ? 'Czytaj więcej →' : 'Śliska News', W - PAD, footY);
   ctx.textAlign = 'left';
+  drawFrame(ctx, W, H, { inset: wideX ? 24 : 20, radius: wideX ? 34 : 30, a: (a.review && a.review.score != null) ? null : a, dateY: PAD + (wideX ? 34 : 28), dateSize: wideX ? 32 : 26, padRight: PAD, family });
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
@@ -1875,6 +1897,7 @@ async function renderReviewImage(a) {
   ctx.fillText(sub, W / 2, ty);
   ctx.textAlign = 'left';
   drawFooterStd(ctx, W, H, family, 'Link w bio →');
+  drawFrame(ctx, W, H, { a, dateY: PAD + 29, family });
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
@@ -1883,13 +1906,7 @@ async function renderSummarySlide(a, text, opts = {}) {
   const W = 1080, H = 1350, PAD = 72;
   const { canvas, ctx, family, photoOk } = await igBackdrop(a, W, H, 'rgba(10,10,14,.82)');
   await drawLogoWhite(ctx, PAD, PAD, 330, family);
-  ctx.font = `800 30px ${family}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const head = 'W SKRÓCIE';
-  const hw = ctx.measureText(head).width + 44;
-  ctx.fillStyle = '#d6001c'; roundRect(ctx, PAD, 250, hw, 56, 28); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(head, PAD + 22, 279);
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  drawKicker(ctx, 'W SKRÓCIE', PAD, 250, { family });
   const paras = String(text || '').split(/\n+/).map(s => s.trim()).filter(Boolean);
   const maxW = W - PAD * 2 - 36, top = 350, bottom = H - 150;
   let size = 64, lines = [];
@@ -1905,6 +1922,7 @@ async function renderSummarySlide(a, text, opts = {}) {
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
   lines.forEach((l, i) => ctx.fillText(l, PAD + 36, y0 + i * lh));
   drawFooterStd(ctx, W, H, family, opts.footRight || 'Przesuń →');
+  drawFrame(ctx, W, H, {});
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
@@ -1916,13 +1934,7 @@ async function renderLinkSlide(a, opts = {}) {
   g.addColorStop(0, 'rgba(242,0,42,.95)'); g.addColorStop(1, 'rgba(110,0,14,.98)');
   ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   await drawLogoWhite(ctx, PAD, PAD, 330, family);
-  ctx.font = `800 30px ${family}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const head = 'CAŁOŚĆ NA STRONIE';
-  const hw = ctx.measureText(head).width + 44;
-  ctx.fillStyle = '#fff'; roundRect(ctx, PAD, 250, hw, 56, 28); ctx.fill();
-  ctx.fillStyle = '#d6001c'; ctx.textBaseline = 'middle'; ctx.fillText(head, PAD + 22, 279);
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  drawKicker(ctx, 'CAŁOŚĆ NA STRONIE', PAD, 250, { family, line: '#fff' });
   // tytuł artykułu (jak w pozostałych slajdach – po lewej, w ramie)
   const maxW = W - PAD * 2;
   let size = 84, lines;
@@ -1943,9 +1955,8 @@ async function renderLinkSlide(a, opts = {}) {
   ctx.fillStyle = '#fff'; roundRect(ctx, PAD, y, pw, 96, 48); ctx.fill();
   ctx.fillStyle = '#d6001c'; ctx.textBaseline = 'middle'; ctx.fillText(pill, PAD + 45, y + 50);
   if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `700 40px ${family}`; ctx.textBaseline = 'top';
-  ctx.fillText('sliska.pl/news', PAD, y + 140);
   drawFooterStd(ctx, W, H, family, opts.footRight || 'Zapisz • Udostępnij');
+  drawFrame(ctx, W, H, {});
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
@@ -2053,6 +2064,7 @@ async function renderInstagramImage(a, opts = {}) {
     ctx.textAlign = 'right';
     if (story) drawStickerZone(ctx, W, H, family); else ctx.fillText(opts.footRight || 'Link w bio →', W - PAD, footY);
     ctx.textAlign = 'left';
+    drawFrame(ctx, W, H, { a: (a.review && a.review.score != null) ? null : a, dateY: topY + 29, family });
     const qblob = await new Promise((res, rej) => canvas.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
     return { blob: qblob, photoOk };
   }
@@ -2073,15 +2085,7 @@ async function renderInstagramImage(a, opts = {}) {
   lines.forEach((l, i) => ctx.fillText(l, PAD, titleTop + i * lh));
 
   const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
-  ctx.font = `800 30px ${family}`;
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-  const cw = ctx.measureText(cat).width + 44;
-  const chipY = titleTop - 28 - 56;
-  ctx.fillStyle = '#d6001c';
-  roundRect(ctx, PAD, chipY, cw, 56, 28); ctx.fill();
-  ctx.fillStyle = '#fff'; ctx.textBaseline = 'middle';
-  ctx.fillText(cat, PAD + 22, chipY + 29);
-  if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  drawKicker(ctx, cat, PAD, titleTop - 28 - 56, { family });
 
   ctx.fillStyle = 'rgba(255,255,255,.35)';
   ctx.fillRect(PAD, footY - 42, maxW, 2);
@@ -2094,6 +2098,7 @@ async function renderInstagramImage(a, opts = {}) {
   else drawStickerZone(ctx, W, H, family);
   ctx.textAlign = 'left';
 
+  drawFrame(ctx, W, H, { a: (a.review && a.review.score != null) ? null : a, dateY: topY + 29, family });
   const blob = await new Promise((res, rej) => canvas.toBlob(b => (b ? res(b) : rej(new Error('toBlob'))), 'image/png'));
   return { blob, photoOk };
 }
@@ -2104,16 +2109,15 @@ const IG_SLIDES = [
   { k: 'cover',    name: 'Okładka',        desc: 'zdjęcie + tytuł',     file: 'okladka' },
   { k: 'title',    name: 'Sam tytuł',      desc: 'wielka typografia',   file: 'tytul' },
   { k: 'photo',    name: 'Zdjęcie',        desc: 'bez tekstu',          file: 'zdjecie' },
+  { k: 'photoquote', name: 'Cytat na zdjęciu', desc: 'zdjęcie + cytat',   file: 'cytat-zdjecie' },
+  { k: 'photolead', name: 'Zajawka na zdjęciu', desc: 'zdjęcie + skrót', file: 'zajawka-zdjecie' },
   { k: 'lead',     name: 'W skrócie',      desc: 'zajawka artykułu',    file: 'w-skrocie' },
   { k: 'sentence', name: 'Kluczowe zdanie', desc: 'z treści artykułu',  file: 'zdanie' },
   { k: 'quote',    name: 'Cytat',          desc: 'z artykułu',          file: 'cytat' },
   { k: 'facts',    name: 'Szybkie fakty',  desc: 'z ramki faktów',      file: 'fakty', need: a => (a.infobox || []).some(r => r && r.label && r.value), why: 'brak ramki faktów' },
   { k: 'score',    name: 'Ocena',          desc: 'recenzja z punktami', file: 'ocena', need: a => !!(a.review && a.review.score != null), why: 'to nie recenzja' },
-  { k: 'tags',     name: 'O kim mowa',     desc: 'tagi i wykonawcy',    file: 'tagi', need: a => Utils.tagsOf(a).length > 0, why: 'brak tagów' },
   { k: 'author',   name: 'Autor',          desc: 'kto napisał',         file: 'autor' },
   { k: 'ask',      name: 'Pytanie',        desc: 'do komentarzy',       file: 'pytanie' },
-  { k: 'app',      name: 'Aplikacja',      desc: 'dodaj do ekranu',     file: 'aplikacja' },
-  { k: 'save',     name: 'Zapisz',         desc: 'zachęta do zapisu',   file: 'zapisz' },
   { k: 'link',     name: 'Link',           desc: 'całość na stronie',   file: 'link' }
 ];
 
@@ -2135,17 +2139,51 @@ function fitText(ctx, family, text, maxW, maxH, start, min, weight = 800, k = 1.
   return { size, lines, lh: Math.round(size * k) };
 }
 
+/** Faktura tła slajdów tekstowych: rozmyte zdjęcie artykułu (przesuwa się z numerem slajdu), gwiazda i ukośne linie. */
+async function slideTexture(ctx, a, W, H, red, o) {
+  const idx = Math.max(0, (o.idx || 1) - 1);
+  try {
+    const src = getImage(a);
+    const img = await loadImage(src, !src.startsWith('data:'));
+    const sw = 32, sh = Math.round(32 * H / W);
+    const sm = document.createElement('canvas'); sm.width = sw; sm.height = sh;
+    const sx = sm.getContext('2d');
+    const iw = img.naturalWidth || sw, ih = img.naturalHeight || sh;
+    const k = Math.max(sw / iw, sh / ih) * 1.7, dw = iw * k, dh = ih * k;
+    sx.drawImage(img, -(dw - sw) * ((idx * 0.29 + 0.1) % 1), -(dh - sh) * 0.35, dw, dh);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.globalAlpha = red ? 0.30 : 0.42; ctx.globalCompositeOperation = red ? 'soft-light' : 'screen';
+    ctx.drawImage(sm, 0, 0, W, H);
+    ctx.restore();
+  } catch { /* bez zdjęcia: tylko gradient */ }
+  // ukośne linie
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 2;
+  for (let x = -H; x < W + H; x += 64) { ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + H * 0.55, 0); ctx.stroke(); }
+  ctx.restore();
+  // duża gwiazda z logo – w innym rogu na każdym slajdzie
+  const spots = [[W * .92, H * .78, .18], [W * .08, H * .62, -.25], [W * .88, H * .52, .1], [W * .15, H * .84, -.1]];
+  const [sxp, syp, rot] = spots[idx % spots.length];
+  ctx.save();
+  ctx.translate(sxp, syp); ctx.rotate(rot); ctx.fillStyle = 'rgba(255,255,255,.075)';
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const r = i % 2 ? 190 : 470, ang = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
 /** Rysuje jeden slajd karuzeli. theme: 'red' | 'dark'. Zwraca { canvas, photoOk }. */
 async function drawSlide(a, kind, theme, o = {}) {
   const W = 1080, H = 1350, PAD = 72, red = theme === 'red';
   const ac = red ? '#fff' : '#d6001c', on = red ? '#d6001c' : '#fff';
   let canvas, ctx, family, photoOk = true;
-  if (kind === 'cover' || kind === 'photo') {
+  if (kind === 'cover' || kind === 'photo' || kind === 'photoquote' || kind === 'photolead') {
     const bd = await igBackdrop(a, W, H, null);
     ({ canvas, ctx, family, photoOk } = bd);
     const g = ctx.createLinearGradient(0, 0, 0, H);
-    if (red) { g.addColorStop(0, 'rgba(214,0,28,.62)'); g.addColorStop(.5, 'rgba(150,0,20,.38)'); g.addColorStop(1, 'rgba(70,0,10,.95)'); }
-    else { g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.45, 'rgba(0,0,0,.18)'); g.addColorStop(1, 'rgba(0,0,0,.93)'); }
+    // zdjęcie zawsze z neutralnym, ciemnym przyciemnieniem (bez czerwonej poświaty)
+    g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.45, 'rgba(0,0,0,.18)'); g.addColorStop(1, 'rgba(0,0,0,.93)');
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   } else {
     family = getComputedStyle(document.body).fontFamily;
@@ -2163,17 +2201,26 @@ async function drawSlide(a, kind, theme, o = {}) {
       const r = ctx.createRadialGradient(W, 0, 0, W, 0, 800); r.addColorStop(0, 'rgba(88,40,160,.7)'); r.addColorStop(1, 'rgba(88,40,160,0)');
       ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
     }
+    if (o.bgPhoto && a.image) {
+      try {
+        const im = await loadImage(a.image, !String(a.image).startsWith('data:'));
+        const iw = im.naturalWidth || W, ih = im.naturalHeight || H, k = Math.max(W / iw, H / ih);
+        ctx.drawImage(im, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+        ctx.fillStyle = red ? 'rgba(150,0,18,.66)' : 'rgba(8,8,12,.74)'; ctx.fillRect(0, 0, W, H);
+      } catch { /* zostaje płaski kolor */ }
+    }
+    // wielka obrysowa cyfra numeru slajdu jako faktura (zamiast gradientów)
+    if (o.idx) {
+      ctx.save();
+      ctx.font = `900 760px ${family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+      ctx.lineWidth = 4; ctx.strokeStyle = red ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.10)';
+      ctx.strokeText(String(o.idx).padStart(2, '0'), W + 40, H - 120);
+      ctx.restore();
+    }
   }
   await drawLogoWhite(ctx, PAD, PAD, 330, family);
 
-  const chip = (text, y = 250) => {
-    ctx.font = `800 30px ${family}`;
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-    const w = ctx.measureText(text).width + 44;
-    ctx.fillStyle = ac; roundRect(ctx, PAD, y, w, 56, 28); ctx.fill();
-    ctx.fillStyle = on; ctx.textBaseline = 'middle'; ctx.textAlign = 'left'; ctx.fillText(text, PAD + 22, y + 29);
-    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-  };
+  const chip = (text, y = 250) => drawKicker(ctx, text, PAD, y, { family, line: ac });
   const bar = (y, h) => { ctx.fillStyle = ac; ctx.fillRect(PAD, y, 8, h); };
   const top = 350, bottom = H - 150, maxW = W - PAD * 2;
   const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
@@ -2181,10 +2228,23 @@ async function drawSlide(a, kind, theme, o = {}) {
 
   if (kind === 'cover') {
     const f = fitText(ctx, family, a.title, maxW, 560, 96, 52, 800, 1.1);
-    const tTop = bottom - 10 - f.lines.length * f.lh;
+    const tTop = bottom - f.lines.length * f.lh;
     ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
     f.lines.forEach((l, i) => ctx.fillText(l, PAD, tTop + i * f.lh));
     chip(cat, tTop - 28 - 56);
+  } else if (kind === 'photoquote' || kind === 'photolead') {
+    const isQ = kind === 'photoquote';
+    chip(isQ ? 'CYTAT' : 'W SKRÓCIE');
+    const text = isQ ? ((o.quote && o.quote.text) || keySentence(a)) : ((o.summary || '').trim() || a.lead || a.title);
+    const f = fitText(ctx, family, isQ ? '„' + text.replace(/^„|”$/g, '') + '”' : text, maxW - 36, 640, isQ ? 70 : 60, 34, isQ ? 800 : 700, 1.22);
+    const hasAu = isQ && o.quote && o.quote.author;
+    const y0 = bottom - f.lines.length * f.lh - (hasAu ? 56 : 0);
+    bar(y0 - 4, f.lines.length * f.lh + 4 + (hasAu ? 50 : 0));
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `${isQ ? 800 : 700} ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD + 36, y0 + i * f.lh));
+    if (isQ && o.quote && o.quote.author) {
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 34px ${family}`; ctx.fillText('— ' + o.quote.author, PAD + 36, y0 + f.lines.length * f.lh + 18);
+    }
   } else if (kind === 'title') {
     chip(cat);
     const f = fitText(ctx, family, a.title, maxW, bottom - top - 120, 128, 56, 900, 1.06);
@@ -2220,8 +2280,9 @@ async function drawSlide(a, kind, theme, o = {}) {
     chip('SZYBKIE FAKTY');
     const rows = (a.infobox || []).filter(r => r && r.label && r.value).slice(0, 4);
     const gap = 22, ch = Math.min(200, Math.floor((bottom - top - gap * (rows.length - 1)) / rows.length));
+    const fy0 = top + Math.max(0, Math.round(((bottom - top) - (rows.length * ch + (rows.length - 1) * gap)) / 2));
     rows.forEach((r, i) => {
-      const y = top + i * (ch + gap);
+      const y = fy0 + i * (ch + gap);
       ctx.fillStyle = 'rgba(255,255,255,.12)'; roundRect(ctx, PAD, y, maxW, ch, 28); ctx.fill();
       ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; roundRect(ctx, PAD, y, maxW, ch, 28); ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `800 26px ${family}`; ctx.textBaseline = 'top';
@@ -2250,7 +2311,11 @@ async function drawSlide(a, kind, theme, o = {}) {
     chip('O KIM MOWA');
     const tags = Utils.tagsOf(a).slice(0, 10);
     ctx.font = `800 52px ${family}`; ctx.textBaseline = 'middle';
-    let x = PAD, y = top + 20; const hgt = 100;
+    const hgt = 100;
+    let rowsN = 1, xx = PAD;
+    tags.forEach(t => { const w = ctx.measureText('#' + t.replace(/\s+/g, '')).width + 60; if (xx + w > W - PAD) { xx = PAD; rowsN++; } xx += w + 20; });
+    const blockH = rowsN * hgt + (rowsN - 1) * 24;
+    let x = PAD, y = top + Math.max(0, Math.round(((bottom - top) - blockH) / 2));
     tags.forEach(t => {
       const label = '#' + t.replace(/\s+/g, '');
       const w = ctx.measureText(label).width + 60;
@@ -2289,7 +2354,9 @@ async function drawSlide(a, kind, theme, o = {}) {
   } else if (kind === 'ask') {
     chip('DYSKUSJA');
     const f = fitText(ctx, family, 'A Ty co o tym sądzisz?', maxW, 480, 120, 60, 900, 1.05);
-    const y0 = top + 20;
+    const t0 = fitText(ctx, family, '„' + a.title + '”', maxW - 40, 220, 44, 30, 600, 1.25);
+    const askH = f.lines.length * f.lh + 50 + t0.lines.length * t0.lh + 70 + 96;
+    const y0 = top + Math.max(0, Math.round(((bottom - top) - askH) / 2));
     ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 ${f.size}px ${family}`;
     f.lines.forEach((l, i) => ctx.fillText(l, PAD, y0 + i * f.lh));
     const sy = y0 + f.lines.length * f.lh + 50;
@@ -2316,7 +2383,7 @@ async function drawSlide(a, kind, theme, o = {}) {
     });
   } else if (kind === 'save') {
     chip('ZAPISZ');
-    const bx = PAD, by = top + 10;
+    const bx = PAD, by = top + Math.max(0, Math.round(((bottom - top) - 700) / 2));
     ctx.fillStyle = ac; ctx.beginPath();
     ctx.moveTo(bx, by); ctx.lineTo(bx + 200, by); ctx.lineTo(bx + 200, by + 280); ctx.lineTo(bx + 100, by + 210); ctx.lineTo(bx, by + 280); ctx.closePath(); ctx.fill();
     ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 100px ${family}`;
@@ -2327,16 +2394,27 @@ async function drawSlide(a, kind, theme, o = {}) {
     chip('CAŁOŚĆ NA STRONIE');
     const f = fitText(ctx, family, a.title, maxW, 460, 84, 44, 800, 1.1);
     ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
-    f.lines.forEach((l, i) => ctx.fillText(l, PAD, top + i * f.lh));
-    const y = top + f.lines.length * f.lh + 60;
+    const lh0 = f.lines.length * f.lh + 60 + 96;
+    const ty = top + Math.max(0, Math.round(((bottom - top) - lh0) / 2));
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD, ty + i * f.lh));
+    const y = ty + f.lines.length * f.lh + 60;
     ctx.font = `800 44px ${family}`; if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
     const pill = 'LINK W BIO', pw = ctx.measureText(pill).width + 90;
     ctx.fillStyle = ac; roundRect(ctx, PAD, y, pw, 96, 48); ctx.fill();
     ctx.fillStyle = on; ctx.textBaseline = 'middle'; ctx.fillText(pill, PAD + 45, y + 50);
     if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `700 40px ${family}`; ctx.textBaseline = 'top'; ctx.fillText('sliska.pl/news', PAD, y + 140);
   }
-  drawFooterStd(ctx, W, H, family, o.idx ? `${o.idx} / ${o.total}` : '');
+  // rama + licznik w prawym górnym rogu + zachęta do przesuwania
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 2;
+  roundRect(ctx, 26, 26, W - 52, H - 52, 36); ctx.stroke();
+  if (o.idx) {
+    ctx.fillStyle = '#fff'; ctx.font = `800 34px ${family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillText(`${String(o.idx).padStart(2, '0')} / ${String(o.total).padStart(2, '0')}`, W - PAD, PAD + 29);
+  }
+  ctx.restore();
+  drawFooterStd(ctx, W, H, family, o.idx ? (o.idx < o.total ? 'Przesuń →' : 'Link w bio') : '');
   return { canvas, photoOk };
 }
 
@@ -2398,7 +2476,7 @@ async function renderSocialSet(a, opts) {
   const slides = [];
   for (let i = 0; i < kinds.length; i++) {
     const def = IG_SLIDES.find(s => s.k === kinds[i]);
-    const r = await drawSlide(a, kinds[i], i % 2 === 0 ? 'red' : 'dark', { idx: i + 1, total: kinds.length, quote: opts.quote, summary: opts.summary });
+    const r = await drawSlide(a, kinds[i], i % 2 === 0 ? 'red' : 'dark', { idx: i + 1, total: kinds.length, quote: opts.quote, summary: opts.summary, bgPhoto: opts.bgPhoto });
     const blob = await canvasBlob(r.canvas);
     slides.push({ blob, photoOk: r.photoOk, name: `sliska-news-${slug}-${String(i + 1).padStart(2, '0')}-${def ? def.file : kinds[i]}.png` });
   }
@@ -2417,7 +2495,7 @@ async function makeInstagramPost(id, btn, opts = {}) {
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
   try {
-    const set = await renderSocialSet(a, opts);
+    const set = await renderSocialSet(opts.photo ? { ...a, image: opts.photo } : a, opts);
     await copyPromise;
     const files = set.files.map(f => new File([f.blob], f.name, { type: 'image/png' }));
     let shared = false;
@@ -3660,6 +3738,28 @@ function articleQuotes(a) {
   }).filter(q => q.text);
 }
 
+function articleImages(a) {
+  const out = [];
+  const add = s => { s = String(s || '').trim(); if (s && !out.includes(s)) out.push(s); };
+  add(a.image);
+  try {
+    const doc = new DOMParser().parseFromString(a.content || '', 'text/html');
+    doc.querySelectorAll('img[src]').forEach(im => add(im.getAttribute('src')));
+  } catch { /* ignoruj */ }
+  if (a.review && a.review.cover) add(a.review.cover);
+  return out.slice(0, 14);
+}
+
+function buildIgPhotos() {
+  const a = state.articles.find(x => x.id === editor.igId);
+  const imgs = a ? articleImages(a) : [];
+  editor.igImages = imgs;
+  const box = $('#ig-photo-box');
+  box.hidden = imgs.length < 2;
+  $('#ig-photo-list').innerHTML = imgs.map((src, i) => `<button type="button" class="ig-photo" data-i="${i}" aria-pressed="${i === 0}" title="Użyj tego zdjęcia"><img src="${Utils.esc(src)}" alt="" loading="lazy">${i === 0 ? '<b>główne</b>' : ''}</button>`).join('');
+  editor.igPhoto = '';
+}
+
 function openIgModal(id) {
   const a = state.articles.find(x => x.id === id);
   if (!a) return;
@@ -3681,6 +3781,8 @@ function openIgModal(id) {
   $('#ig-summary').value = String(a.lead || '').trim().slice(0, 400);
   $('#ig-error').hidden = true;
   editor.igPick = [];
+  buildIgPhotos();
+  $('#ig-bgphoto').checked = false;
   updateIgUi();
   openModal('ig-modal');
 }
@@ -3726,11 +3828,13 @@ function refreshIgGrid() {
   (async () => {
     for (const t of todo) {
       if (job !== igThumbJob) return;
-      const key = `${editor.igId}|${t.k}|${t.theme}`;
+      const bg = $('#ig-bgphoto').checked;
+      const art = editor.igPhoto ? { ...a, image: editor.igPhoto } : a;
+      const key = `${editor.igId}|${t.k}|${t.theme}|${editor.igPhoto || ''}|${bg ? 1 : 0}`;
       let src = igThumbCache.get(key);
       if (!src) {
         try {
-          const r = await drawSlide(a, t.k, t.theme, { quote: { text: $('#ig-quote-text').value.trim(), author: $('#ig-quote-author').value.trim() }, summary: $('#ig-summary').value.trim() });
+          const r = await drawSlide(art, t.k, t.theme, { bgPhoto: bg, quote: { text: $('#ig-quote-text').value.trim(), author: $('#ig-quote-author').value.trim() }, summary: $('#ig-summary').value.trim() });
           const th = document.createElement('canvas'); th.width = 216; th.height = 270;
           th.getContext('2d').drawImage(r.canvas, 0, 0, 216, 270);
           src = th; igThumbCache.set(key, th);
@@ -3749,6 +3853,7 @@ function updateIgUi() {
   $('#ig-carousel-box').hidden = !car;
   $('#ig-texts').hidden = !(car || f === 'quote');
   $('#ig-summary-box').hidden = !car;
+  $('#ig-bgphoto-wrap').hidden = !car;
   if (f === 'quote') $('#ig-texts').open = true;
   $('#ig-texts-title').textContent = car ? 'Teksty slajdów (opcjonalnie)' : 'Cytat';
   $('#ig-quote-label').textContent = 'Treść cytatu';
@@ -5119,12 +5224,10 @@ function renderProfile() {
 
 function renderProfileStats() {
   if (!$('#ps-mine') || !state.articles) return;
-  const me = (state.profile && state.profile.name) || '';
   const pub = publishedArticles();
-  const day = new Date().toDateString();
   const sched = scheduledArticles().length;
+  const me = (state.profile && state.profile.name) || '';
   $('#ps-mine').textContent = me ? pub.filter(a => a.author === me).length : pub.length;
-  $('#ps-today').textContent = pub.filter(a => new Date(a.createdAt).toDateString() === day).length;
   $('#ps-sched').textContent = sched;
   const b = $('#pa-sched'); b.hidden = !sched; b.textContent = sched;
 }
@@ -5619,6 +5722,15 @@ function bindEvents() {
     $('#ig-error').hidden = true;
     refreshIgGrid();
   });
+  $('#ig-photo-list').addEventListener('click', e => {
+    const b = e.target.closest('.ig-photo'); if (!b) return;
+    const i = Number(b.dataset.i);
+    editor.igPhoto = i === 0 ? '' : (editor.igImages[i] || '');
+    $$('.ig-photo', $('#ig-photo-list')).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    igThumbCache.clear();
+    if (igFormat() === 'carousel') refreshIgGrid();
+  });
+  $('#ig-bgphoto').addEventListener('change', () => { igThumbCache.clear(); if (igFormat() === 'carousel') refreshIgGrid(); });
   $('#ig-quote-pick').addEventListener('change', () => {
     const q = editor.igQuotes[Number($('#ig-quote-pick').value)];
     if (q) { $('#ig-quote-text').value = q.text; $('#ig-quote-author').value = q.author; }
@@ -5630,7 +5742,7 @@ function bindEvents() {
     if (format === 'quote' && !quote.text) { $('#ig-error').textContent = 'Wpisz lub wybierz cytat.'; $('#ig-error').hidden = false; return; }
     try { localStorage.setItem('sliska_igformat', format); } catch { /* ignoruj */ }
     if (format === 'carousel' && !editor.igPick.length) { $('#ig-error').textContent = 'Kliknij slajdy, które chcesz mieć w karuzeli.'; $('#ig-error').hidden = false; return; }
-    makeInstagramPost(editor.igId, $('#ig-submit'), { format, quote, summary: $('#ig-summary').value.trim(), slides: format === 'carousel' ? [...editor.igPick] : undefined });
+    makeInstagramPost(editor.igId, $('#ig-submit'), { format, quote, summary: $('#ig-summary').value.trim(), slides: format === 'carousel' ? [...editor.igPick] : undefined, photo: editor.igPhoto || '', bgPhoto: format === 'carousel' && $('#ig-bgphoto').checked });
   });
 
   $('#tag-chips').addEventListener('click', e => {
