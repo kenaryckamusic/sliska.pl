@@ -6004,16 +6004,20 @@ function setReaderMode(m) {
   $('#reader-pass').autocomplete = reg ? 'new-password' : 'current-password';
   $('#reader-pass').placeholder = reg ? 'Min. 6 znaków' : 'Twoje hasło';
 }
-/** Jedno okno logowania: najpierw konto redaktora (projekt główny), potem konto czytelnika. */
+/** Jedno okno logowania: najpierw konto czytelnika (zwykłe i redaktorzy nadani z panelu), potem – jeśli nie pasuje – stare konto redakcji (projekt główny). */
 async function unifiedLogin(email, pw) {
-  const credErr = c => /^(auth\/(invalid-credential|wrong-password|user-not-found|invalid-email|missing-email)|app\/(wrong-password|not-editor))$/.test(c || '');
-  if (Auth.mode === 'firebase' || Auth.mode === 'local') {
-    try { await Auth.login(email, pw); applyAuthUI(); return 'editor'; }
-    catch (e) { if (!Readers.auth || !credErr(e && e.code)) throw e; }
+  const credErr = c => /^(auth\/(invalid-credential|invalid-login-credentials|wrong-password|user-not-found|invalid-email|missing-email|too-many-requests)|app\/(wrong-password|not-editor))$/.test(c || '');
+  const canEditor = Auth.mode === 'firebase' || Auth.mode === 'local';
+  let first = null;
+  if (Readers.auth) {
+    try { await Readers.login(email, pw); return 'reader'; }
+    catch (e) { first = e; if (!canEditor || !credErr(e && e.code)) throw e; }
   }
-  if (!Readers.auth) throw { code: 'auth/invalid-credential' };
-  await Readers.login(email, pw);
-  return 'reader';
+  if (canEditor) {
+    try { await Auth.login(email, pw); applyAuthUI(); return 'editor'; }
+    catch (e) { throw (first && /too-many-requests/.test((e && e.code) || '') ? first : e); }
+  }
+  throw first || { code: 'auth/invalid-credential' };
 }
 
 async function submitReader(e) {
@@ -6063,7 +6067,7 @@ function renderAccount() {
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
           <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
         <label class="field"><span class="field-label">Nazwa użytkownika</span>
-          <input type="text" id="acc-name" maxlength="20" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
+          <input type="text" id="acc-name" maxlength="${me.role === 'owner' ? 30 : 20}" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
           <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Nazwę możesz zmienić raz na 30 dni.'}</small></label>
         ${next ? '' : '<div class="st-actions"><button type="button" class="btn btn-primary" id="acc-save">Zapisz nazwę</button></div>'}
         <p class="form-error" id="acc-error" hidden></p>
@@ -6186,7 +6190,7 @@ function modUserHtml(u) {
   return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}">
     <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
     <div class="mu-main"><b>${Utils.esc(u.name)}</b>${roleBadge({ staff, role: u.role })}<small>komentarzy: ${u.comments}${u.banned ? ' · <span class="mu-ban">zablokowany</span>' : ''}</small></div>
-    <div class="mu-actions">${sel}${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div>
+    <div class="mu-actions">${sel}${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button>${isOwner ? '' : '<button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>'}</div>
   </div>`;
 }
 
@@ -6227,6 +6231,7 @@ document.addEventListener('click', async e => {
       if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
       else if (k === 'cooldown') body.resetCooldown = true;
       else if (k === 'avatar-remove') { if (!confirm('Usunąć zdjęcie profilowe tego użytkownika?')) return; body.avatar = null; }
+      else if (k === 'delete') { if (!confirm('Usunąć konto „' + row.dataset.name + '” razem z jego komentarzami? Nazwa zostanie zwolniona. Tego nie da się cofnąć.')) return; body.delete = true; }
       else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; body.banned = k === 'ban'; }
       await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); loadModUsers(row.closest('[data-modusers]'));
     }
