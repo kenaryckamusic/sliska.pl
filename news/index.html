@@ -17,6 +17,19 @@
   <link rel="canonical" href="https://sliska.pl/news/">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Śliska News">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
   <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Śliska News","url":"https://sliska.pl/news/","inLanguage":"pl-PL"}</script>
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon.ico" sizes="48x48">
@@ -24,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261031">
+  <link rel="stylesheet" href="style.css?v=20261031k">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -50,12 +63,14 @@
       <nav class="main-nav" aria-label="Główna nawigacja">
         <a class="nav-link" id="nav-home" href="#/"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></a>
         <a class="nav-link" id="nav-ranking" href="#/ranking"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-7"/></svg><span>Ranking</span></a>
+        <a class="nav-link" id="nav-quick" href="#/szybkie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Szybkie</span></a>
         <a class="nav-link" id="nav-saved" href="#/zapisane"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Zapisane</span><b class="nav-badge" id="saved-count" hidden></b></a>
       </nav>
 
-      <div class="search">
+      <div class="search" id="search-box">
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-        <input type="search" id="search-input" placeholder="Szukaj w artykułach…" aria-label="Szukaj artykułów" autocomplete="off">
+        <input type="search" id="search-input" placeholder="Szukaj w artykułach…" aria-label="Szukaj artykułów" autocomplete="off" aria-controls="search-suggest" aria-expanded="false">
+        <div class="search-suggest" id="search-suggest" role="listbox" hidden></div>
       </div>
 
       <div class="auth">
@@ -91,7 +106,7 @@
     <a class="tip-card" href="#/zglos">
       <strong>Masz temat?</strong>
       <span>Podeślij nam newsa albo wskazówkę.</span>
-      <em>Zgłoś temat →</em>
+      <em>Zgłoś go →</em>
     </a>
   </aside>
 
@@ -100,6 +115,8 @@
     <!-- WIDOK: STRONA GŁÓWNA -->
     <section id="view-home" aria-live="polite">
       <div id="home-status" class="home-status">Ładowanie wiadomości…</div>
+      <div id="resume-slot"></div>
+      <div id="quick-slot"></div>
       <div id="hero-slot"></div>
       <h2 class="section-title" id="grid-title" hidden>Najnowsze wiadomości</h2>
         <p class="grid-desc" id="grid-desc" hidden></p>
@@ -145,6 +162,9 @@
     <!-- WIDOK: ZAPISANE -->
     <section id="view-saved" hidden></section>
 
+
+    <section id="view-quick" hidden></section>
+
     <!-- WIDOK: ZGŁOŚ TEMAT -->
     <section id="view-tip" hidden></section>
 
@@ -189,6 +209,7 @@
           <div>
             <h1 id="editor-heading">Nowy artykuł</h1>
             <p class="save-status" id="save-status" aria-live="polite"></p>
+            <p class="editor-author" id="editor-author"></p>
           </div>
           <div class="editor-actions">
             <button type="button" class="btn btn-ghost" id="btn-focus" title="Ukryj panel boczny i skup się na pisaniu">Tryb pisania</button>
@@ -217,12 +238,9 @@
             <div class="field">
               <div class="field-head">
                 <label class="field-label" for="f-lead">Lead (zajawka) *</label>
-                <span class="field-head-right">
-                  <button type="button" class="link-btn" id="btn-gen-lead" title="Wygeneruj lead na podstawie tytułu i treści – każde kliknięcie daje inną propozycję">Wygeneruj lead</button>
-                  <span class="counter" id="c-lead">0/400</span>
-                </span>
+                <span class="counter" id="c-lead">0/400</span>
               </div>
-              <textarea id="f-lead" rows="3" maxlength="400" placeholder="Krótkie wprowadzenie widoczne na stronie głównej i na początku tekstu…"></textarea>
+              <textarea id="f-lead" rows="3" maxlength="400" placeholder="Krótka zajawka – widać ją na liście i pod tytułem"></textarea>
             </div>
 
             <div class="field">
@@ -232,11 +250,11 @@
               </div>
               <div class="editor-stats" id="editor-stats"></div>
               <div class="editor-size" id="editor-size" aria-live="polite"></div>
-              <small class="hint">
+              <details class="shortcuts"><summary>Skróty</summary><small class="hint">
                 Skróty: <kbd>##</kbd> + spacja = nagłówek, <kbd>###</kbd> + spacja = podnagłówek, <kbd>&gt;</kbd> + spacja = cytat
                 (Enter na pustej linii kończy cytat), <kbd>-</kbd> + spacja = lista, <kbd>1.</kbd> + spacja = lista numerowana,
                 <kbd>Ctrl</kbd>+<kbd>S</kbd> = zapis wersji roboczej. Zdjęcia możesz wkleić (Ctrl+V) lub przeciągnąć prosto do tekstu. Kliknij zdjęcie lub cytat w tekście, aby je edytować.
-              </small>
+              </small></details>
             </div>
           </div>
 
@@ -262,46 +280,50 @@
             <fieldset class="panel">
               <legend>Ustawienia</legend>
               <div class="field">
-                <span class="field-label">Kategorie * (można wybrać kilka)</span>
+                <span class="field-label">Kategorie *</span>
                 <div class="cat-picker" id="f-categories"></div>
               </div>
               <label class="field">
                 <span class="field-label">Tagi</span>
-                <input type="text" id="f-tags" list="tag-suggest" maxlength="240" placeholder="np. Elizka Sztos, album, premiera" autocomplete="off">
+                <input type="text" id="f-tags" list="tag-suggest" maxlength="240" placeholder="po przecinku, np. album, premiera" autocomplete="off">
                 <datalist id="tag-suggest"></datalist>
-                <small class="hint">Oddziel przecinkami albo kliknij propozycje poniżej.</small>
               </label>
-              <div class="tag-chips" id="tag-chips"></div>
-              <label class="field">
-                <span class="field-label">Autor *</span>
-                <input type="text" id="f-author" maxlength="80" placeholder="Imię i nazwisko / Redakcja">
-              </label>
+              <details class="tag-fold" id="tag-fold"><summary>Podpowiedzi tagów</summary><div class="tag-chips" id="tag-chips"></div></details>
               <label class="check">
                 <input type="checkbox" id="f-urgent">
-                <span>Oznacz jako PILNE (pasek na górze)</span>
+                <span>PILNE (pasek na górze)</span>
               </label>
               <label class="check">
                 <input type="checkbox" id="f-featured">
-                <span>Temat dnia (poprzedni zostanie automatycznie odznaczony)</span>
+                <span>Temat dnia</span>
+              </label>
+              <label class="field">
+                <span class="field-label">Status informacji</span>
+                <select id="f-status">
+                  <option value="">Bez statusu</option>
+                  <option value="potwierdzone">Potwierdzone</option>
+                  <option value="niepotwierdzone">Niepotwierdzone</option>
+                  <option value="plotka">Plotka</option>
+                </select>
               </label>
             </fieldset>
 
             <fieldset class="panel">
               <legend>Zdjęcie główne</legend>
               <label class="field">
-                <span class="field-label">Adres URL zdjęcia</span>
+                <span class="field-label">Adres URL</span>
                 <input type="url" id="f-image-url" placeholder="https://…">
               </label>
-              <label class="field">
-                <span class="field-label">…lub plik z dysku</span>
+              <label class="field dropzone" id="main-drop">
+                <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
                 <input type="file" id="f-image-file" accept="image/*">
               </label>
               <label class="field">
-                <span class="field-label">Podpis pod zdjęciem (opcjonalnie)</span>
+                <span class="field-label">Podpis</span>
                 <input type="text" id="f-image-caption" maxlength="200" placeholder="Np. Artysta podczas koncertu">
               </label>
               <label class="field">
-                <span class="field-label">Źródło – mały napis na zdjęciu (opcjonalnie)</span>
+                <span class="field-label">Źródło</span>
                 <input type="text" id="f-image-source" maxlength="80" placeholder="Np. Instagram / PAP / fot. Jan Kowalski">
               </label>
               <div class="image-preview" id="f-image-preview" hidden>
@@ -310,11 +332,11 @@
               </div>
             </fieldset>
 
-            <fieldset class="panel">
-              <legend>Recenzja – ocena w kółku</legend>
+            <details class="panel fold" id="fold-review">
+              <summary>Recenzja</summary>
               <label class="check">
                 <input type="checkbox" id="f-review-on">
-                <span>Dodaj ocenę (kółko z wynikiem na górze artykułu)</span>
+                <span>Dodaj ocenę</span>
               </label>
               <div id="review-fields" hidden>
                 <div class="panel-review-grid">
@@ -347,10 +369,10 @@
                   </label>
                 </div>
                 <div class="field">
-                  <span class="field-label">Okładka (pojawi się po prawej stronie ramki) *</span>
+                  <span class="field-label">Okładka *</span>
                   <label class="check">
                     <input type="checkbox" id="f-review-cover-same">
-                    <span>Okładka taka sama jak zdjęcie główne artykułu</span>
+                    <span>Okładka taka jak zdj. główne</span>
                   </label>
                 </div>
                 <div id="cover-fields">
@@ -358,8 +380,8 @@
                     <span class="field-label">Adres URL okładki</span>
                     <input type="url" id="f-review-cover-url" placeholder="https://…">
                   </label>
-                  <label class="field">
-                    <span class="field-label">…lub plik z dysku</span>
+                  <label class="field dropzone" id="cover-drop">
+                    <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
                     <input type="file" id="f-review-cover-file" accept="image/*">
                   </label>
                   <div class="image-preview" id="f-review-cover-preview" hidden>
@@ -368,14 +390,21 @@
                   </div>
                 </div>
               </div>
-            </fieldset>
+            </details>
 
-            <fieldset class="panel">
-              <legend>Ramka faktów (opcjonalnie)</legend>
-              <p class="hint">Pary „Nagłówek – Wartość” wyświetlą się w ramce z boku artykułu (np. Miejsce: Warszawa, Źródło: PAP).</p>
+            <details class="panel fold" id="fold-related">
+              <summary>Zobacz też</summary>
+              <div class="rel-chosen" id="rel-chosen"></div>
+              <input type="search" id="rel-search" placeholder="Szukaj artykułu po tytule…" autocomplete="off">
+              <div class="rel-results" id="rel-results"></div>
+              <p class="field-hint">Do 3 artykułów pod tekstem. Bez wyboru strona dobierze podobne sama.</p>
+            </details>
+
+            <details class="panel fold" id="fold-info">
+              <summary>Ramka faktów</summary>
               <div id="infobox-rows"></div>
               <button type="button" class="btn btn-sm" id="infobox-add">+ Dodaj wiersz</button>
-            </fieldset>
+            </details>
           </aside>
         </div>
       </form>
@@ -398,6 +427,7 @@
       <span>© <span id="year"></span> Śliska News. Wszelkie prawa zastrzeżone.</span>
       <nav class="footer-links" aria-label="Informacje">
         <a class="footer-ig" href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer" aria-label="Śliska News na Instagramie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>sliska.pl</span></a>
+        <a href="#" id="install-link" hidden>Zainstaluj aplikację</a>
         <a href="#/o-nas">O nas i kontakt</a>
         <a href="#/zglos">Zgłoś temat</a>
         <a href="#/prywatnosc">Polityka prywatności</a>
@@ -409,6 +439,58 @@
 
 
   <!-- MODAL: LOGOWANIE -->
+  <div class="modal" id="quick-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="quick-title">
+      <h2 id="quick-title">Szybki news</h2>
+      <form id="quick-form" novalidate>
+        <label class="field">
+          <span class="field-label">Treść (jedno–dwa zdania)</span>
+          <textarea id="qk-text" rows="3" maxlength="260" placeholder="Np. Taco Hemingway ogłosił nową trasę koncertową na 2027 rok."></textarea>
+          <small class="hint"><span id="qk-count">0</span>/260</small>
+        </label>
+        <label class="field">
+          <span class="field-label">Link do źródła</span>
+          <input type="url" id="qk-link" maxlength="300" placeholder="https://…">
+        </label>
+        <label class="field">
+          <span class="field-label">Nazwa źródła</span>
+          <input type="text" id="qk-source" maxlength="40" placeholder="Np. Instagram artysty (puste = adres strony)">
+        </label>
+        <p class="form-error" id="qk-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="qk-delete" hidden>Usuń</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="quick-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="qk-submit">Opublikuj</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="report-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <h2 id="report-title">Zauważyłeś błąd?</h2>
+      <p class="muted" id="report-article"></p>
+      <form id="report-form" novalidate>
+        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="field">
+          <span class="field-label">Co jest nie tak?</span>
+          <textarea id="report-text" rows="5" maxlength="1500" placeholder="Np. w trzecim akapicie jest zła data premiery"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Twój e-mail (opcjonalnie)</span>
+          <input type="text" id="report-email" maxlength="120" inputmode="email" placeholder="jeśli chcesz odpowiedź">
+        </label>
+        <p class="form-error" id="report-error" hidden></p>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="report-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="report-send">Wyślij</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="login-modal" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="login-title">
       <h2 id="login-title">Logowanie redaktora</h2>
@@ -439,19 +521,19 @@
           <span class="field-label">Adres URL zdjęcia</span>
           <input type="url" id="im-url" placeholder="https://…">
         </label>
-        <label class="field">
-          <span class="field-label">…lub plik z dysku</span>
+        <label class="field dropzone" id="im-drop">
+          <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
           <input type="file" id="im-file" accept="image/*">
         </label>
         <div class="image-preview" id="im-preview" hidden>
           <img alt="Podgląd zdjęcia">
         </div>
         <label class="field">
-          <span class="field-label">Podpis pod zdjęciem (opcjonalnie)</span>
+          <span class="field-label">Podpis</span>
           <input type="text" id="im-caption" maxlength="200" placeholder="Np. Koncert na Stadionie Narodowym">
         </label>
         <label class="field">
-          <span class="field-label">Źródło – mały napis na zdjęciu (opcjonalnie)</span>
+          <span class="field-label">Źródło</span>
           <input type="text" id="im-source" maxlength="80" placeholder="Np. PAP / Instagram / fot. Jan Kowalski">
         </label>
         <p class="form-error" id="im-error" hidden></p>
@@ -471,7 +553,7 @@
       <h2 id="embed-title">Wstaw film lub odtwarzacz</h2>
       <form id="embed-form" novalidate>
         <label class="field">
-          <span class="field-label">Link do YouTube lub Spotify *</span>
+          <span class="field-label">Link do YouTube lub Spotify</span>
           <input type="text" id="em-url" maxlength="300" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=… albo https://open.spotify.com/track/…">
         </label>
         <p class="field-hint">Działają linki do filmów YouTube oraz do utworów, albumów, playlist, artystów i odcinków Spotify.</p>
@@ -486,20 +568,90 @@
     </div>
   </div>
 
+  <div class="modal" id="gallery-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+      <h2 id="gallery-title">Galeria zdjęć</h2>
+      <form id="gallery-form" novalidate>
+        <label class="field dropzone" id="gal-drop">
+          <span class="field-label">Dodaj zdjęcia (możesz je tu przeciągnąć)</span>
+          <input type="file" id="gal-file" accept="image/*" multiple>
+        </label>
+        <div class="gal-url-row">
+          <input type="url" id="gal-url" placeholder="…albo wklej adres URL zdjęcia">
+          <button type="button" class="btn" id="gal-add-url">Dodaj</button>
+        </div>
+        <div class="gal-items" id="gal-items"></div>
+        <label class="field">
+          <span class="field-label">Podpis</span>
+          <input type="text" id="gal-caption" maxlength="200" placeholder="Np. Zdjęcia z koncertu">
+        </label>
+        <p class="form-error" id="gal-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="gal-delete" hidden>Usuń galerię</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="gallery-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="gal-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="ig-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ig-title">
+      <h2 id="ig-title">Grafika na social media</h2>
+      <form id="ig-form" novalidate>
+        <div class="ig-formats" role="radiogroup" aria-label="Format">
+          <label class="ig-format"><input type="radio" name="ig-format" value="post" checked><span><strong>Post</strong><small>Instagram 4:5</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="story"><span><strong>Story</strong><small>9:16 + naklejka</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="quote"><span><strong>Cytat</strong><small>Story 9:16</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="carousel"><span><strong>Karuzela</strong><small>do 4 slajdów (ZIP)</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="x"><span><strong>X / Twitter</strong><small>16:9</small></span></label>
+          <label class="ig-format" id="ig-review-fmt"><input type="radio" name="ig-format" value="review"><span><strong>Recenzja</strong><small>okładka + ocena</small></span></label>
+        </div>
+        <div class="ig-quote" id="ig-summary-box" hidden>
+          <label class="field">
+            <span class="field-label">Slajd 2 „W skrócie” (puste = bez tego slajdu)</span>
+            <textarea id="ig-summary" rows="4" maxlength="400" placeholder="Domyślnie zajawka artykułu"></textarea>
+          </label>
+        </div>
+        <div class="ig-quote" id="ig-quote-box" hidden>
+          <label class="field" id="ig-quote-pick-wrap">
+            <span class="field-label">Cytat z artykułu</span>
+            <select id="ig-quote-pick"></select>
+          </label>
+          <label class="field">
+            <span class="field-label" id="ig-quote-label">Treść cytatu</span>
+            <textarea id="ig-quote-text" rows="4" maxlength="400" placeholder="Wpisz lub wybierz cytat"></textarea>
+          </label>
+          <label class="field">
+            <span class="field-label">Autor</span>
+            <input type="text" id="ig-quote-author" maxlength="100" placeholder="Np. Jan Kowalski">
+          </label>
+        </div>
+        <p class="form-error" id="ig-error" hidden></p>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="ig-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="ig-submit">Pobierz i skopiuj opis</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <div class="modal" id="quote-modal" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="quote-title">
       <h2 id="quote-title">Wstaw cytat</h2>
       <form id="quote-form" novalidate>
         <label class="field">
-          <span class="field-label">Treść cytatu *</span>
+          <span class="field-label">Treść cytatu</span>
           <textarea id="qm-text" rows="4" maxlength="800" placeholder="Wpisz cytat… (Enter = nowa linia w cytacie)"></textarea>
         </label>
         <label class="field">
-          <span class="field-label">Źródło cytatu (opcjonalnie)</span>
+          <span class="field-label">Źródło</span>
           <input type="text" id="qm-source" maxlength="150" placeholder="Np. wywiad dla Radia Zet, post na Instagramie">
         </label>
         <label class="field">
-          <span class="field-label">Kto to powiedział (opcjonalnie)</span>
+          <span class="field-label">Autor cytatu</span>
           <input type="text" id="qm-author" maxlength="100" placeholder="Np. Jan Kowalski">
         </label>
         <p class="form-error" id="qm-error" hidden></p>
@@ -517,7 +669,13 @@
   <div class="modal" id="preview-modal" hidden>
     <div class="modal-box modal-box-wide" role="dialog" aria-modal="true" aria-label="Podgląd artykułu">
       <div class="preview-bar">
-        <strong>Podgląd – tak zobaczą to czytelnicy</strong>
+        <strong>Podgląd</strong>
+        <div class="pv-controls">
+          <div class="seg" role="group" aria-label="Widok podglądu">
+            <button type="button" class="seg-btn active" data-pv="desktop">Komputer</button>
+            <button type="button" class="seg-btn" data-pv="phone">Telefon</button>
+          </div>
+        </div>
         <button type="button" class="btn btn-sm" data-close="preview-modal">Zamknij</button>
       </div>
       <div class="preview-body" id="preview-body"></div>
@@ -548,6 +706,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261031"></script>
+  <script src="app.js?v=20261031k"></script>
 </body>
 </html>
