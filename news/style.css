@@ -2178,3 +2178,26 @@ body.gx-lock { overflow: hidden; }
   .article-meta > .author-line + *::before { display: none; }
   .article-meta > time, .article-meta > span:not(.author-line) { font-size: .85rem; }
 }
+
+/* Ustawienia v3: nagłówki z opisem i przełączniki */
+.st-head { display: flex; flex-direction: column; gap: 2px; }
+.st-sub { margin: 0; color: var(--muted); font-size: .85rem; }
+.st-switch { display: flex; align-items: center; justify-content: space-between; gap: 16px; cursor: pointer; padding: 10px 0; border-top: 1px solid var(--border); }
+.st-switch > span { display: flex; flex-direction: column; gap: 2px; }
+.st-switch small { color: var(--muted); font-size: .8rem; font-weight: 400; }
+.st-switch input { appearance: none; -webkit-appearance: none; flex: none; width: 46px; height: 28px; border-radius: 99px; background: var(--border); position: relative; cursor: pointer; transition: background .2s; border: 0; }
+.st-switch input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.3); transition: transform .2s; }
+.st-switch input:checked { background: var(--accent); }
+.st-switch input:checked::after { transform: translateX(18px); }
+.st-switch input:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Wyrównanie kolumn: lewy pasek zaczyna się na tej samej linii co treść */
+.side-left, .side-right { top: 84px; max-height: calc(100vh - 100px); }
+
+/* Brak widocznych pasków przewijania (przewijanie nadal działa) */
+html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar, html::-webkit-scrollbar, body::-webkit-scrollbar { display: none; width: 0; height: 0; }
+
+/* diagnostyka powiadomień */
+.st-diag { margin: 0; padding: 10px 12px; border-radius: 12px; background: var(--bg-soft, rgba(0,0,0,.05)); font-size: .85rem; line-height: 1.45; }
+.st-diag.is-ok { color: #14803c; } .st-diag.is-bad { color: #b42318; }

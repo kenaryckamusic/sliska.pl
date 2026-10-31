@@ -1239,7 +1239,7 @@ async function maybeAskPush() {
     if (!Push.supported() && !iosBrowser) return;
     if (Push.supported()) {
       if (Notification.permission === 'denied') return;
-      if (Notification.permission === 'granted' && await Push.sub()) return;
+      if (Notification.permission === 'granted') { const sb = await Push.sub(); if (sb) { Push.post('subscribe', sb.endpoint).catch(() => {}); return; } }
       const kr = await fetch(`${CONFIG.API_BASE}/push/key`).then(r => r.ok ? r.json() : null).catch(() => null);
       if (!kr || !kr.key) return;      // backend powiadomień niedostępny (np. tryb demo)
     }
@@ -3316,7 +3316,7 @@ async function renderPanel() {
   const hi = h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
   const first = (state.profile.name || '').split(/\s+/)[0];
   $('#panel-hello').textContent = `${hi}${first ? ', ' + first : ''}. Oto Twoje materiały i narzędzia redakcji.`;
-  let t = 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || 'drafts'; } catch { /* ignoruj */ }
+  let t = state.profile.panelTab || 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || t; } catch { /* ignoruj */ }
   setPanelTab(t);
   renderTips().then(updatePanelCounts);
   const dEl = $('#panel-drafts');
@@ -4669,8 +4669,8 @@ function openQuickModal(id) {
   $('#qk-delete').hidden = !a;
   $('#qk-text').value = a ? a.title : '';
   $('#qk-link').value = a ? a.link || '' : '';
-  $('#qk-source').value = a ? a.sourceName || '' : '';
-  $('#qk-push').checked = a ? false : true;
+  $('#qk-source').value = a ? a.sourceName || '' : (state.profile.quickSource || '');
+  $('#qk-push').checked = a ? false : state.profile.quickPush !== false;
   $('#qk-push-row').hidden = !!a;
   $('#qk-count').textContent = $('#qk-text').value.length;
   $('#qk-error').hidden = true;
@@ -5777,7 +5777,7 @@ function applyAuthUI() {
 }
 
 /* ---------- Profil redaktora (nazwa i zdjęcie) ---------- */
-function EMPTY_PROFILE() { return ({ name: '', avatar: '', title: '', defaultCategory: '', showPhoto: true, aliases: [] }); }
+function EMPTY_PROFILE() { return ({ name: '', avatar: '', title: '', defaultCategory: '', showPhoto: true, aliases: [], quickPush: true, quickSource: '', panelTab: 'drafts', confirmDelete: true }); }
 function normProfile(p) {
   p = p || {};
   return {
@@ -5786,6 +5786,9 @@ function normProfile(p) {
     title: String(p.title || '').slice(0, 40),
     defaultCategory: CATEGORIES.includes(p.defaultCategory) ? p.defaultCategory : '',
     showPhoto: p.showPhoto !== false,
+    quickPush: p.quickPush !== false,
+    quickSource: String(p.quickSource || '').slice(0, 40),
+    panelTab: ['drafts', 'scheduled', 'tips'].includes(p.panelTab) ? p.panelTab : 'drafts',
     aliases: Array.isArray(p.aliases) ? p.aliases.map(x => String(x).slice(0, 60)).filter(Boolean).slice(0, 30) : []
   };
 }
@@ -5853,6 +5856,10 @@ function renderSettings() {
   const sel = $('#st-cat');
   sel.innerHTML = '<option value="">Brak (wybieram za każdym razem)</option>' + CATEGORIES.map(c => `<option value="${Utils.esc(c)}">${Utils.esc(c)}</option>`).join('');
   sel.value = state.profile.defaultCategory || '';
+  $('#st-quick-push').checked = state.profile.quickPush !== false;
+  $('#st-quick-source').value = state.profile.quickSource || '';
+  $('#st-panel-tab').value = state.profile.panelTab || 'drafts';
+  updateDevicePush();
   $('#st-error').hidden = true;
   $('#st-avatar-file').value = '';
   const authors = otherAuthors();
@@ -5862,8 +5869,37 @@ function renderSettings() {
   let email = '';
   try { const u = FirebaseProvider.auth && FirebaseProvider.auth.currentUser; email = (Auth.useFirebase && u && u.email) || ''; } catch { /* ignoruj */ }
   $('#st-email').textContent = email || (Auth.useFirebase ? '—' : 'tryb lokalny (bez konta e-mail)');
-  $('#st-reset').closest('.st-row').hidden = !email;
   updateSettingsAvatar();
+}
+
+async function testPush() {
+  const out = $('#st-diag'); out.hidden = false; out.className = 'st-diag'; out.textContent = 'Sprawdzam…';
+  const bad = t => { out.className = 'st-diag is-bad'; out.textContent = t; };
+  try {
+    if (!Push.supported()) return bad('Ta przeglądarka nie obsługuje powiadomień' + (Push.isIos() ? ' – na iPhonie otwórz stronę z ikony na ekranie głównym.' : '.'));
+    if (Notification.permission !== 'granted') return bad('Powiadomienia nie są dozwolone – włącz je w ustawieniach przeglądarki/systemu dla tej strony i wróć tutaj.');
+    const sub = await Push.sub();
+    if (!sub) return bad('To urządzenie nie ma subskrypcji. Wyłącz i włącz przełącznik powiadomień powyżej.');
+    const r = await fetch(`${CONFIG.API_BASE}/push/test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+    const d = await r.json().catch(() => ({}));
+    const cron = d.cronAge == null ? ' Cron jeszcze nigdy nie ruszył – sprawdź w Cloudflare: Worker → Settings → Trigger Events (co 5 minut).' : d.cronAge > 15 ? ` Cron ostatnio działał ${d.cronAge} min temu – powinien co 5 min, sprawdź Trigger Events.` : '';
+    if (d.error === 'not_subscribed') { try { await Push.post('subscribe', sub.endpoint); } catch { /* ignoruj */ } return bad('Serwer nie znał tej subskrypcji (dopisałem ją). Kliknij test jeszcze raz.' + cron); }
+    if (d.error === 'rate') return bad('Za dużo testów – spróbuj za godzinę.');
+    if (d.error === 'no_vapid') return bad('Worker nie ma kluczy VAPID_PUBLIC / VAPID_PRIVATE.');
+    if (r.status === 404 || r.status === 503 || r.status >= 500 && !d.status) return bad('Worker nie odpowiada na /news/api/push/test – wgraj najnowszy kod Workera (Edit code → Deploy).');
+    if (d.ok) { out.className = 'st-diag is-ok'; out.textContent = 'Serwer wysłał test (kod ' + d.status + '). Powiadomienie powinno pojawić się w kilka sekund. Jeśli go nie ma, to blokuje je system: tryb „Nie przeszkadzać”, wyciszone powiadomienia przeglądarki/aplikacji.' + cron; return; }
+    if (d.status === 401 || d.status === 403) return bad('Serwer powiadomień odrzucił klucze (kod ' + d.status + '). Wyłącz i włącz powiadomienia na tym urządzeniu; jeśli nie pomoże, VAPID_PUBLIC w Workerze różni się od klucza, którym zapisano subskrypcję.');
+    if (d.status === 404 || d.status === 410) return bad('Subskrypcja wygasła i została usunięta. Wyłącz i włącz powiadomienia ponownie.');
+    bad('Nie udało się wysłać (kod ' + (d.status || r.status) + ').' + cron);
+  } catch (err) { bad('Błąd: ' + (err.message || err)); }
+}
+
+async function updateDevicePush() {
+  const el = $('#st-device-push'); if (!el) return;
+  const usable = Push.supported();
+  el.disabled = !usable;
+  el.checked = usable && Notification.permission === 'granted' && !!(await Push.sub());
+  $('#st-device-hint').textContent = usable ? 'Dotyczy tylko tego urządzenia i przeglądarki.' : (Push.isIos() ? 'Na iPhonie dodaj stronę do ekranu głównego i otwórz ją z ikony.' : 'Ta przeglądarka nie obsługuje powiadomień.');
 }
 
 function updateSettingsAvatar() {
@@ -5904,6 +5940,7 @@ async function saveSettings(e) {
   const next = normProfile({
     name, avatar: settingsAvatar,
     defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
+    quickPush: $('#st-quick-push').checked, quickSource: $('#st-quick-source').value.trim(), panelTab: $('#st-panel-tab').value,
     aliases: [...new Set([...(prev.aliases || []), ...(prev.name && prev.name !== name ? [prev.name] : []), ...picked])].filter(n => n && n !== name)
   });
   const claim = [...new Set([prev.name, ...(prev.aliases || []), ...picked])].filter(n => n && n !== name);
@@ -6095,13 +6132,13 @@ function bindEvents() {
   });
   $('#tip-status-form').addEventListener('submit', saveTipStatus);
   $('#tip-status-form').addEventListener('change', updateTipStatusForm);
-  $('#st-reset').addEventListener('click', async () => {
-    try {
-      const u = FirebaseProvider.auth.currentUser;
-      await FirebaseProvider.auth.sendPasswordResetEmail(u.email);
-      toast('Wysłałem link do zmiany hasła na ' + u.email + '.');
-    } catch (ex) { console.error(ex); toast('Nie udało się wysłać linku. Spróbuj za chwilę.', 'error'); }
+  $('#st-device-push').addEventListener('change', async e => {
+    const on = e.target.checked; e.target.disabled = true;
+    try { if (on) { await Push.enable(); toast('Powiadomienia włączone na tym urządzeniu.'); } else { await Push.disable(); toast('Powiadomienia wyłączone.'); } }
+    catch (err) { toast(err.message || 'Nie udało się zmienić powiadomień.', 'error'); }
+    finally { updateDevicePush(); updatePushButton(); }
   });
+  $('#st-test-push').addEventListener('click', testPush);
   $('#st-logout').addEventListener('click', () => $('#btn-logout').click());
   $('#btn-panel').addEventListener('click', () => { location.hash = '#/panel'; });
   $('#btn-settings').addEventListener('click', () => { location.hash = '#/ustawienia'; });
