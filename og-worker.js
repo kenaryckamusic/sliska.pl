@@ -28,11 +28,11 @@ async function page(id) {
 <meta property="og:type" content="article"><meta property="og:site_name" content="Śliska News">
 <meta property="og:title" content="${esc(title)}"><meta property="og:description" content="${esc(lead)}">
 <meta property="og:url" content="${url}"><meta property="og:image" content="${img}">
-<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}">
+<meta property="og:image:secure_url" content="${img}"><meta property="og:image:type" content="image/jpeg"><meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="theme-color" content="#d6001c"><meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="${esc(title)}">
 <meta name="twitter:description" content="${esc(lead)}"><meta name="twitter:image" content="${img}">
 <link rel="canonical" href="${url}">
-<meta http-equiv="refresh" content="0;url=${dest}"><script>location.replace(${JSON.stringify(dest)})</script>
+<script>location.replace(${JSON.stringify(dest)})</script>
 </head><body><a href="${dest}">${esc(title)}</a></body></html>`;
   return new Response(html, { headers: { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'public, max-age=300' } });
 }
