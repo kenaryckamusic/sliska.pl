@@ -1654,7 +1654,12 @@ function renderSideList() {
   const list = publishedArticles()
     .filter(a => a.id !== current && (ctx === ALL || !Utils.catsOf(a).includes(ctx)))
     .slice(0, 6);
-  const show = visibleHere && list.length > 0;
+  const cur = current ? state.articles.find(x => x.id === current) : null;
+  const wantComments = !!(cur && !cur.quick && isPublished(cur) && Readers.enabled() && window.matchMedia(SIDE_MQ).matches);
+  if (!wantComments || !current) $('#side-comments').innerHTML = '';
+  const show = (visibleHere && list.length > 0) || wantComments;
+  side.dataset.hasList = visibleHere && list.length > 0 ? '1' : '0';
+  $('.side-head', side).hidden = !(visibleHere && list.length > 0);
   layout.dataset.cat = r.name === 'home' && (state.category !== ALL || coll) ? '1' : '0';
   layout.dataset.right = show ? '1' : '0';
   side.hidden = !show;
@@ -1738,7 +1743,7 @@ function articleHtml(a, plain) {
         </div>
       </header>
       ${heroFig}
-      <div class="article-layout ${info.length ? 'has-infobox' : ''} ${commentsHtml ? 'has-comments' : ''}">
+      <div class="article-layout ${info.length ? 'has-infobox' : ''}">
         <div class="article-main">
           <p class="article-lead">${Utils.esc(a.lead)}</p>
           <div class="article-body">${Sanitizer.render(a.content)}</div>
@@ -1746,8 +1751,9 @@ function articleHtml(a, plain) {
           ${tagsBlockHtml(a)}
           ${shareBarHtml(a)}
         </div>
-        ${infobox || commentsHtml ? `<div class="article-aside">${infobox}${commentsHtml}</div>` : ''}
+        ${infobox}
       </div>
+      <div id="comments-home">${commentsHtml}</div>
     </article>`;
 }
 
@@ -1862,6 +1868,7 @@ function renderArticleView(id) {
     ${pagerHtml}
     ${relatedHtml}`;
   enhanceGalleries(el);
+  $('#side-comments').innerHTML = '';
   initReaderVote(a);
   initComments(a);
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
@@ -5231,7 +5238,7 @@ function initQuill() {
 async function openEditor(articleId, draftParam) {
   if (!Auth.isAdmin()) {
     location.hash = '#/';
-    openModal('login-modal');
+    openReaderModal('login');
     return;
   }
   if (!initQuill()) { location.hash = '#/'; return; }
@@ -5716,7 +5723,6 @@ const Readers = {
   render() {
     const b = $('#btn-account');
     if (b) {
-      b.hidden = !this.enabled() || !this.auth;
       b.classList.toggle('is-on', this.loggedIn());
       b.title = this.loggedIn() ? 'Twoje konto' + (this.me && this.me.name ? ' (' + this.me.name + ')' : '') : 'Zaloguj się lub załóż konto';
     }
@@ -5740,6 +5746,20 @@ const readerAvatar = (name, av, pub) => av ? `<img src="${CONFIG.API_BASE}/avata
 /* ---- komentarze pod artykułem ---- */
 const Cmt = { article: null, list: [], off: false, ok: false, expanded: false, sending: false, msg: '' };
 const CMT_SHOWN = 5;
+const CMT_CUT = 220;               // dłuższe komentarze są skracane do tylu znaków
+const cmtOpen = new Set();
+
+const SIDE_MQ = '(min-width: 1221px)';
+/** Szeroki ekran: komentarze w prawej kolumnie nad „Pozostałymi artykułami”; wąski: pod artykułem. */
+function placeComments() {
+  const box = $('#comments'); if (!box) return;
+  const side = $('#side-comments'), home = $('#comments-home');
+  const wide = window.matchMedia(SIDE_MQ).matches;
+  const to = wide ? side : home;
+  if (to && box.parentElement !== to) to.appendChild(box);
+  $('#side-right').hidden = wide ? false : $('#side-right').dataset.hasList !== '1';
+}
+window.matchMedia(SIDE_MQ).addEventListener('change', placeComments);
 
 function commentsSectionHtml(a) {
   if (!Readers.enabled() || a.quick || !isPublished(a)) return '';
@@ -5749,6 +5769,7 @@ function commentsSectionHtml(a) {
 async function initComments(a) {
   const box = $('#comments');
   if (!box || box.dataset.article !== a.id) return;
+  placeComments();
   Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = '';
   try {
     const d = await Readers.api('/comments?article=' + encodeURIComponent(a.id));
@@ -5756,6 +5777,14 @@ async function initComments(a) {
     Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.ok = d.enabled !== false;
   } catch { return; }          // brak API (np. tryb demonstracyjny) – sekcja zostaje ukryta
   drawComments();
+}
+
+function cmtTextHtml(c) {
+  const long = c.text.length > CMT_CUT, open = cmtOpen.has(c.id);
+  let t = c.text;
+  if (long && !open) { t = t.slice(0, CMT_CUT).replace(/\s+\S*$/, ''); t = t.replace(/[\s.,;:!?-]+$/, '') + '…'; }
+  const body = Utils.esc(t).replace(/\n/g, '<br>');
+  return `<p>${body}</p>${long ? `<button type="button" class="cmt-act cmt-toggle" data-cmt="toggle" data-id="${c.id}">${open ? 'Pokaż mniej' : 'Pokaż więcej'}</button>` : ''}`;
 }
 
 function commentItemHtml(c) {
@@ -5767,7 +5796,7 @@ function commentItemHtml(c) {
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
       <div class="cmt-head"><b>${Utils.esc(c.name)}</b><time>${ago(c.at)}</time></div>
-      <p>${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
+      ${cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
       <div class="cmt-actions">${own}${rep}${adm}</div>
     </div>
@@ -5778,6 +5807,7 @@ function drawComments() {
   const box = $('#comments');
   if (!box || !Cmt.ok || box.dataset.article !== Cmt.article) return;
   box.hidden = false;
+  placeComments();
   const visible = Cmt.list.filter(c => c.status !== 'pending' || c.mine);
   const shown = Cmt.expanded ? visible : visible.slice(0, CMT_SHOWN);
   let form = '';
@@ -5815,6 +5845,7 @@ async function sendComment(e) {
 async function commentAction(act, id, btn) {
   try {
     if (act === 'more') { Cmt.expanded = true; drawComments(); return; }
+    if (act === 'toggle') { cmtOpen.has(id) ? cmtOpen.delete(id) : cmtOpen.add(id); drawComments(); return; }
     if (act === 'login') { openReaderModal('login'); return; }
     if (act === 'resend') { await Readers.resend(); Cmt.msg = 'Wysłaliśmy link ponownie.'; drawComments(); return; }
     if (act === 'refresh') { await Readers.refresh(); if (!Readers.verified()) { Cmt.msg = 'Adres nie jest jeszcze potwierdzony. Kliknij link w wiadomości.'; drawComments(); } return; }
@@ -5862,16 +5893,30 @@ function setReaderMode(m) {
   $('#reader-pass-field').hidden = rst || nm;
   $('#reader-terms').hidden = !reg;
   $('#reader-submit').textContent = reg ? 'Załóż konto' : rst ? 'Wyślij link' : nm ? 'Zapisz' : 'Zaloguj się';
-  $('#reader-switch').innerHTML = reg || rst ? '<a href="#" data-rmode="login">Mam już konto</a>' : nm ? '' : '<a href="#" data-rmode="register">Załóż konto</a> · <a href="#" data-rmode="reset">Nie pamiętam hasła</a>';
+  $('#reader-switch').innerHTML = reg || rst ? '<a href="#" data-rmode="login">Wróć do logowania</a>' : nm ? '' : (Readers.enabled() ? '<a href="#" data-rmode="register">Załóż konto</a> <span>·</span> ' : '') + '<a href="#" data-rmode="reset">Nie pamiętam hasła</a>';
+  $('#reader-email-field').hidden = nm || (readerMode === 'login' && Auth.mode === 'local' && !Readers.enabled());
+  $('#reader-title').textContent = reg ? 'Załóż konto' : rst ? 'Nie pamiętam hasła' : nm ? 'Wybierz nazwę użytkownika' : 'Zaloguj się';
   $('#reader-pass').autocomplete = reg ? 'new-password' : 'current-password';
 }
+/** Jedno okno logowania: najpierw konto redaktora (projekt główny), potem konto czytelnika. */
+async function unifiedLogin(email, pw) {
+  const credErr = c => /^(auth\/(invalid-credential|wrong-password|user-not-found|invalid-email|missing-email)|app\/(wrong-password|not-editor))$/.test(c || '');
+  if (Auth.mode === 'firebase' || Auth.mode === 'local') {
+    try { await Auth.login(email, pw); applyAuthUI(); return 'editor'; }
+    catch (e) { if (!Readers.auth || !credErr(e && e.code)) throw e; }
+  }
+  if (!Readers.auth) throw { code: 'auth/invalid-credential' };
+  await Readers.login(email, pw);
+  return 'reader';
+}
+
 async function submitReader(e) {
   e.preventDefault();
   const err = $('#reader-error'); err.hidden = true;
   const email = $('#reader-email').value.trim(), pw = $('#reader-pass').value, name = $('#reader-name').value.trim();
   const btn = $('#reader-submit'); btn.disabled = true;
   try {
-    if (readerMode === 'login') { await Readers.login(email, pw); closeModal('reader-modal'); toast('Zalogowano.'); }
+    if (readerMode === 'login') { const who = await unifiedLogin(email, pw); closeModal('reader-modal'); $('#reader-pass').value = ''; toast(who === 'editor' ? 'Zalogowano jako redaktor.' : 'Zalogowano.'); }
     else if (readerMode === 'reset') { await Readers.reset(email); err.hidden = false; err.className = 'form-ok'; err.textContent = 'Jeśli konto istnieje, wysłaliśmy link do zmiany hasła.'; return; }
     else if (readerMode === 'name') { await Readers.saveName(name); closeModal('reader-modal'); toast('Zapisano nazwę użytkownika.'); }
     else {
@@ -5934,6 +5979,7 @@ async function shrinkToJpeg(file, size = 160) {
 
 function bindReaderEvents() {
   $('#btn-account').addEventListener('click', () => { if (Readers.loggedIn()) location.hash = '#/konto'; else openReaderModal('login'); });
+  $('#reader-error').className = 'form-error';
   $('#reader-form').addEventListener('submit', submitReader);
   $('#reader-modal').addEventListener('click', e => { const a = e.target.closest('[data-rmode]'); if (a) { e.preventDefault(); setReaderMode(a.dataset.rmode); $('#reader-error').hidden = true; } });
   document.addEventListener('click', async e => {
@@ -6042,7 +6088,7 @@ function routeCore() {
 
   if ((r.name === 'editor' || r.name === 'panel' || r.name === 'settings') && !Auth.isAdmin()) {
     location.hash = '#/';
-    openModal('login-modal');
+    openReaderModal('login');
     return;
   }
 
@@ -6481,11 +6527,6 @@ function bindEvents() {
   });
 
   // Przyciski nawigacji
-  $('#btn-login').addEventListener('click', () => {
-    $('#login-error').hidden = true;
-    $('#login-password').value = '';
-    openModal('login-modal');
-  });
   $('#btn-logout').addEventListener('click', async () => {
     await Auth.logout();
     if (['editor', 'panel', 'settings'].includes(currentRoute().name)) location.hash = '#/';
@@ -6541,31 +6582,6 @@ function bindEvents() {
   // Przewijany pasek PILNE – dopasowanie po zmianie rozmiaru okna
   window.addEventListener('resize', Utils.debounce(fitTicker, 150));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitTicker);
-
-  // Logowanie
-  $('#login-form').addEventListener('submit', async e => {
-    e.preventDefault();
-    const emailInput = $('#login-email');
-    const input = $('#login-password');
-    const errEl = $('#login-error');
-    const submit = $('button[type="submit"]', $('#login-form'));
-    errEl.hidden = true;
-    submit.disabled = true;
-    try {
-      await Auth.login(emailInput.value.trim(), input.value);
-      closeModal('login-modal');
-      input.value = '';
-      applyAuthUI();
-      toast('Zalogowano jako redaktor.');
-    } catch (err) {
-      console.warn('Logowanie nieudane:', err.code || err);
-      errEl.textContent = Auth.explain(err);
-      errEl.hidden = false;
-      input.select();
-    } finally {
-      submit.disabled = false;
-    }
-  });
 
   // Zamykanie modali
   $$('[data-close]').forEach(b => b.addEventListener('click', () => closeModal(b.dataset.close)));

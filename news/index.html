@@ -76,7 +76,7 @@
       <div class="auth">
         <button type="button" class="btn btn-icon push-toggle" id="btn-push" aria-label="Powiadomienia o nowych artykułach" title="Włącz powiadomienia o nowych artykułach" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
         <button type="button" class="btn btn-icon theme-toggle" id="btn-theme" aria-label="Przełącz motyw jasny/ciemny" title="Przełącz motyw jasny/ciemny"><svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
-        <button type="button" class="btn btn-icon" id="btn-account" aria-label="Konto czytelnika" title="Zaloguj się lub załóż konto" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+        <button type="button" class="btn btn-icon" id="btn-account" aria-label="Zaloguj się" title="Zaloguj się lub załóż konto"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
         <button type="button" class="btn btn-icon guest-only" id="btn-login" aria-label="Logowanie redakcji" title="Logowanie redakcji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 8.65-8.65"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2.5 2.5"/></svg></button>
       </div>
     </div>
@@ -488,6 +488,7 @@
   </main>
 
   <aside class="side-right" id="side-right">
+    <div id="side-comments"></div>
     <div class="side-head">
       <h2 class="side-title" id="side-title">Pozostałe artykuły</h2>
       <a class="side-all" href="#/">Wszystkie</a>
@@ -587,9 +588,10 @@
         <label class="field" id="reader-name-field" hidden><span class="field-label">Nazwa użytkownika</span><input type="text" id="reader-name" maxlength="20" placeholder="3–20 znaków" autocomplete="nickname"><small class="hint">Widoczna przy komentarzach. Zmienisz ją raz na 30 dni.</small></label>
         <label class="field" id="reader-email-field"><span class="field-label">E-mail</span><input type="email" id="reader-email" autocomplete="email" spellcheck="false"></label>
         <label class="field" id="reader-pass-field"><span class="field-label">Hasło</span><input type="password" id="reader-pass" autocomplete="current-password"></label>
-        <label class="field-check" id="reader-terms" hidden><input type="checkbox" id="reader-accept"> Akceptuję <a href="#/regulamin" data-close="reader-modal">regulamin</a> i <a href="#/prywatnosc" data-close="reader-modal">politykę prywatności</a></label>
+        <label class="field-check" id="reader-terms" hidden><input type="checkbox" id="reader-accept"><span>Akceptuję <a href="#/regulamin" data-close="reader-modal">regulamin</a> i <a href="#/prywatnosc" data-close="reader-modal">politykę prywatności</a></span></label>
         <p class="form-error" id="reader-error" hidden></p>
-        <div class="modal-actions"><span class="reader-switch" id="reader-switch"></span><span class="spacer"></span><button type="button" class="btn" data-close="reader-modal">Anuluj</button><button type="submit" class="btn btn-primary" id="reader-submit">Zaloguj się</button></div>
+        <div class="modal-actions"><span class="spacer"></span><button type="button" class="btn" data-close="reader-modal">Anuluj</button><button type="submit" class="btn btn-primary" id="reader-submit">Zaloguj się</button></div>
+        <p class="reader-switch" id="reader-switch"></p>
       </form>
     </div>
   </div>
