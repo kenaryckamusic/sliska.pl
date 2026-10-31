@@ -1740,8 +1740,8 @@ async function igBackdrop(a, W, H, overlay) {
 
 /** Wspólna stopka wszystkich grafik pionowych: linia, adres po lewej, opis po prawej. */
 function drawFooterStd(ctx, W, H, family, right, opts = {}) {
-  const PAD = 72, footY = opts.footY || H - 66;
-  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - 42, W - PAD * 2, 2);
+  const PAD = 72, footY = opts.footY || H - 82;
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - 56, W - PAD * 2, 2);
   ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 32px ${family}`; ctx.textBaseline = 'middle';
   ctx.textAlign = 'left'; ctx.fillText('sliska.pl/news', PAD, footY);
   if (right) { ctx.textAlign = 'right'; ctx.fillText(right, W - PAD, footY); }
@@ -1769,6 +1769,11 @@ function drawKicker(ctx, text, x, yTop, o = {}) {
   const size = o.size || 30, h = o.h || 56, family = o.family;
   const cy = yTop + h / 2;
   ctx.save();
+  if (o.centerW) {
+    ctx.font = `800 ${size}px ${family}`;
+    if ('letterSpacing' in ctx) ctx.letterSpacing = Math.round(size * 0.17) + 'px';
+    x = Math.round((o.centerW - (Math.round(size * 1.8) + 20 + ctx.measureText(text).width)) / 2);
+  }
   ctx.fillStyle = o.line || '#d6001c';
   ctx.fillRect(x, cy - 3, Math.round(size * 1.8), 6);
   ctx.fillStyle = o.color || '#fff'; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
@@ -1807,7 +1812,8 @@ async function renderWideImage(a, format) {
   await drawLogoWhite(ctx, PAD, PAD, wideX ? 400 : 300, family);
   if (a.review && a.review.score != null) scoreBadge(ctx, W - PAD - (wideX ? 72 : 58), PAD + (wideX ? 62 : 50), wideX ? 72 : 58, a.review.score, family);
   const maxW = W - PAD * 2;
-  const footY = H - Math.round(PAD * 1.45);
+  const frameIn = wideX ? 24 : 20, fh = wideX ? 56 : 48;
+  const footY = H - frameIn - fh;
   let size = wideX ? 92 : 68, lines;
   for (; size >= 38; size -= 4) {
     ctx.font = `800 ${size}px ${family}`;
@@ -1815,16 +1821,17 @@ async function renderWideImage(a, format) {
     if (lines.length <= 3 && lines.every(l => ctx.measureText(l).width <= maxW)) break;
   }
   const lh = Math.round(size * 1.1);
-  const titleTop = footY - (wideX ? 40 : 32) - 36 - lines.length * lh;
+  const titleTop = footY - fh - 36 - lines.length * lh;
   ctx.fillStyle = '#fff'; ctx.textBaseline = 'top';
   lines.forEach((l, i) => ctx.fillText(l, PAD, titleTop + i * lh));
   const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
   const chipH = wideX ? 48 : 40;
   const chipY = titleTop - 20 - chipH;
   drawKicker(ctx, cat, PAD, chipY, { size: wideX ? 26 : 22, h: chipH, family });
-  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - (wideX ? 40 : 32), W - PAD * 2, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - fh, W - PAD * 2, 2);
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.font = `700 ${wideX ? 30 : 24}px ${family}`;
+  ctx.textBaseline = 'middle';
   ctx.fillText('sliska.pl/news', PAD, footY);
   ctx.textAlign = 'right';
   ctx.fillText(wideX ? 'Czytaj więcej →' : 'Śliska News', W - PAD, footY);
@@ -1833,71 +1840,96 @@ async function renderWideImage(a, format) {
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
-/** Okładka albumu jako rozmyte tło + duża okładka z oceną. */
+/** Miękkie rozmycie zdjęcia na całe płótno (bez „pikseli”): zmniejszamy w kilku krokach i powiększamy z powrotem. */
+function drawSoftBlur(ctx, img, W, H) {
+  const iw = img.naturalWidth || W, ih = img.naturalHeight || H, k = Math.max(W / iw, H / ih);
+  const mk = (w, h) => { const c = document.createElement('canvas'); c.width = w; c.height = h; const x = c.getContext('2d'); x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high'; return c; };
+  let w = Math.round(W / 3), h = Math.round(H / 3);
+  let cur = mk(w, h);
+  cur.getContext('2d').drawImage(img, (w - iw * k / 3) / 2, (h - ih * k / 3) / 2, iw * k / 3, ih * k / 3);
+  while (w > 60) {
+    const nw = Math.max(60, Math.round(w / 2)), nh = Math.max(75, Math.round(h / 2));
+    const nx = mk(nw, nh); nx.getContext('2d').drawImage(cur, 0, 0, nw, nh); cur = nx; w = nw; h = nh;
+  }
+  while (w < W) {
+    const nw = Math.min(W, w * 2), nh = Math.min(H, h * 2);
+    const nx = mk(nw, nh); nx.getContext('2d').drawImage(cur, 0, 0, nw, nh); cur = nx; w = nw; h = nh;
+  }
+  ctx.save();
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  if ('filter' in ctx) ctx.filter = 'blur(18px)';
+  ctx.drawImage(cur, -30, -30, W + 60, H + 60);
+  ctx.restore();
+}
+
+/** Recenzja (4:5): w tle wybrane zdjęcie (albo – gdy go nie ma – miękko rozmyta okładka), okładka + ocena, układ jak na grafice X. */
 async function renderReviewImage(a) {
-  const W = 1080, H = 1350, PAD = 72, S = 640;
-  const r = a.review;
+  const W = 1080, H = 1350, PAD = 72;
+  const r = a.review || {};
   const family = getComputedStyle(document.body).fontFamily;
   try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
-  let photoOk = true, img = null;
-  const src = coverOf(a) || a.image;
-  try { if (src) img = await loadImage(src, !src.startsWith('data:')); else throw new Error('brak'); }
-  catch { photoOk = !src; try { img = await loadImage(Utils.placeholder(Utils.catsOf(a)[0])); } catch {} }
+  let photoOk = true;
+  const origImage = a._origImage !== undefined ? a._origImage : a.image;
+  const coverSrc = (r.coverSame || !r.cover) ? origImage : r.cover;
+  const load = async src => { if (!src) return null; try { return await loadImage(src, !String(src).startsWith('data:')); } catch { photoOk = false; return null; } };
+  const cover = await load(coverSrc);
+  const bgImg = (a.image && a.image !== coverSrc) ? await load(a.image) : null;
   ctx.fillStyle = '#111'; ctx.fillRect(0, 0, W, H);
-  if (img) {
-    // „rozmycie” bez filtra (działa też w Safari): rysujemy w miniaturze i powiększamy
-    const tiny = document.createElement('canvas');
-    tiny.width = 27; tiny.height = 34;
-    const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
-    const kt = Math.max(27 / iw, 34 / ih);
-    tiny.getContext('2d').drawImage(img, (27 - iw * kt) / 2, (34 - ih * kt) / 2, iw * kt, ih * kt);
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(tiny, 0, 0, W, H);
+  if (bgImg) {
+    const iw = bgImg.naturalWidth || W, ih = bgImg.naturalHeight || H, k = Math.max(W / iw, H / ih);
+    ctx.drawImage(bgImg, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+  } else if (cover) {
+    drawSoftBlur(ctx, cover, W, H);
   }
-  ctx.fillStyle = 'rgba(8,8,12,.5)'; ctx.fillRect(0, 0, W, H);
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.3, 'rgba(0,0,0,.25)'); g.addColorStop(.6, 'rgba(0,0,0,.55)'); g.addColorStop(1, 'rgba(0,0,0,.94)');
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  if (!bgImg) { ctx.fillStyle = 'rgba(8,8,12,.28)'; ctx.fillRect(0, 0, W, H); }
+
   await drawLogoWhite(ctx, PAD, PAD, 330, family);
-  const x = (W - S) / 2, y = 215;
-  ctx.save();
-  ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 24;
-  ctx.fillStyle = '#000'; roundRect(ctx, x, y, S, S, 28); ctx.fill();
-  ctx.restore();
-  ctx.save();
-  roundRect(ctx, x, y, S, S, 28); ctx.clip();
-  if (img) {
-    const iw = img.naturalWidth || S, ih = img.naturalHeight || S;
-    const k = Math.max(S / iw, S / ih);
-    ctx.drawImage(img, x + (S - iw * k) / 2, y + (S - ih * k) / 2, iw * k, ih * k);
-  }
-  ctx.restore();
-  if (r && r.score != null) {
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,.4)'; ctx.shadowBlur = 24;
-    ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x + S - 24, y + S - 24, 116, 0, Math.PI * 2); ctx.fill();
-    ctx.restore();
-    scoreBadge(ctx, x + S - 24, y + S - 24, 106, r.score, family);
-  }
-  const maxW = W - PAD * 2;
-  const work = (r && r.work) || a.title;
-  let size = 80, lines;
-  for (; size >= 40; size -= 4) {
+  const hasScore = r.score != null;
+  if (hasScore) scoreBadge(ctx, W - PAD - 78, PAD + 62, 78, r.score, family);
+
+  // układ od dołu: stopka → podtytuł → tytuł → kicker → okładka
+  const footY = H - 82, lineY = footY - 56, maxW = W - PAD * 2;
+  const work = r.work || a.title;
+  let size = 84, lines;
+  for (; size >= 44; size -= 4) {
     ctx.font = `800 ${size}px ${family}`;
     lines = wrapLines(ctx, work, maxW);
     if (lines.length <= 2 && lines.every(l => ctx.measureText(l).width <= maxW)) break;
   }
-  const lh = Math.round(size * 1.12);
-  let ty = y + S + 120;
+  const lh = Math.round(size * 1.1);
+  const sub = [r.artist, r.kind, r.year].filter(Boolean).join('  ·  ');
+  const subTop = lineY - 36 - 38;
+  const titleTop = subTop - 22 - lines.length * lh;
+  const kickTop = titleTop - 26 - 56;
+  const topFree = PAD + 58 + 44;
+  const S = Math.max(300, Math.min(580, kickTop - topFree - 44));
+  const tx = Math.round((W - S) / 2), ty = Math.round(topFree + (kickTop - topFree - S) / 2);
+  if (cover) {
+    ctx.save();
+    ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = 50; ctx.shadowOffsetY = 20;
+    ctx.fillStyle = '#000'; roundRect(ctx, tx, ty, S, S, 26); ctx.fill();
+    ctx.restore();
+    ctx.save();
+    roundRect(ctx, tx, ty, S, S, 26); ctx.clip();
+    const iw = cover.naturalWidth || S, ih = cover.naturalHeight || S, k = Math.max(S / iw, S / ih);
+    ctx.drawImage(cover, tx + (S - iw * k) / 2, ty + (S - ih * k) / 2, iw * k, ih * k);
+    ctx.restore();
+  }
+  drawKicker(ctx, 'RECENZJA', 0, kickTop, { family, centerW: W });
   ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  lines.forEach((l, i) => ctx.fillText(l, W / 2, ty + i * lh));
-  ty += lines.length * lh + 14;
-  const sub = [r && r.artist, r && r.kind, r && r.year].filter(Boolean).join('  ·  ');
-  ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.font = `700 36px ${family}`;
-  ctx.fillText(sub, W / 2, ty);
+  ctx.font = `800 ${size}px ${family}`;
+  lines.forEach((l, i) => ctx.fillText(l, W / 2, titleTop + i * lh));
+  ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.font = `700 34px ${family}`;
+  ctx.fillText(sub, W / 2, subTop);
   ctx.textAlign = 'left';
   drawFooterStd(ctx, W, H, family, 'Link w bio →');
-  drawFrame(ctx, W, H, { a, dateY: PAD + 29, family });
+  drawFrame(ctx, W, H, { a: hasScore ? null : a, dateY: PAD + 29, family });
   return { blob: await canvasBlob(canvas), photoOk };
 }
 
@@ -1970,7 +2002,7 @@ async function renderInstagramImage(a, opts = {}) {
   const story = format === 'story' || format === 'quote';
   const W = 1080, H = story ? 1920 : 1350, PAD = 72;
   const topY = story ? 230 : PAD;        // w Story góra i dół zasłaniają interfejs Instagrama
-  const footY = story ? H - 520 : H - 66;
+  const footY = story ? H - 520 : H - 82, lo = story ? 42 : 56;   // lo = odległość linii nad stopką
   const family = getComputedStyle(document.body).fontFamily;
   try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
 
@@ -2056,7 +2088,7 @@ async function renderInstagramImage(a, opts = {}) {
     ctx.font = `600 32px ${family}`;
     wrapLines(ctx, 'z artykułu: ' + a.title, qW).slice(0, 2).forEach((l, i) => ctx.fillText(l, PAD + 20, nextY + 12 + i * 42));
     ctx.fillStyle = 'rgba(255,255,255,.35)';
-    ctx.fillRect(PAD, footY - 42, W - PAD * 2, 2);
+    ctx.fillRect(PAD, footY - lo, W - PAD * 2, 2);
     ctx.fillStyle = 'rgba(255,255,255,.85)';
     ctx.font = `700 32px ${family}`;
     ctx.textBaseline = 'middle';
@@ -2078,7 +2110,7 @@ async function renderInstagramImage(a, opts = {}) {
     if (lines.length <= 5 && lines.every(l => ctx.measureText(l).width <= maxW)) break;
   }
   const lh = Math.round(size * 1.1);
-  const bottomY = footY - 84;
+  const bottomY = footY - lo - 42;
   const titleTop = bottomY - lines.length * lh;
   ctx.fillStyle = '#fff';
   ctx.textBaseline = 'top';
@@ -2088,7 +2120,7 @@ async function renderInstagramImage(a, opts = {}) {
   drawKicker(ctx, cat, PAD, titleTop - 28 - 56, { family });
 
   ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.fillRect(PAD, footY - 42, maxW, 2);
+  ctx.fillRect(PAD, footY - lo, maxW, 2);
   ctx.fillStyle = 'rgba(255,255,255,.85)';
   ctx.font = `700 32px ${family}`;
   ctx.textBaseline = 'middle';
@@ -2476,7 +2508,7 @@ async function renderSocialSet(a, opts) {
   const slides = [];
   for (let i = 0; i < kinds.length; i++) {
     const def = IG_SLIDES.find(s => s.k === kinds[i]);
-    const r = await drawSlide(a, kinds[i], i % 2 === 0 ? 'red' : 'dark', { idx: i + 1, total: kinds.length, quote: opts.quote, summary: opts.summary, bgPhoto: opts.bgPhoto });
+    const r = await drawSlide(a, kinds[i], i % 2 === 0 ? 'red' : 'dark', { idx: i + 1, total: kinds.length, quote: opts.quote, summary: opts.summary, bgPhoto: igBgFor(kinds[i], opts.bgMode, opts.bgKinds) });
     const blob = await canvasBlob(r.canvas);
     slides.push({ blob, photoOk: r.photoOk, name: `sliska-news-${slug}-${String(i + 1).padStart(2, '0')}-${def ? def.file : kinds[i]}.png` });
   }
@@ -2495,7 +2527,7 @@ async function makeInstagramPost(id, btn, opts = {}) {
   const label = btn ? btn.textContent : '';
   if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
   try {
-    const set = await renderSocialSet(opts.photo ? { ...a, image: opts.photo } : a, opts);
+    const set = await renderSocialSet(opts.photo ? { ...a, image: opts.photo, _origImage: a.image } : a, opts);
     await copyPromise;
     const files = set.files.map(f => new File([f.blob], f.name, { type: 'image/png' }));
     let shared = false;
@@ -3782,7 +3814,8 @@ function openIgModal(id) {
   $('#ig-error').hidden = true;
   editor.igPick = [];
   buildIgPhotos();
-  $('#ig-bgphoto').checked = false;
+  editor.igBgKinds = [];
+  $('#ig-bgmode').value = 'none';
   updateIgUi();
   openModal('ig-modal');
 }
@@ -3795,6 +3828,10 @@ function igFormat() {
 let igThumbJob = 0;
 const igThumbCache = new Map();
 
+const IG_TEXT_KINDS = ['title', 'lead', 'sentence', 'quote', 'facts', 'score', 'author', 'ask', 'link'];
+function igBgFor(kind, mode, kinds) { return mode === 'all' ? IG_TEXT_KINDS.includes(kind) : (mode === 'pick' && (kinds || []).includes(kind)); }
+function igBgMode() { const el = $('#ig-bgmode'); return el ? el.value : 'none'; }
+
 function igSlideTheme(i) { return i % 2 === 0 ? 'red' : 'dark'; }
 
 function buildIgGrid() {
@@ -3804,7 +3841,7 @@ function buildIgGrid() {
   $('#ig-slide-grid').innerHTML = IG_SLIDES.map(s => {
     const off = s.need && !s.need(a);
     return `<button type="button" class="ig-slide${off ? ' is-off' : ''}" data-slide="${s.k}" ${off ? 'disabled' : ''} aria-pressed="false">
-      <span class="ig-thumb"><canvas width="216" height="270"></canvas><i class="ig-num"></i></span>
+      <span class="ig-thumb"><canvas width="216" height="270"></canvas><i class="ig-num"></i>${IG_TEXT_KINDS.includes(s.k) && !off ? '<span class="ig-bgtoggle" role="button" tabindex="0" data-bg="' + s.k + '" title="Zdjęcie w tle tego slajdu">Zdjęcie w tle</span>' : ''}</span>
       <b>${Utils.esc(s.name)}</b><small>${Utils.esc(off ? s.why : s.desc)}</small></button>`;
   }).join('');
   refreshIgGrid();
@@ -3819,6 +3856,8 @@ function refreshIgGrid() {
     const k = btn.dataset.slide, pos = editor.igPick.indexOf(k);
     btn.classList.toggle('is-on', pos >= 0);
     btn.setAttribute('aria-pressed', String(pos >= 0));
+    const tg = $('.ig-bgtoggle', btn);
+    if (tg) { tg.hidden = igBgMode() !== 'pick'; tg.classList.toggle('is-on', (editor.igBgKinds || []).includes(k)); }
     $('.ig-num', btn).textContent = pos >= 0 ? String(pos + 1) : '';
     if (!btn.disabled) todo.push({ btn, k, theme: pos >= 0 ? igSlideTheme(pos) : 'dark' });
   });
@@ -3828,8 +3867,8 @@ function refreshIgGrid() {
   (async () => {
     for (const t of todo) {
       if (job !== igThumbJob) return;
-      const bg = $('#ig-bgphoto').checked;
-      const art = editor.igPhoto ? { ...a, image: editor.igPhoto } : a;
+      const bg = igBgFor(t.k, igBgMode(), editor.igBgKinds);
+      const art = editor.igPhoto ? { ...a, image: editor.igPhoto, _origImage: a.image } : a;
       const key = `${editor.igId}|${t.k}|${t.theme}|${editor.igPhoto || ''}|${bg ? 1 : 0}`;
       let src = igThumbCache.get(key);
       if (!src) {
@@ -3854,6 +3893,7 @@ function updateIgUi() {
   $('#ig-texts').hidden = !(car || f === 'quote');
   $('#ig-summary-box').hidden = !car;
   $('#ig-bgphoto-wrap').hidden = !car;
+  $('#ig-grid-hint').hidden = !(car && igBgMode() === 'pick');
   if (f === 'quote') $('#ig-texts').open = true;
   $('#ig-texts-title').textContent = car ? 'Teksty slajdów (opcjonalnie)' : 'Cytat';
   $('#ig-quote-label').textContent = 'Treść cytatu';
@@ -5715,6 +5755,13 @@ function bindEvents() {
 
   $$('input[name="ig-format"]').forEach(r => r.addEventListener('change', updateIgUi));
   $('#ig-slide-grid').addEventListener('click', e => {
+    const tg = e.target.closest('.ig-bgtoggle');
+    if (tg) {
+      e.stopPropagation(); e.preventDefault();
+      const kk = tg.dataset.bg, at = editor.igBgKinds.indexOf(kk);
+      if (at >= 0) editor.igBgKinds.splice(at, 1); else editor.igBgKinds.push(kk);
+      refreshIgGrid(); return;
+    }
     const b = e.target.closest('.ig-slide');
     if (!b || b.disabled) return;
     const k = b.dataset.slide, i = editor.igPick.indexOf(k);
@@ -5730,7 +5777,7 @@ function bindEvents() {
     igThumbCache.clear();
     if (igFormat() === 'carousel') refreshIgGrid();
   });
-  $('#ig-bgphoto').addEventListener('change', () => { igThumbCache.clear(); if (igFormat() === 'carousel') refreshIgGrid(); });
+  $('#ig-bgmode').addEventListener('change', () => { $('#ig-grid-hint').hidden = igBgMode() !== 'pick'; if (igFormat() === 'carousel') refreshIgGrid(); });
   $('#ig-quote-pick').addEventListener('change', () => {
     const q = editor.igQuotes[Number($('#ig-quote-pick').value)];
     if (q) { $('#ig-quote-text').value = q.text; $('#ig-quote-author').value = q.author; }
@@ -5742,7 +5789,7 @@ function bindEvents() {
     if (format === 'quote' && !quote.text) { $('#ig-error').textContent = 'Wpisz lub wybierz cytat.'; $('#ig-error').hidden = false; return; }
     try { localStorage.setItem('sliska_igformat', format); } catch { /* ignoruj */ }
     if (format === 'carousel' && !editor.igPick.length) { $('#ig-error').textContent = 'Kliknij slajdy, które chcesz mieć w karuzeli.'; $('#ig-error').hidden = false; return; }
-    makeInstagramPost(editor.igId, $('#ig-submit'), { format, quote, summary: $('#ig-summary').value.trim(), slides: format === 'carousel' ? [...editor.igPick] : undefined, photo: editor.igPhoto || '', bgPhoto: format === 'carousel' && $('#ig-bgphoto').checked });
+    makeInstagramPost(editor.igId, $('#ig-submit'), { format, quote, summary: $('#ig-summary').value.trim(), slides: format === 'carousel' ? [...editor.igPick] : undefined, photo: editor.igPhoto || '', bgMode: format === 'carousel' ? igBgMode() : 'none', bgKinds: [...(editor.igBgKinds || [])] });
   });
 
   $('#tag-chips').addEventListener('click', e => {

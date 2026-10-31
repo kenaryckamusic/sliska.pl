@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261101c">
+  <link rel="stylesheet" href="style.css?v=20261101g">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -623,9 +623,15 @@
           <span class="field-label">Zdjęcie do grafik</span>
           <div class="ig-photo-list" id="ig-photo-list"></div>
         </div>
-        <label class="ig-check" id="ig-bgphoto-wrap" hidden>
-          <input type="checkbox" id="ig-bgphoto"> <span>Zdjęcie jako tło slajdów tekstowych <small>(domyślnie: płaski kolor)</small></span>
-        </label>
+        <div class="ig-bgmode" id="ig-bgphoto-wrap" hidden>
+          <label class="field-label" for="ig-bgmode">Tło slajdów tekstowych</label>
+          <select id="ig-bgmode" class="input">
+            <option value="none">Płaski kolor (domyślnie)</option>
+            <option value="pick">Zdjęcie tylko na wybranych slajdach</option>
+            <option value="all">Zdjęcie na wszystkich slajdach tekstowych</option>
+          </select>
+          <p class="hint" id="ig-grid-hint" hidden>Przy slajdach tekstowych pojawi się przycisk „Zdjęcie w tle” – kliknij te, które mają mieć zdjęcie.</p>
+        </div>
         <div id="ig-carousel-box" hidden>
           <p class="hint ig-hint">Kliknij slajdy, które chcesz mieć w karuzeli. Kolejność klikania = kolejność slajdów, numeracja i kolory (czerwony, ciemny, czerwony…) ustawią się same.</p>
           <div class="ig-slide-grid" id="ig-slide-grid"></div>
@@ -731,6 +737,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261101c"></script>
+  <script src="app.js?v=20261101g"></script>
 </body>
 </html>

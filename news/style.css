@@ -1934,3 +1934,9 @@ figure.article-gallery figcaption { margin-top: 6px; font: .85rem/1.4 var(--font
 .ig-check { display: flex; align-items: center; gap: 10px; margin: 6px 2px 4px; font-weight: 700; font-size: .92rem; cursor: pointer; }
 .ig-check small { color: var(--muted); font-weight: 600; }
 .ig-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+.ig-bgmode { display: grid; gap: 6px; margin: 8px 2px 4px; }
+.ig-bgmode select { max-width: 360px; }
+.ig-bgtoggle { position: absolute; left: 6px; bottom: 6px; padding: 4px 9px; border-radius: 99px; background: rgba(0, 0, 0, .72); color: #fff; font-size: .68rem; font-weight: 800; font-style: normal; border: 1.5px solid rgba(255, 255, 255, .45); cursor: pointer; }
+.ig-bgtoggle[hidden] { display: none; }
+.ig-bgtoggle.is-on { background: var(--accent); border-color: #fff; }
