@@ -6131,12 +6131,12 @@ function bindReaderEvents() {
 
 /* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
 const Mod = { all: false };
-const ROLE_LABEL = { owner: 'Właściciel Portalu', editor: 'Redaktor' };
+const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor' };
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
 const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
-const roleBadge = c => c.staff ? '<span class="cmt-badge">Redakcja</span>' : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
+const roleBadge = c => c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 function modItemHtml(c) {
   const a = state.articles.find(x => x.id === c.article);
@@ -6180,10 +6180,10 @@ function modApply(item, act) {
 function modUserHtml(u) {
   const staff = !!u.staff;
   const isOwner = u.role === 'owner';
-  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : [['', 'Czytelnik'], ['editor', 'Redaktor (pisze artykuły)']];
-  const sel = staff ? '' : `<select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
-  const av = staff ? '' : `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
-  return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-name="${Utils.esc(u.name)}">
+  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor (pisze artykuły)']];
+  const sel = `<select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const av = `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
+  return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}">
     <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
     <div class="mu-main"><b>${Utils.esc(u.name)}</b>${roleBadge({ staff, role: u.role })}<small>komentarzy: ${u.comments}${u.banned ? ' · <span class="mu-ban">zablokowany</span>' : ''}</small></div>
     <div class="mu-actions">${sel}${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div>
@@ -6237,7 +6237,8 @@ document.addEventListener('change', async e => {
   const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
   try {
     const d = await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, role: sel.value }) });
-    if (sel.value === 'editor' && d.editorSync === null) toast('Rola zapisana (plakietka i moderacja). Prawo pisania artykułów wymaga konta serwisowego w workerze – patrz instrukcja.');
+    if (row.dataset.staff === '1') toast('Rola zapisana. Konto redakcji ma dostęp z reguł Firestore – rola zmienia tylko tytuł przy komentarzach.');
+    else if (sel.value === 'editor' && d.editorSync === null) toast('Rola zapisana (plakietka i moderacja). Prawo pisania artykułów wymaga konta serwisowego w workerze – patrz instrukcja.');
     else if (d.editorSync === false) toast('Rola zapisana, ale synchronizacja z Firebase się nie udała. Sprawdź konto serwisowe w workerze.', 'error');
     else toast('Rola zapisana.');
   } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }

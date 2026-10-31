@@ -2388,3 +2388,5 @@ a.ptab { display: inline-flex; align-items: center; justify-content: center; tex
   .cmt-act { font-size: .72rem; }
   .cmt-form textarea { min-height: 64px; border-radius: 10px; }
 }
+
+.cmt-badge.is-chief { background: #7c3aed; }
