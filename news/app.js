@@ -490,11 +490,6 @@ function seedArticles() {
       image: '',
       urgent: false,
       featured: true,
-      infobox: [
-        { label: 'Rodzaj', value: 'Artykuł demonstracyjny' },
-        { label: 'Edytor', value: 'Quill.js (WYSIWYG)' },
-        { label: 'Źródło', value: 'Redakcja' }
-      ],
       content:
         '<h2>Jak to działa?</h2>' +
         '<p>Kliknięcie w kafel otwiera artykuł <strong>bez przeładowania strony</strong>, a adres w przeglądarce można skopiować i wysłać dalej.</p>' +
@@ -514,7 +509,6 @@ function seedArticles() {
       image: '',
       urgent: true,
       featured: false,
-      infobox: [],
       content: '<p>To przykładowy materiał demonstracyjny. Flagę <strong>„Pilne”</strong> ustawia się w panelu Ustawienia w edytorze.</p>',
       createdAt: ago(45),
       updatedAt: ago(45)
@@ -528,7 +522,6 @@ function seedArticles() {
       image: '',
       urgent: false,
       featured: false,
-      infobox: [{ label: 'Miejsce', value: 'Polska' }],
       content: '<p>Wyszukiwarka w nagłówku filtruje kafle na żywo – po tytule, zajawce i treści artykułu.</p>',
       createdAt: ago(180),
       updatedAt: ago(180)
@@ -545,7 +538,6 @@ function seedArticles() {
       urgent: false,
       featured: false,
       review: { score: 9.1, coverSame: true, cover: '', kind: 'Albumy', work: 'Przykładowy album', artist: 'Przykładowy zespół', year: '2026' },
-      infobox: [],
       content: '<p>To materiał demonstracyjny trybu lokalnego.</p><p><br></p><p>Pusta linia powyżej powstała po dwóch Enterach.</p>',
       createdAt: ago(300),
       updatedAt: ago(300)
@@ -1048,6 +1040,7 @@ const editor = {
   articleId: null,
   existing: null,       // edytowany artykuł (opublikowany lub zaplanowany)
   image: '',            // zdjęcie główne (URL lub Base64)
+  pos: { x: 50, y: 50, z: 1 },   // kadr zdjęcia głównego (punkt ostrości w % i przybliżenie)
   cover: '',            // własna okładka recenzji (URL lub Base64)
   author: '',           // autor – z profilu redaktora (nowy artykuł) albo z edytowanego artykułu
   modalImage: '',       // zdjęcie wstawiane do treści
@@ -1114,6 +1107,14 @@ function setArticles(list) {
   state.plain = new Map(state.articles.map(a => [a.id, Utils.stripHtml(a.content)]));
 }
 
+/** Kadr zdjęcia głównego (wybrany w edytorze): punkt ostrości i przybliżenie. Działa tylko dla zdjęcia głównego artykułu. */
+function imgFocus(a, src) {
+  const p = a && a.imagePos;
+  if (!p || !a.image || (src !== undefined && src !== a.image)) return '';
+  const x = Math.min(100, Math.max(0, Number(p.x))), y = Math.min(100, Math.max(0, Number(p.y))), z = Math.min(3, Math.max(1, Number(p.z) || 1));
+  if (!Number.isFinite(x) || !Number.isFinite(y) || (x === 50 && y === 50 && z === 1)) return '';
+  return ` style="object-position:${x}% ${y}%;transform-origin:${x}% ${y}%${z > 1 ? ';scale:' + z : ''}"`;
+}
 function getImage(a) { return a.image || Utils.placeholder(Utils.catsOf(a)[0]); }
 
 function sourceTag(src) {
@@ -1344,22 +1345,23 @@ async function initReaderVote(a) {
         <p class="rv-lead">Daj swoją ocenę od 0 do 10 – średnią czytelników zobaczysz od razu po oddaniu głosu.</p>
         <p class="rv-who-note">${(Readers.loggedIn() && Readers.hasName()) || isStaffActor() ? `Głosujesz jako <b>${Utils.esc(isStaffActor() ? staffName() : Readers.me.name)}</b> – Twoja ocena będzie widoczna na liście oceniających.` : 'Możesz zagłosować bez konta. Zalogowani czytelnicy oceniają pod własną nazwą.'}</p>
         <div class="rv-pick"><output class="rv-val" id="rv-val">${fmt1(v)}</output>
-          <input type="range" id="rv-range" min="0" max="10" step="0.5" value="${v}" aria-label="Twoja ocena od 0 do 10"></div>
+          <input type="range" id="rv-range" min="0" max="10" step="0.5" value="${v}" aria-label="Twoja ocena od 0 do 10">
+          <button type="button" class="btn btn-primary rv-send" data-rv="send">Oceń</button></div>
+        <div class="rv-btns" role="group" aria-label="Wybierz ocenę – kliknięcie od razu oddaje głos">${[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(n => `<button type="button" data-rv="score" data-score="${n}" class="${mine === n ? 'is-mine' : ''}">${n}</button>`).join('')}</div>
         ${err ? `<p class="form-error">${Utils.esc(err)}</p>` : ''}
-        <div class="rv-actions"><button type="button" class="btn btn-primary" data-rv="send">Oceń</button>
-        <button type="button" class="rv-link" data-rv="peek">Zobacz wyniki bez głosowania</button></div>`;
+        <div class="rv-actions"><button type="button" class="rv-link" data-rv="peek">Zobacz wyniki bez głosowania</button></div>`;
       const rg = $('#rv-range', box), out = $('#rv-val', box);
       rg.addEventListener('input', () => { out.textContent = fmt1(Number(rg.value)); rg.style.setProperty('--p', (rg.value * 10) + '%'); });
       rg.style.setProperty('--p', (rg.value * 10) + '%');
     }
   };
   box.onclick = async e => {
-    const b = e.target.closest('[data-rv]'); if (!b) return;
+    const b = e.target.closest('[data-rv]'); if (!b || b.disabled) return;
     const act = b.dataset.rv;
     if (act === 'peek') { showResults = true; draw(); return; }
     if (act === 'edit') { showResults = false; draw(); return; }
-    if (act === 'send') {
-      const score = Number($('#rv-range', box).value);
+    if (act === 'send' || act === 'score') {
+      const score = act === 'score' ? Number(b.dataset.score) : Number($('#rv-range', box).value);
       b.disabled = true;
       const r = await Votes.send(a.id, score);
       if (r.status === 200 && r.data.ok) { mine = r.data.mine; cur = { n: r.data.n, avg: r.data.avg, voters: r.data.voters }; showResults = true; draw(); toast('Dziękujemy za ocenę!'); Votes._all = null; return; }
@@ -1560,7 +1562,7 @@ function cardHtml(a, opts = {}) {
   return `<article class="card" data-id="${Utils.esc(a.id)}">
     <div class="img-tags">${Utils.chipsHtml(a)}${a.urgent ? '<span class="badge-urgent">PILNE</span>' : ''}</div>
     <a class="card-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true">
-      <img src="${Utils.esc(thumbFor(a, opts.cover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
+      <img src="${Utils.esc(thumbFor(a, opts.cover))}"${imgFocus(a, thumbFor(a, opts.cover))} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     </a>
     <div class="card-body">
       <h3 class="card-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
@@ -1576,7 +1578,7 @@ function cardHtml(a, opts = {}) {
 function heroHtml(a, useCover) {
   const id = encodeURIComponent(a.id);
   return `<section class="hero" data-id="${Utils.esc(a.id)}" aria-label="Temat dnia">
-    <img class="hero-img" fetchpriority="high" decoding="async" src="${Utils.esc(thumbFor(a, useCover))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">
+    <img class="hero-img" fetchpriority="high" decoding="async" src="${Utils.esc(thumbFor(a, useCover))}"${imgFocus(a, thumbFor(a, useCover))} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">
     <div class="hero-tags"><span class="hero-flag">Temat dnia</span>${Utils.chipsHtml(a)}</div>
     <div class="hero-content">
       <h2 class="hero-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h2>
@@ -1592,7 +1594,7 @@ function heroHtml(a, useCover) {
 function tileHtml(a) {
   const id = encodeURIComponent(a.id);
   return `<article class="tile" data-id="${Utils.esc(a.id)}">
-    <img class="tile-img" src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
+    <img class="tile-img" src="${Utils.esc(getImage(a))}"${imgFocus(a)} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     <div class="img-tags">${Utils.chipsHtml(a)}</div>
     <div class="tile-content">
       <h3 class="tile-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
@@ -1698,7 +1700,7 @@ function renderSideList() {
   $('#side-list').innerHTML = list.map(a => {
     const id = encodeURIComponent(a.id);
     return `<article class="side-item" data-id="${Utils.esc(a.id)}">
-      <a class="side-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(getImage(a))}" alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async"></a>
+      <a class="side-media" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(getImage(a))}"${imgFocus(a)} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async"></a>
       <div class="side-body">
         <div class="card-tags">${Utils.chipsHtml(a)}${a.urgent ? '<span class="badge-urgent">PILNE</span>' : ''}</div>
         <h3 class="side-item-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
@@ -1736,27 +1738,18 @@ function shrinkAvatar(src, size = 96) {
 }
 
 function articleHtml(a, plain) {
-  const info = (a.infobox || []).filter(r => r && r.label && r.value);
   const minutes = Utils.readingTime(a, plain);
   const hasReview = !!(a.review && a.review.score !== null && a.review.score !== undefined);
   // Przy recenzji z osobną okładką zdjęcie główne też jest widoczne; gdy okładka = zdjęcie główne, pokazujemy je tylko w ramce oceny
   const showHero = !hasReview || !!a.image;
   const heroFig = showHero
     ? `<figure class="article-hero">
-        <div class="media-wrap"><img src="${Utils.esc(getImage(a))}" alt="${Utils.esc(a.title)}" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">${sourceTag(a.imageSource)}</div>
+        <div class="media-wrap"><img src="${Utils.esc(getImage(a))}"${imgFocus(a)} alt="${Utils.esc(a.title)}" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}">${sourceTag(a.imageSource)}</div>
         ${a.imageCaption ? `<figcaption>${Utils.esc(a.imageCaption)}</figcaption>` : ''}
       </figure>`
     : '';
   const edited = a.updatedAt && Math.abs(new Date(a.updatedAt) - new Date(a.createdAt)) > 60000 && isPublished(a);
 
-  const infobox = info.length
-    ? `<aside class="infobox" aria-label="Szybkie fakty">
-         <h2 class="infobox-title">Szybkie fakty</h2>
-         <table><tbody>${info.map(r =>
-           `<tr><th scope="row">${Utils.esc(r.label)}</th><td>${Utils.esc(r.value)}</td></tr>`).join('')}
-         </tbody></table>
-       </aside>`
-    : '';
 
   const commentsHtml = commentsSectionHtml(a);
 
@@ -1774,7 +1767,7 @@ function articleHtml(a, plain) {
         </div>
       </header>
       ${heroFig}
-      <div class="article-layout ${info.length ? 'has-infobox' : ''}">
+      <div class="article-layout">
         <div class="article-main">
           <p class="article-lead">${Utils.esc(a.lead)}</p>
           <div class="article-body">${Sanitizer.render(a.content)}</div>
@@ -1782,7 +1775,6 @@ function articleHtml(a, plain) {
           ${tagsBlockHtml(a)}
           ${shareBarHtml(a)}
         </div>
-        ${infobox}
       </div>
       <div id="comments-home">${commentsHtml}</div>
     </article>`;
@@ -2406,7 +2398,6 @@ const IG_SLIDES = [
   { k: 'lead',     name: 'W skrócie',      desc: 'zajawka artykułu',    file: 'w-skrocie' },
   { k: 'sentence', name: 'Kluczowe zdanie', desc: 'z treści artykułu',  file: 'zdanie' },
   { k: 'quote',    name: 'Cytat',          desc: 'z artykułu',          file: 'cytat' },
-  { k: 'facts',    name: 'Szybkie fakty',  desc: 'z ramki faktów',      file: 'fakty', need: a => (a.infobox || []).some(r => r && r.label && r.value), why: 'brak ramki faktów' },
   { k: 'score',    name: 'Ocena',          desc: 'recenzja z punktami', file: 'ocena', need: a => !!(a.review && a.review.score != null), why: 'to nie recenzja' },
   { k: 'author',   name: 'Autor',          desc: 'kto napisał',         file: 'autor' },
   { k: 'ask',      name: 'Pytanie',        desc: 'do komentarzy',       file: 'pytanie' },
@@ -2568,23 +2559,6 @@ async function drawSlide(a, kind, theme, o = {}) {
       ctx.fillStyle = ac; ctx.fillRect(PAD + 4, ay + 22, 64, 6);
       ctx.fillStyle = '#fff'; ctx.font = `700 42px ${family}`; ctx.fillText(author, PAD + 88, ay);
     }
-  } else if (kind === 'facts') {
-    chip('SZYBKIE FAKTY');
-    const rows = (a.infobox || []).filter(r => r && r.label && r.value).slice(0, 4);
-    const gap = 22, ch = Math.min(200, Math.floor((bottom - top - gap * (rows.length - 1)) / rows.length));
-    const fy0 = top + Math.max(0, Math.round(((bottom - top) - (rows.length * ch + (rows.length - 1) * gap)) / 2));
-    rows.forEach((r, i) => {
-      const y = fy0 + i * (ch + gap);
-      ctx.fillStyle = 'rgba(255,255,255,.12)'; roundRect(ctx, PAD, y, maxW, ch, 28); ctx.fill();
-      ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 2; roundRect(ctx, PAD, y, maxW, ch, 28); ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,.75)'; ctx.font = `800 26px ${family}`; ctx.textBaseline = 'top';
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '3px';
-      ctx.fillText(String(r.label).toUpperCase().slice(0, 32), PAD + 36, y + 28);
-      if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
-      const f = fitText(ctx, family, String(r.value), maxW - 72, ch - 90, 50, 28, 800, 1.15);
-      ctx.fillStyle = '#fff'; ctx.font = `800 ${f.size}px ${family}`;
-      f.lines.slice(0, 2).forEach((l, k) => ctx.fillText(l, PAD + 36, y + 70 + k * f.lh));
-    });
   } else if (kind === 'score') {
     chip('OCENA');
     const r = a.review || {};
@@ -3525,7 +3499,7 @@ function defaultAuthor() {
 function emptyData() {
   return {
     title: '', lead: '', categories: state.profile.defaultCategory ? [state.profile.defaultCategory] : [], author: defaultAuthor(),
-    image: '', imageCaption: '', imageSource: '', urgent: false, featured: false, commentsOff: false, status: '', related: [], infobox: [], content: '',
+    image: '', imagePos: null, imageCaption: '', imageSource: '', urgent: false, featured: false, commentsOff: false, status: '', related: [], content: '',
     tags: '',
     reviewOn: false, reviewScore: '', reviewKind: 'Albumy', reviewCoverSame: false, reviewCover: '', reviewWork: '', reviewArtist: '', reviewYear: '',
     scheduleOn: false, scheduleAt: ''
@@ -3542,6 +3516,7 @@ function normalizeData(obj) {
     tags: Array.isArray(o.tags) ? o.tags.join(', ') : (typeof o.tags === 'string' ? o.tags : ''),
     author: o.author ?? base.author,
     image: o.image || '',
+    imagePos: o.imagePos && typeof o.imagePos === 'object' ? { x: Number(o.imagePos.x) || 50, y: Number(o.imagePos.y) || 50, z: Number(o.imagePos.z) || 1 } : null,
     imageCaption: o.imageCaption || '',
     imageSource: o.imageSource || '',
     reviewOn: !!o.reviewOn,
@@ -3557,7 +3532,6 @@ function normalizeData(obj) {
     commentsOff: !!o.commentsOff,
     status: Utils.STATUSES[o.status] ? o.status : '',
     related: Array.isArray(o.related) ? o.related.filter(x => typeof x === 'string').slice(0, 3) : [],
-    infobox: Array.isArray(o.infobox) ? o.infobox.map(r => ({ label: r.label || '', value: r.value || '' })) : [],
     content: o.content || '',
     scheduleOn: !!o.scheduleOn,
     scheduleAt: o.scheduleAt || ''
@@ -3596,6 +3570,7 @@ function collectData() {
     tags: $('#f-tags').value,
     author: editor.author || state.profile.name || 'Redaktor',
     image: editor.image,
+    imagePos: editor.image ? { ...editor.pos } : null,
     imageCaption: $('#f-image-caption').value,
     imageSource: $('#f-image-source').value,
     reviewOn: $('#f-review-on').checked,
@@ -3611,10 +3586,6 @@ function collectData() {
     commentsOff: $('#f-comments-off').checked,
     status: $('#f-status').value,
     related: editor.related.slice(),
-    infobox: $$('.info-row').map(row => ({
-      label: $('.info-label', row).value,
-      value: $('.info-value', row).value
-    })).filter(r => r.label.trim() || r.value.trim()),
     content: contentHtml(),
     scheduleOn: $('#f-schedule-on').checked,
     scheduleAt: $('#f-schedule-at').value
@@ -3622,7 +3593,7 @@ function collectData() {
 }
 
 function isEmptyData(d) {
-  return !d.title.trim() && !d.lead.trim() && !d.content && !d.image && d.infobox.length === 0 && !d.reviewOn;
+  return !d.title.trim() && !d.lead.trim() && !d.content && !d.image && !d.reviewOn;
 }
 
 function renderCatPicker(selected = []) {
@@ -3645,28 +3616,53 @@ function setCover(src) {
   if (!editor.cover) $('#f-review-cover-file').value = '';
 }
 
-function addInfoRow(label = '', value = '') {
-  const row = document.createElement('div');
-  row.className = 'info-row';
-  row.innerHTML =
-    '<input type="text" class="info-label" placeholder="Nagłówek (np. Miejsce)" maxlength="60" aria-label="Nagłówek">' +
-    '<input type="text" class="info-value" placeholder="Wartość (np. Warszawa)" maxlength="200" aria-label="Wartość">' +
-    '<button type="button" class="btn btn-sm btn-ghost info-remove" aria-label="Usuń wiersz">✕</button>';
-  row.querySelector('.info-label').value = label;
-  row.querySelector('.info-value').value = value;
-  $('#infobox-rows').appendChild(row);
-  $('#fold-info').open = true;
+const defaultPos = () => ({ x: 50, y: 50, z: 1 });
+function applyCrop() {
+  const img = $('#f-crop img'); if (!img) return;
+  const { x, y, z } = editor.pos;
+  img.style.objectPosition = `${x}% ${y}%`;
+  img.style.transformOrigin = `${x}% ${y}%`;
+  img.style.scale = z > 1 ? String(z) : '';
+  $('#f-crop-zoom').value = z;
 }
-
-function setMainImage(src) {
+function setMainImage(src, pos) {
   editor.image = src || '';
+  editor.pos = pos && src ? { x: Number(pos.x) || 50, y: Number(pos.y) || 50, z: Math.min(3, Math.max(1, Number(pos.z) || 1)) } : defaultPos();
   const box = $('#f-image-preview');
   box.hidden = !editor.image;
   updateChecklist();
-  if (editor.image) $('img', box).src = editor.image;
+  if (editor.image) $('#f-crop img').src = editor.image;
+  applyCrop();
   // pole URL pokazuje tylko zwykły link (nie Base64)
   $('#f-image-url').value = editor.image && !editor.image.startsWith('data:') ? editor.image : '';
   if (!editor.image) $('#f-image-file').value = '';
+}
+
+/** Kadrowanie zdjęcia głównego: przeciąganie ustawia punkt ostrości, suwak – przybliżenie (podgląd 16:9 = to, co zobaczą czytelnicy). */
+function initCropper() {
+  const frame = $('#f-crop'); if (!frame) return;
+  const img = $('img', frame);
+  let drag = null;
+  frame.addEventListener('pointerdown', e => {
+    if (!editor.image) return;
+    drag = { sx: e.clientX, sy: e.clientY, x: editor.pos.x, y: editor.pos.y };
+    frame.setPointerCapture(e.pointerId); frame.classList.add('is-drag'); e.preventDefault();
+  });
+  frame.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const r = frame.getBoundingClientRect(), nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) return;
+    const k = Math.max(r.width / nw, r.height / nh), wi = nw * k, hi = nh * k, z = editor.pos.z;
+    const sx = (z - 1) * r.width + z * (wi - r.width), sy = (z - 1) * r.height + z * (hi - r.height);   // piksele przesunięcia na 1% zmiany punktu ostrości (×100)
+    if (sx > 0.5) editor.pos.x = Math.min(100, Math.max(0, drag.x - (e.clientX - drag.sx) * 100 / sx));
+    if (sy > 0.5) editor.pos.y = Math.min(100, Math.max(0, drag.y - (e.clientY - drag.sy) * 100 / sy));
+    applyCrop();
+  });
+  const end = () => { if (!drag) return; drag = null; frame.classList.remove('is-drag'); onFormChange(); };
+  frame.addEventListener('pointerup', end); frame.addEventListener('pointercancel', end);
+  $('#f-crop-zoom').addEventListener('input', e => { editor.pos.z = Number(e.target.value) || 1; applyCrop(); });
+  $('#f-crop-zoom').addEventListener('change', () => onFormChange());
+  $('#f-crop-reset').addEventListener('click', () => { editor.pos = defaultPos(); applyCrop(); onFormChange(); });
 }
 
 /** Podpowiedzi tagów: istniejące tagi i wykonawcy z recenzji. */
@@ -3789,7 +3785,6 @@ function applyData(d) {
   $('#f-review-year').value = d.reviewYear;
   updateReviewUi();
   $('#fold-review').open = !!d.reviewOn;
-  $('#fold-info').open = d.infobox.length > 0;
   // autor: nowy artykuł = nazwa z profilu; edycja = autor zostaje taki, jaki był
   editor.author = editor.mode === 'new' ? (state.profile.name || 'Redaktor') : (d.author || state.profile.name || 'Redaktor');
   $('#editor-author').textContent = 'Autor: ' + editor.author;
@@ -3803,9 +3798,7 @@ function applyData(d) {
   $('#f-schedule-on').checked = d.scheduleOn;
   $('#f-schedule-at').value = d.scheduleAt;
 
-  $('#infobox-rows').innerHTML = '';
-  d.infobox.forEach(r => addInfoRow(r.label, r.value));
-  setMainImage(d.image);
+  setMainImage(d.image, d.imagePos);
 
   if (d.content) {
     editor.quill.setContents(editor.quill.clipboard.convert(Sanitizer.upgradeQuotes(d.content)), 'silent');
@@ -4346,7 +4339,7 @@ function igFormat() {
 let igThumbJob = 0;
 const igThumbCache = new Map();
 
-const IG_TEXT_KINDS = ['title', 'lead', 'sentence', 'quote', 'facts', 'score', 'author', 'ask', 'link'];
+const IG_TEXT_KINDS = ['title', 'lead', 'sentence', 'quote', 'score', 'author', 'ask', 'link'];
 function igBgFor(kind, mode, kinds) { return mode === 'all' ? IG_TEXT_KINDS.includes(kind) : (mode === 'pick' && (kinds || []).includes(kind)); }
 function igBgMode() { const el = $('#ig-bgmode'); return el ? el.value : 'none'; }
 
@@ -4754,7 +4747,7 @@ async function submitQuick(e) {
     category: 'Inne', categories: ['Inne'], tags: [],
     author: (existing && existing.author) || state.profile.name || 'Redaktor',
     image: '', imageCaption: '', imageSource: '', review: null,
-    urgent: false, featured: false, infobox: [],
+    urgent: false, featured: false,
     link, sourceName: $('#qk-source').value.trim().slice(0, 40),
     createdAt: existing ? existing.createdAt : now,
     updatedAt: now,
@@ -5454,6 +5447,7 @@ async function saveArticle(e) {
     authorUid: Auth.uid(),
     authorPhoto,
     image: d.image,
+    imagePos: d.image && d.imagePos ? d.imagePos : null,
     imageCaption: d.imageCaption.trim(),
     imageSource: d.imageSource.trim(),
     review,
@@ -5462,7 +5456,6 @@ async function saveArticle(e) {
     commentsOff: !!d.commentsOff,
     status: d.status,
     related: d.related,
-    infobox: d.infobox.map(r => ({ label: r.label.trim(), value: r.value.trim() })).filter(r => r.label && r.value),
     content: d.content,
     createdAt,
     updatedAt: new Date().toISOString()
@@ -5535,6 +5528,7 @@ function openPreview() {
     author: d.author.trim() || '(autor)',
     authorPhoto: (d.author.trim() === state.profile.name && state.profile.avatar) || '',
     image: d.image,
+    imagePos: d.image && d.imagePos ? d.imagePos : null,
     imageCaption: d.imageCaption.trim(),
     imageSource: d.imageSource.trim(),
     review: d.reviewOn && Utils.parseScore(d.reviewScore) !== null
@@ -5545,7 +5539,6 @@ function openPreview() {
     commentsOff: !!d.commentsOff,
     status: d.status,
     related: d.related,
-    infobox: d.infobox.map(r => ({ label: r.label.trim(), value: r.value.trim() })),
     content: d.content,
     createdAt: created,
     updatedAt: created
@@ -5720,7 +5713,7 @@ const Readers = {
       try { await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch { /* ignoruj */ }
       this.auth.onAuthStateChanged(async u => {
         this.user = u; this.me = null;
-        if (u) { await this.loadMe(); Push.link(); }
+        if (u) { await this.loadMe(); Push.link(); this.joinEditor(); }
         this.loading = false; this.render();
       });
     } catch (e) { console.warn('Konta czytelników niedostępne:', e); this.loading = false; this.auth = null; }
@@ -5745,10 +5738,27 @@ const Readers = {
     this.render();
   },
   async login(email, pw) { await this.auth.signInWithEmailAndPassword(email, pw); },
-  async logout() { await Push.unlink(); await this.auth.signOut(); },
+  async logout() {
+    await Push.unlink();
+    try { const cur = Auth.mode === 'firebase' && FirebaseProvider.auth && FirebaseProvider.auth.currentUser; if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); } catch { /* ignoruj */ }
+    await this.auth.signOut();
+  },
+  /** Czytelnik z rolą Redaktor/Właściciel dostaje od workera token logowania do projektu redakcji (prawo pisania artykułów). */
+  async joinEditor() {
+    try {
+      if (Auth.mode !== 'firebase' || !FirebaseProvider.auth || this._joining) return;
+      const cur = FirebaseProvider.auth.currentUser, role = this.me && this.me.role;
+      if (!['editor', 'owner'].includes(role)) { if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); return; }   // odebrana rola = koniec sesji redaktora
+      if (cur) return;
+      this._joining = true;
+      const d = await this.api('/editor-token', { method: 'POST' });
+      await FirebaseProvider.auth.signInWithCustomToken(d.token);
+    } catch (e) { if (e && e.error !== 'no_sa' && e.error !== 'forbidden') console.warn('Logowanie redaktora nie powiodło się:', e); }
+    finally { this._joining = false; }
+  },
   async reset(email) { await this.auth.sendPasswordResetEmail(email); },
   async resend() { await this.user.sendEmailVerification(); },
-  async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); },
+  async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); this.joinEditor(); },
   async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
@@ -6072,15 +6082,18 @@ function renderAccount() {
 
 /** Kafelek profilu po lewej także dla zalogowanego czytelnika (w tym samym miejscu co u redaktora, bez funkcji redakcyjnych). */
 function renderReaderCard() {
-  const on = Readers.loggedIn() && !Auth.isAdmin();
-  document.body.classList.toggle('is-reader', on);
-  if (!on) return;
+  const rd = Readers.loggedIn(), only = rd && !Auth.isAdmin();
+  document.body.classList.toggle('is-reader', rd);
+  document.body.classList.toggle('is-reader-only', only);
   const me = Readers.me || {};
-  $('#profile-name').textContent = me.name || 'Twoje konto';
-  $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);
-  $('#profile-role').textContent = ROLE_LABEL[me.role] || 'Czytelnik';
   $('#btn-rd-mod').hidden = !canMod();
   $('#btn-rd-users').hidden = !canManage();
+  if (only) {
+    $('#profile-name').textContent = me.name || 'Twoje konto';
+    $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);
+    $('#profile-role').textContent = ROLE_LABEL[me.role] || 'Czytelnik';
+  } else if (rd && Auth.isAdmin() && me.role === 'owner') $('#profile-role').textContent = ROLE_LABEL.owner;
+  else if (Auth.isAdmin()) $('#profile-role').textContent = 'Redaktor';
 }
 
 async function shrinkToJpeg(file, size = 160) {
@@ -6122,7 +6135,7 @@ const ROLE_LABEL = { owner: 'Właściciel Portalu', editor: 'Redaktor' };
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
-const canManage = () => Auth.isAdmin() || myRole() === 'owner';
+const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
 const roleBadge = c => c.staff ? '<span class="cmt-badge">Redakcja</span>' : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 function modItemHtml(c) {
@@ -6166,13 +6179,14 @@ function modApply(item, act) {
 
 function modUserHtml(u) {
   const staff = !!u.staff;
-  const opts = [['', 'Czytelnik'], ['editor', 'Redaktor'], ...(Auth.isAdmin() ? [['owner', 'Właściciel Portalu']] : [])];
-  const lock = staff || (u.role === 'owner' && !Auth.isAdmin());
-  const sel = staff ? '' : `<select data-mod-role ${lock ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}${u.role === 'owner' && !Auth.isAdmin() ? '<option value="owner" selected>Właściciel Portalu</option>' : ''}</select>`;
+  const isOwner = u.role === 'owner';
+  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : [['', 'Czytelnik'], ['editor', 'Redaktor (pisze artykuły)']];
+  const sel = staff ? '' : `<select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const av = staff ? '' : `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
   return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-name="${Utils.esc(u.name)}">
     <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
     <div class="mu-main"><b>${Utils.esc(u.name)}</b>${roleBadge({ staff, role: u.role })}<small>komentarzy: ${u.comments}${u.banned ? ' · <span class="mu-ban">zablokowany</span>' : ''}</small></div>
-    <div class="mu-actions">${sel}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div>
+    <div class="mu-actions">${sel}${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div>
   </div>`;
 }
 
@@ -6212,6 +6226,7 @@ document.addEventListener('click', async e => {
       const row = u.closest('.mu'), body = { uid: row.dataset.uid }, k = u.dataset.modUser;
       if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
       else if (k === 'cooldown') body.resetCooldown = true;
+      else if (k === 'avatar-remove') { if (!confirm('Usunąć zdjęcie profilowe tego użytkownika?')) return; body.avatar = null; }
       else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; body.banned = k === 'ban'; }
       await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); loadModUsers(row.closest('[data-modusers]'));
     }
@@ -6220,8 +6235,19 @@ document.addEventListener('click', async e => {
 document.addEventListener('change', async e => {
   const sel = e.target.closest('[data-mod-role]'); if (!sel) return;
   const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
-  try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, role: sel.value }) }); toast('Rola zapisana.'); }
-  catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  try {
+    const d = await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, role: sel.value }) });
+    if (sel.value === 'editor' && d.editorSync === null) toast('Rola zapisana (plakietka i moderacja). Prawo pisania artykułów wymaga konta serwisowego w workerze – patrz instrukcja.');
+    else if (d.editorSync === false) toast('Rola zapisana, ale synchronizacja z Firebase się nie udała. Sprawdź konto serwisowe w workerze.', 'error');
+    else toast('Rola zapisana.');
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  loadModUsers(box);
+});
+document.addEventListener('change', async e => {
+  const f = e.target.closest('[data-mod-avatar]'); if (!f || !f.files[0]) return;
+  const row = f.closest('.mu'), box = row.closest('[data-modusers]');
+  try { const data = await shrinkToJpeg(f.files[0]); await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, avatar: data }) }); toast('Zdjęcie zmienione.'); }
+  catch (ex) { toast(ex.message || 'Nie udało się zmienić zdjęcia.', 'error'); }
   loadModUsers(box);
 });
 let modQTimer = 0;
@@ -6435,6 +6461,9 @@ async function loadProfile() {
     if (remote) {
       state.profile = normProfile(remote);
       writeLocalProfile(state.profile);
+      renderProfile();
+    } else if (/^rd_/.test(uid) && Readers.me && Readers.me.name && !state.profile.name) {     // nowy redaktor z konta czytelnika: zacznij od jego nazwy
+      state.profile.name = Readers.me.name;
       renderProfile();
     }
   } catch (err) {
@@ -6722,6 +6751,7 @@ function bindEvents() {
   $('#btn-logout').addEventListener('click', async () => {
     if (!Auth.isAdmin() && Readers.loggedIn()) { await Readers.logout(); location.hash = '#/'; toast('Wylogowano.'); return; }
     await Auth.logout();
+    if (Readers.loggedIn()) { try { await Readers.logout(); } catch { /* ignoruj */ } }
     if (['editor', 'panel', 'settings'].includes(currentRoute().name)) location.hash = '#/';
     applyAuthUI();
     toast('Wylogowano.');
@@ -6840,20 +6870,17 @@ function bindEvents() {
     if (n !== null) e.target.value = Utils.formatScore(n);
   });
 
-  $('#infobox-add').addEventListener('click', () => { addInfoRow(); onFormChange(); });
-  $('#infobox-rows').addEventListener('click', e => {
-    const rm = e.target.closest('.info-remove');
-    if (rm) { rm.closest('.info-row').remove(); onFormChange(); }
-  });
-
   // Zdjęcie główne
   $('#f-image-url').addEventListener('input', e => {
     const v = e.target.value.trim();
     editor.image = v;
     const box = $('#f-image-preview');
     box.hidden = !v;
-    if (v) $('img', box).src = v;
+    editor.pos = defaultPos();
+    if (v) $('#f-crop img').src = v;
+    applyCrop();
   });
+  initCropper();
   $('#f-image-file').addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;

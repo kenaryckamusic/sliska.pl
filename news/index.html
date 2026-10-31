@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261101zg">
+  <link rel="stylesheet" href="style.css?v=20261101zi">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -404,8 +404,13 @@
                 <input type="text" id="f-image-source" maxlength="80" placeholder="Np. Instagram / PAP / fot. Jan Kowalski">
               </label>
               <div class="image-preview" id="f-image-preview" hidden>
-                <img alt="Podgląd zdjęcia głównego">
-                <button type="button" class="btn btn-sm btn-danger" id="f-image-remove">Usuń zdjęcie</button>
+                <div class="crop-frame" id="f-crop" title="Przeciągnij, żeby ustawić kadr"><img alt="Podgląd zdjęcia głównego" draggable="false"></div>
+                <p class="hint crop-hint">Zdjęcie zawsze wyświetla się w formacie 16:9. Przeciągnij je, żeby wybrać kadr.</p>
+                <label class="crop-zoom"><span>Przybliżenie</span><input type="range" id="f-crop-zoom" min="1" max="3" step="0.05" value="1" aria-label="Przybliżenie zdjęcia"></label>
+                <div class="crop-actions">
+                  <button type="button" class="btn btn-sm" id="f-crop-reset">Wyśrodkuj</button>
+                  <button type="button" class="btn btn-sm btn-danger" id="f-image-remove">Usuń zdjęcie</button>
+                </div>
               </div>
             </details>
 
@@ -475,12 +480,6 @@
               <input type="search" id="rel-search" placeholder="Szukaj artykułu po tytule…" autocomplete="off">
               <div class="rel-results" id="rel-results"></div>
               <p class="field-hint">Do 3 artykułów pod tekstem. Bez wyboru strona dobierze podobne sama.</p>
-            </details>
-
-            <details class="panel fold" id="fold-info">
-              <summary>Ramka faktów</summary>
-              <div id="infobox-rows"></div>
-              <button type="button" class="btn btn-sm" id="infobox-add">+ Dodaj wiersz</button>
             </details>
           </aside>
         </div>
@@ -868,6 +867,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261101zg"></script>
+  <script src="app.js?v=20261101zi"></script>
 </body>
 </html>
