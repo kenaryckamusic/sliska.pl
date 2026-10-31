@@ -1807,7 +1807,7 @@ async function renderWideImage(a, format) {
   await drawLogoWhite(ctx, PAD, PAD, wideX ? 400 : 300, family);
   if (a.review && a.review.score != null) scoreBadge(ctx, W - PAD - (wideX ? 72 : 58), PAD + (wideX ? 62 : 50), wideX ? 72 : 58, a.review.score, family);
   const maxW = W - PAD * 2;
-  const footY = H - PAD * 0.75;
+  const footY = H - Math.round(PAD * 1.1);
   let size = wideX ? 92 : 68, lines;
   for (; size >= 38; size -= 4) {
     ctx.font = `800 ${size}px ${family}`;
