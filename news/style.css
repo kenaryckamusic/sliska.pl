@@ -2390,3 +2390,62 @@ a.ptab { display: inline-flex; align-items: center; justify-content: center; tex
 }
 
 .cmt-badge.is-chief { background: #7c3aed; }
+
+/* ---- panel użytkowników (Właściciel): karty z wyborem roli i weryfikacji ---- */
+.mu { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 8px 14px; align-items: center; padding: 14px 4px; border-bottom: 1px solid var(--border); }
+.mu.is-banned { opacity: .72; }
+.mu-av { width: 44px; height: 44px; font-size: .8rem; grid-row: auto; }
+.mu-main { display: block; min-width: 0; }
+.mu-head { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; }
+.mu-head b { font-size: 1rem; }
+.mu-main small { display: block; margin-top: 2px; color: var(--muted); font-size: .78rem; }
+.mu-chip { display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 999px; font-size: .68rem; font-weight: 800; letter-spacing: .02em; background: rgba(46,160,67,.14); color: #1f7a3a; }
+.mu-chip.is-warn { background: rgba(230,160,0,.16); color: #9a6700; }
+.mu-chip.is-bad { background: rgba(192,57,43,.14); color: #c0392b; }
+.mu-ctrl { grid-column: 2; display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.mu-sel { display: grid; gap: 3px; }
+.mu-sel span { font-size: .66rem; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.mu-sel select { height: 34px; padding: 0 28px 0 10px; border: 1px solid var(--border); border-radius: 10px; font: inherit; font-size: .84rem; background-color: var(--surface, #fff); color: inherit; min-width: 170px; max-width: 240px; }
+.mu-more { position: relative; }
+.mu-more summary { list-style: none; width: 34px; height: 34px; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 10px; cursor: pointer; color: var(--muted); background: var(--surface, #fff); }
+.mu-more summary::-webkit-details-marker { display: none; }
+.mu-more summary:hover, .mu-more[open] summary { color: var(--text); border-color: var(--muted); }
+.mu-menu { position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 190px; display: grid; padding: 6px; background: var(--surface, #fff); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.16); }
+.mu-menu button, .mu-menu .mu-file { display: block; width: 100%; text-align: left; border: 0; background: none; padding: 8px 10px; border-radius: 8px; font: inherit; font-size: .84rem; font-weight: 600; color: var(--text); cursor: pointer; }
+.mu-menu button:hover, .mu-menu .mu-file:hover { background: rgba(127,127,127,.12); }
+.mu-menu .is-danger { color: #c0392b; }
+.mu-filters { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0 4px; }
+.mu-f { border: 1px solid var(--border); background: none; border-radius: 999px; padding: 5px 12px; font: inherit; font-size: .78rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.mu-f.is-on { background: var(--text); color: var(--bg, #fff); border-color: var(--text); }
+.rd-hint { margin: 10px 14px 0; padding: 10px 12px; border-radius: 12px; background: rgba(230,160,0,.14); font-size: .8rem; line-height: 1.4; display: grid; gap: 8px; justify-items: start; }
+.rd-hint[hidden] { display: none; }
+@media (max-width: 720px) {
+  .mu-ctrl { grid-column: 1 / -1; }
+  .mu-sel { flex: 1 1 150px; } .mu-sel select { width: 100%; min-width: 0; max-width: none; }
+}
+
+/* ---- panel użytkowników v2: siatka kart na całą szerokość ---- */
+#layout[data-view="account"] { grid-template-columns: 230px minmax(0, 1fr); }
+#layout[data-view="account"] .side-right { display: none; }
+#view-account .mod-users, #view-account [data-modusers] { max-width: none; }
+.mu-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 14px; margin-top: 12px; }
+.mu-list > p { grid-column: 1 / -1; }
+.mu { display: flex; flex-direction: column; gap: 12px; padding: 16px; border: 1px solid var(--border); border-bottom: 1px solid var(--border); border-radius: 16px; background: var(--card, var(--surface, #fff)); box-shadow: 0 1px 2px rgba(0,0,0,.04); transition: box-shadow .15s, border-color .15s; }
+.mu:hover { box-shadow: 0 6px 18px rgba(0,0,0,.08); }
+.mu.is-banned { opacity: .7; background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(192,57,43,.05) 10px 20px); }
+.mu-top { display: flex; align-items: center; gap: 12px; }
+.mu-av { width: 48px; height: 48px; flex: 0 0 48px; font-size: .85rem; }
+.mu-main { flex: 1; min-width: 0; }
+.mu-name { display: block; font-size: 1.02rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mu-main small { display: block; margin-top: 3px; color: var(--muted); font-size: .78rem; }
+.mu-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-height: 22px; }
+.mu-chips:empty { display: none; }
+.mu-ctrl { grid-column: auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 10px; padding-top: 12px; border-top: 1px dashed var(--border); }
+.mu-sel select { width: 100%; min-width: 0; max-width: none; }
+.mu-menu { right: 0; }
+@media (max-width: 720px) { .mu-list { grid-template-columns: 1fr; } }
+@media (max-width: 1100px) { #layout[data-view="account"] { grid-template-columns: 220px minmax(0, 1fr); } }
+@media (max-width: 860px) { #layout[data-view="account"] { grid-template-columns: minmax(0, 1fr); gap: 18px; } .mu-list { grid-template-columns: minmax(0, 1fr); } }
+.mu { align-items: stretch; }
+/* zalogowany: ikonka konta w rogu znika (na komputerze konto jest w kafelku profilu po lewej; na telefonie zostaje jako skrót) */
+@media (min-width: 861px) { body.is-reader #btn-account, body.is-admin #btn-account { display: none; } }

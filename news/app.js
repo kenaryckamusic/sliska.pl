@@ -5728,7 +5728,7 @@ const Readers = {
   },
   async loadMe() { try { this.me = await this.api('/me'); } catch { this.me = null; } },
   loggedIn() { return !!this.user; },
-  verified() { return !!(this.user && this.user.emailVerified); },
+  verified() { if (this.me && typeof this.me.verified === 'boolean') return this.me.verified; return !!(this.user && this.user.emailVerified); },
   hasName() { return !!(this.me && this.me.name); },
   async register(email, pw, name) {
     const cred = await this.auth.createUserWithEmailAndPassword(email, pw);
@@ -5748,17 +5748,22 @@ const Readers = {
     try {
       if (Auth.mode !== 'firebase' || !FirebaseProvider.auth || this._joining) return;
       const cur = FirebaseProvider.auth.currentUser, role = this.me && this.me.role;
+      this.editorIssue = '';
       if (!['editor', 'owner'].includes(role)) { if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); return; }   // odebrana rola = koniec sesji redaktora
       if (cur) return;
       this._joining = true;
       const d = await this.api('/editor-token', { method: 'POST' });
       await FirebaseProvider.auth.signInWithCustomToken(d.token);
-    } catch (e) { if (e && e.error !== 'no_sa' && e.error !== 'forbidden') console.warn('Logowanie redaktora nie powiodło się:', e); }
-    finally { this._joining = false; }
+    } catch (e) {
+      const code = e && e.error;
+      this.editorIssue = code === 'forbidden' ? (this.verified() ? 'forbidden' : 'verify') : code === 'no_sa' || code === 'sync' ? 'server' : 'signin';
+      console.warn('Logowanie redaktora nie powiodło się:', e);
+    }
+    finally { this._joining = false; try { renderReaderCard(); } catch { /* ignoruj */ } }
   },
   async reset(email) { await this.auth.sendPasswordResetEmail(email); },
   async resend() { await this.user.sendEmailVerification(); },
-  async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); this.joinEditor(); },
+  async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); await this.joinEditor(); },
   async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
@@ -6092,6 +6097,12 @@ function renderReaderCard() {
   const me = Readers.me || {};
   $('#btn-rd-mod').hidden = !canMod();
   $('#btn-rd-users').hidden = !canManage();
+  let hint = $('#rd-hint');
+  if (!hint) { hint = document.createElement('div'); hint.id = 'rd-hint'; hint.className = 'rd-hint'; const pa = $('#profile-card .profile-actions'); if (pa) pa.parentNode.insertBefore(hint, pa); }
+  const issue = rd && ['editor', 'owner'].includes(me.role) && !Auth.isAdmin() ? Readers.editorIssue : '';
+  const HINT = { verify: 'Panel redaktora czeka na potwierdzenie adresu e-mail. Kliknij link z wiadomości, a potem „Sprawdź ponownie”.', forbidden: 'Konto nie ma teraz dostępu do panelu redaktora. Skontaktuj się z Właścicielem Portalu.', server: 'Nie udało się włączyć panelu redaktora (błąd po stronie serwera). Spróbuj ponownie albo napisz do Właściciela.', signin: 'Nie udało się zalogować do panelu redaktora. Spróbuj ponownie.' };
+  hint.hidden = !issue;
+  hint.innerHTML = issue ? `<span>${HINT[issue] || HINT.signin}</span><button type="button" class="btn btn-sm" data-rd-retry>Sprawdź ponownie</button>` : '';
   if (only) {
     $('#profile-name').textContent = me.name || 'Twoje konto';
     $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);
@@ -6111,11 +6122,17 @@ async function shrinkToJpeg(file, size = 160) {
 }
 
 function bindReaderEvents() {
-  $('#btn-account').addEventListener('click', () => { if (Readers.loggedIn()) location.hash = '#/konto'; else openReaderModal('login'); });
+  $('#btn-account').addEventListener('click', () => {
+    const go = h => { if (location.hash === h) { route(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else location.hash = h; };   // ten sam adres = wcześniej „nic się nie działo”
+    if (Readers.loggedIn()) go('#/konto');
+    else if (Auth.isAdmin()) go('#/panel');
+    else openReaderModal('login');
+  });
   $('#reader-error').className = 'form-error';
   $('#reader-form').addEventListener('submit', submitReader);
   $('#reader-modal').addEventListener('click', e => { const a = e.target.closest('[data-rmode]'); if (a) { e.preventDefault(); setReaderMode(a.dataset.rmode); $('#reader-error').hidden = true; } });
   document.addEventListener('click', async e => {
+    const rt = e.target.closest('[data-rd-retry]'); if (rt) { rt.disabled = true; try { await Readers.refresh(); } catch { /* ignoruj */ } renderReaderCard(); return; }
     const c = e.target.closest('[data-cmt]'); if (c) { commentAction(c.dataset.cmt, Number(c.dataset.id) || 0, c); return; }
     if (e.target.id === 'acc-register') openReaderModal('register');
     else if (e.target.id === 'acc-logout') { await Readers.logout(); location.hash = '#/'; }
@@ -6181,32 +6198,48 @@ function modApply(item, act) {
   first.disabled = false;
 }
 
+function userVerified(u) { return u.staff || u.role === 'owner' ? true : u.vfy === 1 ? true : u.vfy === 0 ? false : !!u.email_ok; }
 function modUserHtml(u) {
   const staff = !!u.staff;
   const isOwner = u.role === 'owner';
   const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor (pisze artykuły)']];
-  const sel = `<select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+  const sel = `<label class="mu-sel"><span>Rola</span><select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const vOpts = [['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']];
+  const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
+  const vsel = staff || isOwner ? '' : `<label class="mu-sel"><span>Weryfikacja</span><select data-mod-verify aria-label="Weryfikacja konta">${vOpts.map(([v, l]) => `<option value="${v}" ${vCur === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const ver = userVerified(u);
+  const how = staff ? 'konto redakcji' : isOwner ? 'Właściciel' : u.vfy === 1 ? 'ręcznie' : u.vfy === 0 ? 'ręcznie' : 'e-mail';
+  const chip = `<span class="mu-chip ${ver ? 'is-ok' : 'is-warn'}" title="Źródło: ${how}">${ver ? 'Zweryfikowany' : 'Niezweryfikowany'}</span>`;
+  const since = u.created ? new Date(u.created).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const av = `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
-  return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}">
-    <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
-    <div class="mu-main"><b>${Utils.esc(u.name)}</b>${roleBadge({ staff, role: u.role })}<small>komentarzy: ${u.comments}${u.banned ? ' · <span class="mu-ban">zablokowany</span>' : ''}</small></div>
-    <div class="mu-actions">${sel}${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button>${isOwner ? '' : '<button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>'}</div>
+  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
+  return `<div class="mu ${u.banned ? 'is-banned' : ''}" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}" data-ver="${ver ? 1 : 0}" data-banned="${u.banned ? 1 : 0}">
+    <div class="mu-top">
+      <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
+      <div class="mu-main"><b class="mu-name">${Utils.esc(u.name)}</b><small>${u.comments} ${u.comments === 1 ? 'komentarz' : 'komentarzy'}${since ? ' · od ' + since : ''}</small></div>
+      ${menu}
+    </div>
+    <div class="mu-chips">${roleBadge({ staff, role: u.role })}${chip}${u.banned ? '<span class="mu-chip is-bad">Zablokowany</span>' : ''}</div>
+    <div class="mu-ctrl">${sel}${vsel}</div>
   </div>`;
 }
 
+const MU_FILTERS = [['', 'Wszyscy'], ['staff', 'Redakcja'], ['unver', 'Niezweryfikowani'], ['banned', 'Zablokowani']];
+function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner') : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
 async function loadModUsers(el) {
   const list = $('.mu-list', el); if (!list) return;
-  const y = window.scrollY;
+  const y = window.scrollY, f = el.dataset.f || '';
   try {
     const d = await adminApi('/admin/users?q=' + encodeURIComponent($('.mod-q', el).value.trim()));
-    list.innerHTML = d.users.length ? d.users.map(modUserHtml).join('') : '<p class="muted">Brak użytkowników.</p>';
+    const rows = modUserFilter(d.users, f);
+    list.innerHTML = rows.length ? rows.map(modUserHtml).join('') : '<p class="muted">Brak użytkowników.</p>';
     window.scrollTo(0, y);
   } catch (ex) { list.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p>`; }
 }
 function renderModUsersPanel(el) {
   if (!el) return;
-  el.dataset.modusers = '1';
-  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
+  el.dataset.modusers = '1'; el.dataset.f = el.dataset.f || '';
+  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-filters" role="group" aria-label="Filtr użytkowników">${MU_FILTERS.map(([v, l]) => `<button type="button" class="mu-f ${(el.dataset.f || '') === v ? 'is-on' : ''}" data-mod-f="${v}">${l}</button>`).join('')}</div><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
   loadModUsers(el);
 }
 /** Zakładka „Komentarze” w panelu redaktora: moderacja + (dla uprawnionych) użytkownicy. */
@@ -6218,9 +6251,10 @@ function renderModeration(all) {
 }
 
 document.addEventListener('click', async e => {
-  const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]');
+  const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]'), fl = e.target.closest('[data-mod-f]');
   try {
-    if (m) { renderModComments(m.closest('[data-modroot]'), m.dataset.mod === 'all'); }
+    if (fl) { const box = fl.closest('[data-modusers]'); box.dataset.f = fl.dataset.modF; $$('.mu-f', box).forEach(b => b.classList.toggle('is-on', b === fl)); loadModUsers(box); }
+    else if (m) { renderModComments(m.closest('[data-modroot]'), m.dataset.mod === 'all'); }
     else if (a) {
       const item = a.closest('.mc'); if (!item || a.disabled) return;
       a.disabled = true;
@@ -6246,6 +6280,15 @@ document.addEventListener('change', async e => {
     else if (sel.value === 'editor' && d.editorSync === null) toast('Rola zapisana (plakietka i moderacja). Prawo pisania artykułów wymaga konta serwisowego w workerze – patrz instrukcja.');
     else if (d.editorSync === false) toast('Rola zapisana, ale synchronizacja z Firebase się nie udała. Sprawdź konto serwisowe w workerze.', 'error');
     else toast('Rola zapisana.');
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  loadModUsers(box);
+});
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-mod-verify]'); if (!sel) return;
+  const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
+  try {
+    await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, verify: sel.value }) });
+    toast(sel.value === 'on' ? 'Konto oznaczone jako zweryfikowane.' : sel.value === 'off' ? 'Konto oznaczone jako niezweryfikowane.' : 'Weryfikacja wg potwierdzenia e-mail.');
   } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
   loadModUsers(box);
 });
