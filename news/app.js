@@ -1162,6 +1162,24 @@ function thumbFor(a, useCover) {
 
 
 /* ---------- Oceny czytelników (API w Cloudflare Workerze) ---------- */
+/** Kto jest „zalogowany do interakcji”: czytelnik (konto z projektu sliska-users) albo redaktor (konto z projektu redakcji). */
+async function actorAuth() {
+  try {
+    if (typeof Readers !== 'undefined' && Readers.user) return { authorization: 'Bearer ' + await Readers.user.getIdToken() };
+    const u = Auth.isAdmin() && FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
+    if (u) return { authorization: 'Bearer ' + await u.getIdToken() };
+  } catch { /* brak tokenu – działamy anonimowo */ }
+  return {};
+}
+const isStaffActor = () => !(typeof Readers !== 'undefined' && Readers.user) && Auth.isAdmin() && !!(FirebaseProvider.auth && FirebaseProvider.auth.currentUser);
+const staffName = () => isStaffActor() ? ((state.profile && state.profile.name) || 'Redakcja') : undefined;
+async function actorApi(path, opts = {}) {
+  const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...(await actorAuth()), ...(opts.headers || {}) }, cache: 'no-store' });
+  let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
+  if (!r.ok) { const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
+  return d;
+}
+
 const Votes = {
   MIN_SHOWN: 3,                       // tyle ocen potrzeba, żeby pokazać średnią
   _all: null, _allAt: 0,
@@ -1177,7 +1195,7 @@ const Votes = {
   },
   async summary(id) {
     try {
-      const r = await fetch(`${CONFIG.API_BASE}/votes?article=${encodeURIComponent(id)}&token=${encodeURIComponent(this.token())}`, { cache: 'no-store' });
+      const r = await fetch(`${CONFIG.API_BASE}/votes?article=${encodeURIComponent(id)}&token=${encodeURIComponent(this.token())}`, { cache: 'no-store', headers: await actorAuth() });
       if (!r.ok || !/json/.test(r.headers.get('content-type') || '')) return null;
       const j = await r.json();
       return typeof j.n === 'number' ? j : null;
@@ -1185,7 +1203,7 @@ const Votes = {
   },
   async send(id, score) {
     try {
-      const r = await fetch(`${CONFIG.API_BASE}/vote`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ article: id, score, token: this.token() }) });
+      const r = await fetch(`${CONFIG.API_BASE}/vote`, { method: 'POST', headers: { 'content-type': 'application/json', ...(await actorAuth()) }, body: JSON.stringify({ article: id, score, token: this.token(), staffName: staffName() }) });
       let data = {}; try { data = await r.json(); } catch { /* ignoruj */ }
       return { status: r.status, data };
     } catch { return { status: 0, data: {} }; }
@@ -1222,7 +1240,7 @@ const Push = {
     if (!r.ok) { try { await sub.unsubscribe(); } catch { /* ignoruj */ } throw new Error('Nie udało się włączyć powiadomień. Spróbuj później.'); }
   },
   /** Zalogowany czytelnik: powiąż to urządzenie z kontem, żeby dostawać powiadomienia o odpowiedziach. */
-  async link() { try { const sb = await this.sub(); if (sb && Readers.loggedIn()) await Readers.api('/push/subscribe', { method: 'POST', body: JSON.stringify({ endpoint: sb.endpoint }) }); } catch { /* ignoruj */ } },
+  async link() { try { const sb = await this.sub(); if (sb && (Readers.loggedIn() || isStaffActor())) await actorApi('/push/subscribe', { method: 'POST', body: JSON.stringify({ endpoint: sb.endpoint }) }); } catch { /* ignoruj */ } },
   async unlink() { try { const sb = await this.sub(); if (sb) await this.post('unlink', sb.endpoint); } catch { /* ignoruj */ } },
   async disable() {
     const sub = await this.sub();
@@ -1286,6 +1304,11 @@ async function togglePush() {
 
 const fmt1 = n => Utils.formatScore(Math.round(n * 10) / 10);
 
+function votersHtml(list) {
+  if (!list || !list.length) return '';
+  return `<div class="rv-who"><b>Kto jak ocenił</b><ul>${list.map(v => `<li${v.staff ? ' class="is-staff"' : ''}><span class="avatar">${readerAvatar(v.name, v.av, v.u)}</span><span class="rv-who-name">${Utils.esc(v.name)}</span><b>${fmt1(v.score)}</b></li>`).join('')}</ul></div>`;
+}
+
 function voteResultsHtml(editorScore, sum) {
   const enough = sum.n >= Votes.MIN_SHOWN;
   const diff = enough ? Math.round((sum.avg - editorScore) * 10) / 10 : 0;
@@ -1294,6 +1317,7 @@ function voteResultsHtml(editorScore, sum) {
       <div class="rv-bar"><span class="rv-lab">Redakcja</span><span class="rv-track"><i style="width:${(editorScore * 10).toFixed(0)}%"></i></span><b>${fmt1(editorScore)}</b></div>
       <div class="rv-bar is-readers"><span class="rv-lab">Czytelnicy</span><span class="rv-track"><i style="width:${enough ? (sum.avg * 10).toFixed(0) : 0}%"></i></span><b>${enough ? fmt1(sum.avg) : '–'}</b></div>
     </div>
+    ${votersHtml(sum.voters)}
     <p class="rv-note">${enough ? `${verdict} <span>(${sum.n} ${plural(sum.n, 'ocena', 'oceny', 'ocen')})</span>` : `Średnia pojawi się po ${Votes.MIN_SHOWN} ocenach (teraz: ${sum.n}).`}</p>`;
 }
 
@@ -1305,6 +1329,7 @@ async function initReaderVote(a) {
   const editor = a.review.score;
   let mine = typeof sum.mine === 'number' ? sum.mine : null;
   let cur = { ...sum };
+  let signed = !!sum.signed;
   let showResults = mine !== null;
 
   const draw = (err) => {
@@ -1317,6 +1342,7 @@ async function initReaderVote(a) {
       const v = mine !== null ? mine : 7;
       box.innerHTML = `<div class="rv-head"><h2>A Ty jak oceniasz?</h2></div>
         <p class="rv-lead">Daj swoją ocenę od 0 do 10 – średnią czytelników zobaczysz od razu po oddaniu głosu.</p>
+        <p class="rv-who-note">${(Readers.loggedIn() && Readers.hasName()) || isStaffActor() ? `Głosujesz jako <b>${Utils.esc(isStaffActor() ? staffName() : Readers.me.name)}</b> – Twoja ocena będzie widoczna na liście oceniających.` : 'Możesz zagłosować bez konta. Zalogowani czytelnicy oceniają pod własną nazwą.'}</p>
         <div class="rv-pick"><output class="rv-val" id="rv-val">${fmt1(v)}</output>
           <input type="range" id="rv-range" min="0" max="10" step="0.5" value="${v}" aria-label="Twoja ocena od 0 do 10"></div>
         ${err ? `<p class="form-error">${Utils.esc(err)}</p>` : ''}
@@ -1336,11 +1362,11 @@ async function initReaderVote(a) {
       const score = Number($('#rv-range', box).value);
       b.disabled = true;
       const r = await Votes.send(a.id, score);
-      if (r.status === 200 && r.data.ok) { mine = r.data.mine; cur = { n: r.data.n, avg: r.data.avg }; showResults = true; draw(); toast('Dziękujemy za ocenę!'); Votes._all = null; return; }
+      if (r.status === 200 && r.data.ok) { mine = r.data.mine; cur = { n: r.data.n, avg: r.data.avg, voters: r.data.voters }; showResults = true; draw(); toast('Dziękujemy za ocenę!'); Votes._all = null; return; }
       const msg = r.status === 409 ? 'Z tej sieci ktoś już ocenił tę recenzję – na jedną sieć przypada jedna ocena.'
         : r.status === 429 ? 'Za dużo ocen w krótkim czasie. Spróbuj za godzinę.'
         : r.status === 404 ? 'Tej recenzji nie można teraz ocenić.' : 'Nie udało się zapisać oceny. Spróbuj ponownie.';
-      if (r.status === 409 && r.data && typeof r.data.n === 'number') cur = { n: r.data.n, avg: r.data.avg };
+      if (r.status === 409 && r.data && typeof r.data.n === 'number') cur = { n: r.data.n, avg: r.data.avg, voters: r.data.voters };
       draw(msg);
     }
   };
@@ -3140,7 +3166,7 @@ function legalHtml(doc) {
       <li><strong>Dane techniczne</strong> – podczas wizyty w Serwisie serwery (hosting i usługi Google Firebase) mogą zapisywać w dziennikach adres IP, rodzaj przeglądarki i czas wizyty. Cel: zapewnienie działania i bezpieczeństwa Serwisu. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO).</li>
       <li><strong>Oceny recenzji</strong> – ocena, którą oddajesz pod recenzją, oraz losowy identyfikator przeglądarki. Aby jedna osoba nie mogła głosować wielokrotnie, zapisujemy też nieodwracalny skrót (hash) Twojego adresu sieciowego – nie przechowujemy samego adresu IP. Cel: uczciwe zliczanie ocen. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO). Oceny są anonimowe i przechowywane do czasu usunięcia recenzji.</li>
       <li><strong>Powiadomienia o nowych artykułach</strong> – jeśli klikniesz dzwonek, zapisujemy techniczny adres subskrypcji Twojej przeglądarki, aby wysłać powiadomienie. Cel: informowanie o nowych artykułach. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Zgodę wycofasz, klikając dzwonek ponownie lub wyłączając powiadomienia w przeglądarce.</li>
-      <li><strong>Konto czytelnika i komentarze</strong> – adres e-mail, hasło (przechowywane w usłudze Google Firebase Authentication w postaci zabezpieczonej), nazwa użytkownika, opcjonalne zdjęcie profilowe oraz treść i data Twoich komentarzy. Cel: prowadzenie konta i publikowanie komentarzy. Podstawa: umowa o świadczenie usługi konta (art. 6 ust. 1 lit. b RODO). Nazwa użytkownika, zdjęcie i komentarze są publiczne. Dane przechowujemy do usunięcia konta; usunięcia konta lub komentarzy możesz zażądać mailowo.</li>
+      <li><strong>Konto czytelnika i komentarze</strong> – adres e-mail, hasło (przechowywane w usłudze Google Firebase Authentication w postaci zabezpieczonej), nazwa użytkownika, opcjonalne zdjęcie profilowe, treść i data Twoich komentarzy oraz oceny recenzji oddane po zalogowaniu (podpisane Twoją nazwą; oceny bez konta pozostają anonimowe). Cel: prowadzenie konta i publikowanie komentarzy. Podstawa: umowa o świadczenie usługi konta (art. 6 ust. 1 lit. b RODO). Nazwa użytkownika, zdjęcie, komentarze i oceny oddane po zalogowaniu są publiczne. Dane przechowujemy do usunięcia konta; usunięcia konta lub komentarzy możesz zażądać mailowo.</li>
     </ul>
     <p>Podanie danych jest dobrowolne.</p>
     <h2>3. Komu przekazujemy dane</h2>
@@ -5777,7 +5803,7 @@ async function initComments(a) {
   placeComments();
   Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = ''; Cmt.replyTo = null; Cmt.focus = currentRoute().k || 0;
   try {
-    const d = await Readers.api('/comments?article=' + encodeURIComponent(a.id));
+    const d = await actorApi('/comments?article=' + encodeURIComponent(a.id));
     if (!$('#comments') || $('#comments').dataset.article !== a.id) return;
     Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.ok = d.enabled !== false;
   } catch { return; }          // brak API (np. tryb demonstracyjny) – sekcja zostaje ukryta
@@ -5820,7 +5846,7 @@ function cmtTextHtml(c) {
 function commentItemHtml(c, kids) {
   const admin = Auth.isAdmin();
   const own = c.mine && !admin ? `<button type="button" class="cmt-act" data-cmt="delete" data-id="${c.id}">Usuń</button>` : '';
-  const rep = !c.mine && Readers.loggedIn() ? `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>` : '';
+  const rep = !c.mine && Readers.loggedIn() && !isStaffActor() ? `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>` : '';
   const adm = admin ? `<button type="button" class="cmt-act" data-cmt="admin-delete" data-id="${c.id}">Usuń</button>` : '';
   const canReply = !Cmt.off && c.status === 'ok';
   const reply = canReply ? `<button type="button" class="cmt-act" data-cmt="reply" data-id="${c.id}">Odpowiedz</button>` : '';
@@ -5829,7 +5855,7 @@ function commentItemHtml(c, kids) {
   return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}" id="c-${c.id}">
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
-      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
+      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${c.staff ? '<span class="cmt-badge">Redakcja</span>' : ''}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
       ${cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
       <div class="cmt-actions">${reply}${link}${own}${rep}${adm}</div>
@@ -5848,10 +5874,10 @@ function drawComments() {
   let form = '';
   if (Cmt.off) form = '<p class="cmt-note">Komentarze do tego artykułu są wyłączone.</p>';
   else if (Readers.loading) form = '';
-  else if (!Readers.loggedIn()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
-  else if (!Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
-  else if (!Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
-  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="600" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(Readers.me.name)}…" aria-label="Komentarz"></textarea>
+  else if (!Readers.loggedIn() && !isStaffActor()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
+  else if (!isStaffActor() && !Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
+  else if (!isStaffActor() && !Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
+  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="600" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.me.name)}…" aria-label="Komentarz"></textarea>
       <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div></form>`;
   const keep = $('#cmt-text') ? $('#cmt-text').value : '';
   box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span></h2>
@@ -5869,7 +5895,7 @@ async function sendComment(e) {
   if (text.length < 2) return;
   Cmt.sending = true; const btn = $('#cmt-send'); btn.disabled = true;
   try {
-    const d = await Readers.api('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text, replyTo: Cmt.replyTo ? Cmt.replyTo.id : undefined }) });
+    const d = await actorApi('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text, replyTo: Cmt.replyTo ? Cmt.replyTo.id : undefined, staffName: staffName() }) });
     Cmt.list.unshift(d.comment); Cmt.replyTo = null;
     Cmt.msg = d.held ? 'Komentarz zawiera link lub niedozwolone słowa, więc czeka na zatwierdzenie redakcji.' : '';
     if (!d.held && Push.supported() && Notification.permission !== 'granted') Cmt.msg = 'Opublikowano. Włącz powiadomienia (dzwonek na górze), a damy Ci znać, gdy ktoś odpowie na Twój komentarz.';
@@ -5892,7 +5918,7 @@ async function commentAction(act, id, btn) {
     if (act === 'toggle') { cmtOpen.has(id) ? cmtOpen.delete(id) : cmtOpen.add(id); drawComments(); return; }
     if (act === 'login') { openReaderModal('login'); return; }
     if (act === 'reply') {
-      if (!Readers.loggedIn()) { openReaderModal('login'); return; }
+      if (!Readers.loggedIn() && !isStaffActor()) { openReaderModal('login'); return; }
       const c = Cmt.list.find(x => x.id === id); if (!c) return;
       Cmt.replyTo = { id: c.id, name: c.name }; drawComments();
       const t = $('#cmt-text'); if (t) { t.focus(); t.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
@@ -5909,10 +5935,10 @@ async function commentAction(act, id, btn) {
     if (act === 'refresh') { await Readers.refresh(); if (!Readers.verified()) { Cmt.msg = 'Adres nie jest jeszcze potwierdzony. Kliknij link w wiadomości.'; drawComments(); } return; }
     if (act === 'delete') {
       if (!confirm('Usunąć Twój komentarz?')) return;
-      await Readers.api('/comments/delete', { method: 'POST', body: JSON.stringify({ id }) });
+      await actorApi('/comments/delete', { method: 'POST', body: JSON.stringify({ id }) });
       Cmt.list = Cmt.list.filter(c => c.id !== id && c.parent !== id);
     } else if (act === 'report') {
-      await Readers.api('/comments/report', { method: 'POST', body: JSON.stringify({ id }) });
+      await actorApi('/comments/report', { method: 'POST', body: JSON.stringify({ id }) });
       toast('Dziękujemy za zgłoszenie. Redakcja je sprawdzi.');
       return;
     } else if (act === 'admin-delete') {
@@ -5945,17 +5971,26 @@ function openReaderModal(mode) {
 }
 function setReaderMode(m) {
   if (m) readerMode = m;
-  const reg = readerMode === 'register', rst = readerMode === 'reset', nm = readerMode === 'name';
-  $('#reader-title').textContent = reg ? 'Załóż konto' : rst ? 'Nie pamiętam hasła' : nm ? 'Wybierz nazwę użytkownika' : 'Zaloguj się';
+  const reg = readerMode === 'register', rst = readerMode === 'reset', nm = readerMode === 'name', login = readerMode === 'login';
+  const T = {
+    login: ['Witaj z powrotem', 'Zaloguj się, żeby komentować i oceniać recenzje. Redakcja loguje się tutaj tak samo.'],
+    register: ['Dołącz do Śliska News', 'Konto pozwala komentować artykuły i oceniać recenzje pod własną nazwą.'],
+    reset: ['Nie pamiętam hasła', 'Podaj e-mail, a wyślemy link do ustawienia nowego hasła.'],
+    name: ['Wybierz nazwę użytkownika', 'Będzie widoczna przy komentarzach i ocenach.']
+  }[readerMode] || ['', ''];
+  $('#reader-title').textContent = T[0];
+  $('#reader-sub').textContent = T[1];
+  $('#reader-tabs').hidden = !(login || reg) || !Readers.enabled();
+  $('#rm-tab-login').classList.toggle('is-on', login);
+  $('#rm-tab-register').classList.toggle('is-on', reg);
   $('#reader-name-field').hidden = !(reg || nm);
-  $('#reader-email-field').hidden = nm;
   $('#reader-pass-field').hidden = rst || nm;
   $('#reader-terms').hidden = !reg;
   $('#reader-submit').textContent = reg ? 'Załóż konto' : rst ? 'Wyślij link' : nm ? 'Zapisz' : 'Zaloguj się';
-  $('#reader-switch').innerHTML = reg || rst ? '<a href="#" data-rmode="login">Wróć do logowania</a>' : nm ? '' : (Readers.enabled() ? '<a href="#" data-rmode="register">Załóż konto</a> <span>·</span> ' : '') + '<a href="#" data-rmode="reset">Nie pamiętam hasła</a>';
-  $('#reader-email-field').hidden = nm || (readerMode === 'login' && Auth.mode === 'local' && !Readers.enabled());
-  $('#reader-title').textContent = reg ? 'Załóż konto' : rst ? 'Nie pamiętam hasła' : nm ? 'Wybierz nazwę użytkownika' : 'Zaloguj się';
+  $('#reader-switch').innerHTML = rst ? '<a href="#" data-rmode="login">Wróć do logowania</a>' : login ? '<a href="#" data-rmode="reset">Nie pamiętam hasła</a>' : '';
+  $('#reader-email-field').hidden = nm || (login && Auth.mode === 'local' && !Readers.enabled());
   $('#reader-pass').autocomplete = reg ? 'new-password' : 'current-password';
+  $('#reader-pass').placeholder = reg ? 'Min. 6 znaków' : 'Twoje hasło';
 }
 /** Jedno okno logowania: najpierw konto redaktora (projekt główny), potem konto czytelnika. */
 async function unifiedLogin(email, pw) {
@@ -6277,6 +6312,7 @@ function avatarHtml(p) {
 }
 
 function renderProfile() {
+  try { drawComments(); } catch { /* ignoruj */ }
   $('#profile-name').textContent = state.profile.name || 'Redaktor';
   $('#profile-avatar').innerHTML = avatarHtml(state.profile);
   renderProfileStats();
