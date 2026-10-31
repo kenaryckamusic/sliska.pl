@@ -1,6 +1,6 @@
 /* Śliska News – prosty service worker: strona działa też przy słabym zasięgu.
    Strategia: najpierw sieć (zawsze świeża wersja), a gdy brak internetu – ostatnia zapamiętana kopia. */
-const CACHE = 'sliska-news-v6';
+const CACHE = 'sliska-news-v7';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
@@ -24,6 +24,18 @@ self.addEventListener('fetch', e => {
 /* Powiadomienia push: serwer wysyła „puste” powiadomienie, a tytuł najnowszego artykułu pobieramy stąd. */
 self.addEventListener('push', e => {
   e.waitUntil((async () => {
+    // najpierw sprawdź, czy czeka powiadomienie o odpowiedzi na komentarz dla tego urządzenia
+    try {
+      const sub = await self.registration.pushManager.getSubscription();
+      if (sub) {
+        const r = await fetch('/news/api/push/inbox', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }), cache: 'no-store' });
+        const m = r.ok ? await r.json() : {};
+        if (m && m.title) {
+          await self.registration.showNotification(m.title, { body: m.body, icon: '/news/icons/icon-192.png', badge: '/news/icons/icon-192.png', tag: 'sliska-reply-' + Date.now(), data: { url: m.url } });
+          return;
+        }
+      }
+    } catch { /* przejdź do zwykłego powiadomienia */ }
     let d = {};
     try { const r = await fetch('/news/api/latest', { cache: 'no-store' }); d = await r.json(); } catch { /* brak sieci */ }
     const more = d.more > 0 ? ` (+${d.more} więcej)` : '';

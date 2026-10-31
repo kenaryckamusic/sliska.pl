@@ -1218,8 +1218,12 @@ const Push = {
     const reg = await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.key(kr.key) });
     const r = await this.post('subscribe', sub.endpoint);
+    this.link();
     if (!r.ok) { try { await sub.unsubscribe(); } catch { /* ignoruj */ } throw new Error('Nie udało się włączyć powiadomień. Spróbuj później.'); }
   },
+  /** Zalogowany czytelnik: powiąż to urządzenie z kontem, żeby dostawać powiadomienia o odpowiedziach. */
+  async link() { try { const sb = await this.sub(); if (sb && Readers.loggedIn()) await Readers.api('/push/subscribe', { method: 'POST', body: JSON.stringify({ endpoint: sb.endpoint }) }); } catch { /* ignoruj */ } },
+  async unlink() { try { const sb = await this.sub(); if (sb) await this.post('unlink', sb.endpoint); } catch { /* ignoruj */ } },
   async disable() {
     const sub = await this.sub();
     if (!sub) return;
@@ -1378,8 +1382,9 @@ function reviewHtml(a) {
 }
 
 function currentRoute() {
-  const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
-  if ((parts[0] === 'artykul' || parts[0] === 'a') && parts[1]) return { name: 'article', id: decodeURIComponent(parts[0 + 1]) };
+  const [hpath, hquery] = location.hash.replace(/^#\/?/, '').split('?');
+  const parts = hpath.split('/').filter(Boolean);
+  if ((parts[0] === 'artykul' || parts[0] === 'a') && parts[1]) return { name: 'article', id: decodeURIComponent(parts[0 + 1]), k: Number(new URLSearchParams(hquery || '').get('k')) || 0 };
   if (parts[0] === 'edytor') return { name: 'editor', id: parts[1] ? decodeURIComponent(parts[1]) : null, draft: null };
   if (parts[0] === 'szkic' && parts[1]) return { name: 'editor', id: null, draft: decodeURIComponent(parts[1]) };
   if (parts[0] === 'panel') return { name: 'panel' };
@@ -5689,7 +5694,7 @@ const Readers = {
       try { await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch { /* ignoruj */ }
       this.auth.onAuthStateChanged(async u => {
         this.user = u; this.me = null;
-        if (u) await this.loadMe();
+        if (u) { await this.loadMe(); Push.link(); }
         this.loading = false; this.render();
       });
     } catch (e) { console.warn('Konta czytelników niedostępne:', e); this.loading = false; this.auth = null; }
@@ -5714,7 +5719,7 @@ const Readers = {
     this.render();
   },
   async login(email, pw) { await this.auth.signInWithEmailAndPassword(email, pw); },
-  async logout() { await this.auth.signOut(); },
+  async logout() { await Push.unlink(); await this.auth.signOut(); },
   async reset(email) { await this.auth.sendPasswordResetEmail(email); },
   async resend() { await this.user.sendEmailVerification(); },
   async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); },
@@ -5744,7 +5749,7 @@ const ago = ms => {
 const readerAvatar = (name, av, pub) => av ? `<img src="${CONFIG.API_BASE}/avatar/${Utils.esc(pub)}.jpg?v=${av}" alt="" loading="lazy">` : `<span>${Utils.esc((name || '?').trim().slice(0, 2).toUpperCase())}</span>`;
 
 /* ---- komentarze pod artykułem ---- */
-const Cmt = { article: null, list: [], off: false, ok: false, expanded: false, sending: false, msg: '' };
+const Cmt = { article: null, list: [], off: false, ok: false, expanded: false, sending: false, msg: '', replyTo: null, focus: 0 };
 const CMT_SHOWN = 5;
 const CMT_CUT = 220;               // dłuższe komentarze są skracane do tylu znaków
 const cmtOpen = new Set();
@@ -5770,13 +5775,38 @@ async function initComments(a) {
   const box = $('#comments');
   if (!box || box.dataset.article !== a.id) return;
   placeComments();
-  Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = '';
+  Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = ''; Cmt.replyTo = null; Cmt.focus = currentRoute().k || 0;
   try {
     const d = await Readers.api('/comments?article=' + encodeURIComponent(a.id));
     if (!$('#comments') || $('#comments').dataset.article !== a.id) return;
     Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.ok = d.enabled !== false;
   } catch { return; }          // brak API (np. tryb demonstracyjny) – sekcja zostaje ukryta
+  const want = Cmt.focus; Cmt.focus = 0;
+  if (want) {
+    const top = cmtTree().tops, c = Cmt.list.find(x => x.id === want);
+    const root = c && (c.parent && Cmt.list.some(x => x.id === c.parent) ? c.parent : c.id);
+    if (root && top.findIndex(x => x.id === root) >= CMT_SHOWN) Cmt.expanded = true;
+  }
   drawComments();
+  if (want) {
+    const el = document.getElementById('c-' + want);
+    if (!el) toast('Tego komentarza już nie ma.', 'error');
+    else { el.scrollIntoView({ block: 'center', behavior: 'smooth' }); el.classList.add('cmt-hl'); setTimeout(() => el.classList.remove('cmt-hl'), 3500); }
+  }
+}
+
+/** Komentarze główne (od najnowszych) i odpowiedzi do nich (od najstarszych). */
+function cmtTree() {
+  const vis = Cmt.list.filter(c => c.status !== 'pending' || c.mine);
+  const ids = new Set(vis.map(c => c.id));
+  const kids = new Map();
+  const tops = [];
+  vis.forEach(c => {
+    if (c.parent && ids.has(c.parent)) { if (!kids.has(c.parent)) kids.set(c.parent, []); kids.get(c.parent).push(c); }
+    else tops.push(c);
+  });
+  kids.forEach(a => a.sort((x, y) => x.at - y.at));
+  return { vis, tops, kids };
 }
 
 function cmtTextHtml(c) {
@@ -5787,18 +5817,23 @@ function cmtTextHtml(c) {
   return `<p>${body}</p>${long ? `<button type="button" class="cmt-act cmt-toggle" data-cmt="toggle" data-id="${c.id}">${open ? 'Pokaż mniej' : 'Pokaż więcej'}</button>` : ''}`;
 }
 
-function commentItemHtml(c) {
+function commentItemHtml(c, kids) {
   const admin = Auth.isAdmin();
   const own = c.mine && !admin ? `<button type="button" class="cmt-act" data-cmt="delete" data-id="${c.id}">Usuń</button>` : '';
   const rep = !c.mine && Readers.loggedIn() ? `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>` : '';
   const adm = admin ? `<button type="button" class="cmt-act" data-cmt="admin-delete" data-id="${c.id}">Usuń</button>` : '';
-  return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}">
+  const canReply = !Cmt.off && c.status === 'ok';
+  const reply = canReply ? `<button type="button" class="cmt-act" data-cmt="reply" data-id="${c.id}">Odpowiedz</button>` : '';
+  const link = c.status === 'ok' ? `<button type="button" class="cmt-act" data-cmt="link" data-id="${c.id}">Link</button>` : '';
+  const sub = kids && kids.length ? `<ul class="cmt-replies">${kids.map(k => commentItemHtml(k)).join('')}</ul>` : '';
+  return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}" id="c-${c.id}">
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
-      <div class="cmt-head"><b>${Utils.esc(c.name)}</b><time>${ago(c.at)}</time></div>
+      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
       ${cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
-      <div class="cmt-actions">${own}${rep}${adm}</div>
+      <div class="cmt-actions">${reply}${link}${own}${rep}${adm}</div>
+      ${sub}
     </div>
   </li>`;
 }
@@ -5808,23 +5843,23 @@ function drawComments() {
   if (!box || !Cmt.ok || box.dataset.article !== Cmt.article) return;
   box.hidden = false;
   placeComments();
-  const visible = Cmt.list.filter(c => c.status !== 'pending' || c.mine);
-  const shown = Cmt.expanded ? visible : visible.slice(0, CMT_SHOWN);
+  const { vis: visible, tops, kids } = cmtTree();
+  const shown = Cmt.expanded ? tops : tops.slice(0, CMT_SHOWN);
   let form = '';
   if (Cmt.off) form = '<p class="cmt-note">Komentarze do tego artykułu są wyłączone.</p>';
   else if (Readers.loading) form = '';
   else if (!Readers.loggedIn()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
   else if (!Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
   else if (!Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
-  else form = `<form class="cmt-form" id="cmt-form"><textarea id="cmt-text" rows="3" maxlength="600" placeholder="Napisz komentarz jako ${Utils.esc(Readers.me.name)}…" aria-label="Komentarz"></textarea>
+  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="600" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(Readers.me.name)}…" aria-label="Komentarz"></textarea>
       <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div></form>`;
   const keep = $('#cmt-text') ? $('#cmt-text').value : '';
   box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span></h2>
     ${form}
     ${Cmt.msg ? `<p class="cmt-msg">${Utils.esc(Cmt.msg)}</p>` : ''}
-    ${visible.length ? `<ul class="cmt-list">${shown.map(commentItemHtml).join('')}</ul>` : (Cmt.off ? '' : '<p class="cmt-empty">Bądź pierwszy – napisz, co myślisz.</p>')}
-    ${!Cmt.expanded && visible.length > CMT_SHOWN ? `<button type="button" class="btn btn-sm cmt-more" data-cmt="more">Pokaż resztę komentarzy (${visible.length - CMT_SHOWN})</button>` : ''}`;
-  const t = $('#cmt-text'); if (t && keep) { t.value = keep; $('#cmt-count').textContent = keep.length; }
+    ${visible.length ? `<ul class="cmt-list">${shown.map(c => commentItemHtml(c, kids.get(c.id))).join('')}</ul>` : (Cmt.off ? '' : '<p class="cmt-empty">Bądź pierwszy – napisz, co myślisz.</p>')}
+    ${!Cmt.expanded && tops.length > CMT_SHOWN ? `<button type="button" class="btn btn-sm cmt-more" data-cmt="more">Pokaż resztę komentarzy (${tops.length - CMT_SHOWN})</button>` : ''}`;
+  const t = $('#cmt-text'); if (t && keep) { t.value = keep; cmtCount(); }
 }
 
 async function sendComment(e) {
@@ -5834,12 +5869,21 @@ async function sendComment(e) {
   if (text.length < 2) return;
   Cmt.sending = true; const btn = $('#cmt-send'); btn.disabled = true;
   try {
-    const d = await Readers.api('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text }) });
-    Cmt.list.unshift(d.comment);
+    const d = await Readers.api('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text, replyTo: Cmt.replyTo ? Cmt.replyTo.id : undefined }) });
+    Cmt.list.unshift(d.comment); Cmt.replyTo = null;
     Cmt.msg = d.held ? 'Komentarz zawiera link lub niedozwolone słowa, więc czeka na zatwierdzenie redakcji.' : '';
+    if (!d.held && Push.supported() && Notification.permission !== 'granted') Cmt.msg = 'Opublikowano. Włącz powiadomienia (dzwonek na górze), a damy Ci znać, gdy ktoś odpowie na Twój komentarz.';
     $('#cmt-text').value = '';
   } catch (err) { Cmt.msg = readerErr(err); }
   finally { Cmt.sending = false; drawComments(); }
+}
+
+function cmtCount() {
+  const t = $('#cmt-text'), n = $('#cmt-count'); if (!t || !n) return;
+  const len = t.value.length;
+  n.textContent = len;
+  n.parentElement.classList.toggle('is-warn', len >= 540 && len < 600);
+  n.parentElement.classList.toggle('is-max', len >= 600);
 }
 
 async function commentAction(act, id, btn) {
@@ -5847,12 +5891,26 @@ async function commentAction(act, id, btn) {
     if (act === 'more') { Cmt.expanded = true; drawComments(); return; }
     if (act === 'toggle') { cmtOpen.has(id) ? cmtOpen.delete(id) : cmtOpen.add(id); drawComments(); return; }
     if (act === 'login') { openReaderModal('login'); return; }
+    if (act === 'reply') {
+      if (!Readers.loggedIn()) { openReaderModal('login'); return; }
+      const c = Cmt.list.find(x => x.id === id); if (!c) return;
+      Cmt.replyTo = { id: c.id, name: c.name }; drawComments();
+      const t = $('#cmt-text'); if (t) { t.focus(); t.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+      return;
+    }
+    if (act === 'cancel-reply') { Cmt.replyTo = null; drawComments(); return; }
+    if (act === 'link') {
+      const url = `${location.origin}${location.pathname}#/artykul/${encodeURIComponent(Cmt.article)}?k=${id}`;
+      try { await navigator.clipboard.writeText(url); toast('Skopiowano link do komentarza.'); }
+      catch { window.prompt('Skopiuj link do komentarza:', url); }
+      return;
+    }
     if (act === 'resend') { await Readers.resend(); Cmt.msg = 'Wysłaliśmy link ponownie.'; drawComments(); return; }
     if (act === 'refresh') { await Readers.refresh(); if (!Readers.verified()) { Cmt.msg = 'Adres nie jest jeszcze potwierdzony. Kliknij link w wiadomości.'; drawComments(); } return; }
     if (act === 'delete') {
       if (!confirm('Usunąć Twój komentarz?')) return;
       await Readers.api('/comments/delete', { method: 'POST', body: JSON.stringify({ id }) });
-      Cmt.list = Cmt.list.filter(c => c.id !== id);
+      Cmt.list = Cmt.list.filter(c => c.id !== id && c.parent !== id);
     } else if (act === 'report') {
       await Readers.api('/comments/report', { method: 'POST', body: JSON.stringify({ id }) });
       toast('Dziękujemy za zgłoszenie. Redakcja je sprawdzi.');
@@ -5860,8 +5918,9 @@ async function commentAction(act, id, btn) {
     } else if (act === 'admin-delete') {
       if (!confirm('Usunąć ten komentarz?')) return;
       await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id, action: 'delete' }) });
-      Cmt.list = Cmt.list.filter(c => c.id !== id);
+      Cmt.list = Cmt.list.filter(c => c.id !== id && c.parent !== id);
     }
+    if (Cmt.replyTo && !Cmt.list.some(c => c.id === Cmt.replyTo.id)) Cmt.replyTo = null;
     Cmt.msg = ''; drawComments();
   } catch (err) { toast(readerErr(err), 'error'); }
 }
@@ -5993,7 +6052,7 @@ function bindReaderEvents() {
     } else if (e.target.id === 'acc-avatar-remove') { try { await Readers.saveAvatar(null); toast('Zdjęcie usunięte.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
   });
   document.addEventListener('submit', e => { if (e.target.id === 'cmt-form') sendComment(e); });
-  document.addEventListener('input', e => { if (e.target.id === 'cmt-text') $('#cmt-count').textContent = e.target.value.length; });
+  document.addEventListener('input', e => { if (e.target.id === 'cmt-text') cmtCount(); });
   document.addEventListener('change', async e => {
     if (e.target.id !== 'acc-avatar-file' || !e.target.files[0]) return;
     try { await Readers.saveAvatar(await shrinkToJpeg(e.target.files[0])); toast('Zdjęcie zapisane.'); } catch (ex) { toast(readerErr(ex), 'error'); }

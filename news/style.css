@@ -2269,3 +2269,13 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .side-head[hidden] { display: none; }
 #layout[data-view="article"] .side-right { position: static; max-height: none; overflow: visible; }
 .cmt-toggle { color: var(--accent); font-weight: 700; font-size: .8rem; margin-top: 2px; display: block; }
+
+.cmt-replies { list-style: none; margin: 10px 0 0; padding: 0 0 0 12px; border-left: 2px solid var(--border); display: flex; flex-direction: column; gap: 12px; }
+.cmt-to { font-size: .75rem; color: var(--muted); margin-left: 6px; }
+.cmt-replying { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .85rem; color: var(--muted); margin-bottom: 6px; }
+.cmt-replying b { color: inherit; }
+.cmt-row small.is-warn { color: #c77700; font-weight: 700; }
+.cmt-row small.is-max { color: #d12; font-weight: 700; }
+.cmt { border-radius: 10px; transition: background .4s; }
+.cmt.cmt-hl > .cmt-body { animation: cmthl 3.5s ease-out; }
+@keyframes cmthl { 0%, 60% { background: rgba(255, 190, 0, .28); box-shadow: 0 0 0 6px rgba(255, 190, 0, .28); } 100% { background: transparent; box-shadow: 0 0 0 6px transparent; } }
