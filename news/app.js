@@ -4598,7 +4598,7 @@ function quickItemHtml(a, withAdmin) {
     <time class="quick-time" datetime="${Utils.esc(a.createdAt)}">${Utils.formatTime(a.createdAt)}</time>
     <div class="quick-body">
       <p>${Utils.esc(a.title)}</p>
-      <div class="quick-meta">${src}<button type="button" class="quick-share" data-action="quick-share" data-id="${Utils.esc(a.id)}">Udostępnij</button>${admin}</div>
+      <div class="quick-meta">${src}<button type="button" class="quick-share" data-action="quick-share" data-id="${Utils.esc(a.id)}">Udostępnij</button>${withAdmin && Auth.isAdmin() ? `<button type="button" class="quick-share" data-action="quick-story" data-id="${Utils.esc(a.id)}">Story</button>` : ''}${admin}</div>
     </div>
   </li>`;
 }
@@ -4644,6 +4644,8 @@ function openQuickModal(id) {
   $('#qk-text').value = a ? a.title : '';
   $('#qk-link').value = a ? a.link || '' : '';
   $('#qk-source').value = a ? a.sourceName || '' : '';
+  $('#qk-push').checked = a ? false : true;
+  $('#qk-push-row').hidden = !!a;
   $('#qk-count').textContent = $('#qk-text').value.length;
   $('#qk-error').hidden = true;
   openModal('quick-modal');
@@ -4670,7 +4672,8 @@ async function submitQuick(e) {
     urgent: false, featured: false, infobox: [],
     link, sourceName: $('#qk-source').value.trim().slice(0, 40),
     createdAt: existing ? existing.createdAt : now,
-    updatedAt: now
+    updatedAt: now,
+    noPush: existing ? !!existing.noPush : !$('#qk-push').checked
   };
   const btn = $('#qk-submit');
   btn.disabled = true;
@@ -4706,6 +4709,57 @@ async function shareQuick(id) {
     try { await navigator.share({ title: 'Śliska News', text: a.title, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
   }
   try { await navigator.clipboard.writeText(`${a.title} ${url}`); toast('Skopiowano do schowka.'); } catch { toast('Nie udało się skopiować.', 'error'); }
+}
+
+/** Story (1080×1920): samo tło + treść newsa + zwykły napis „sliska.pl” – bez linku, naklejek i ozdobników. */
+async function renderQuickStory(a) {
+  const W = 1080, H = 1920, PAD = 96;
+  const family = getComputedStyle(document.body).fontFamily;
+  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 40px ${family}`)]); } catch {}
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#1a1a1a'); bg.addColorStop(1, '#070707');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W * .85, H * .1, 0, W * .85, H * .1, 900);
+  glow.addColorStop(0, 'rgba(214,0,28,.55)'); glow.addColorStop(1, 'rgba(214,0,28,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  const t = fitText(ctx, family, a.title, W - PAD * 2, 1000, 84, 44, 800, 1.22);
+  ctx.font = `800 ${t.size}px ${family}`;
+  const total = t.lines.length * t.lh;
+  let y = Math.round((H - total) / 2);
+  for (const l of t.lines) { ctx.fillText(l, PAD, y); y += t.lh; }
+  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.85)';
+  ctx.font = `700 44px ${family}`;
+  ctx.fillText('sliska.pl', W / 2, H - 330);
+  return canvasBlob(canvas);
+}
+
+async function shareQuickStory(id, btn) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
+  try {
+    const blob = await renderQuickStory(a);
+    const name = `sliska-story-${Utils.slugify(a.title).slice(0, 40) || a.id}.png`;
+    const file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const obj = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = obj; link.download = name;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(obj), 4000);
+    toast('Story pobrane.');
+  } catch (e) {
+    toast('Nie udało się utworzyć grafiki.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
 }
 
 /* ---------- Zgłoszenie błędu w artykule ---------- */
@@ -5844,7 +5898,7 @@ async function saveSettings(e) {
 }
 
 /* ---------- Akcje (przyciski z data-action) ---------- */
-function handleAction(action, id) {
+function handleAction(action, id, btn) {
   if (action === 'save') {
     const now = Saved.toggle(id);
     if (now === null) return;
@@ -5857,6 +5911,7 @@ function handleAction(action, id) {
   if (action === 'share-image') { shareImage(id, document.activeElement && document.activeElement.dataset && document.activeElement.dataset.action === 'share-image' ? document.activeElement : null); return; }
   if (action === 'report-error') { openReportModal(id); return; }
   if (action === 'quick-share') { shareQuick(id); return; }
+  if (action === 'quick-story') { shareQuickStory(id, btn); return; }
   if (action === 'quick-more') { state.quickVisible = (state.quickVisible || 30) + 30; renderQuick(); return; }
   if (action === 'share') { shareArticle(id); return; }
   if (action === 'ig-post') { openIgModal(id); return; }
@@ -5971,7 +6026,7 @@ function bindEvents() {
     if (actionBtn) {
       e.preventDefault();
       e.stopPropagation();
-      handleAction(actionBtn.dataset.action, actionBtn.dataset.id);
+      handleAction(actionBtn.dataset.action, actionBtn.dataset.id, actionBtn);
       return;
     }
     const tile = e.target.closest('.card, .hero, .tile, .side-item');

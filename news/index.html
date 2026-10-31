@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261101p">
+  <link rel="stylesheet" href="style.css?v=20261101q">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -503,6 +503,7 @@
           <span class="field-label">Nazwa źródła</span>
           <input type="text" id="qk-source" maxlength="40" placeholder="Np. Instagram artysty (puste = adres strony)">
         </label>
+        <label class="field-check" id="qk-push-row"><input type="checkbox" id="qk-push" checked> Wyślij powiadomienie push</label>
         <p class="form-error" id="qk-error" hidden></p>
         <div class="modal-actions">
           <button type="button" class="btn btn-danger" id="qk-delete" hidden>Usuń</button>
@@ -802,6 +803,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261101p"></script>
+  <script src="app.js?v=20261101q"></script>
 </body>
 </html>

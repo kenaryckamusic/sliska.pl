@@ -2166,3 +2166,7 @@ body.gx-lock { overflow: hidden; }
 .push-toggle.is-on svg { fill: currentColor; }
 .push-toggle[hidden] { display: none; }
 @media (max-width: 640px) { .reader-vote { padding: 14px 16px; } .rv-bar { grid-template-columns: 76px 1fr 38px; gap: 8px; } .rv-val { font-size: 2rem; } }
+
+/* push przy szybkim newsie */
+.field-check { display: flex; align-items: center; gap: 8px; font-size: .9rem; margin: 6px 0 10px; cursor: pointer; }
+.field-check input { width: 18px; height: 18px; accent-color: var(--accent); }
