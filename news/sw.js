@@ -1,6 +1,6 @@
 /* Śliska News – prosty service worker: strona działa też przy słabym zasięgu.
    Strategia: najpierw sieć (zawsze świeża wersja), a gdy brak internetu – ostatnia zapamiętana kopia. */
-const CACHE = 'sliska-news-v2';
+const CACHE = 'sliska-news-v3';
 
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => {
