@@ -1177,7 +1177,7 @@ const staffName = () => isStaffActor() ? ((state.profile && state.profile.name) 
 async function actorApi(path, opts = {}) {
   const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...(await actorAuth()), ...(opts.headers || {}) }, cache: 'no-store' });
   let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
-  if (!r.ok) { const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
+  if (!r.ok) { if (d.error === 'session_revoked') { try { Readers.auth && Readers.auth.signOut(); } catch { /* ignoruj */ } } const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
   return d;
 }
 
@@ -1418,6 +1418,7 @@ function currentRoute() {
   if (parts[0] === 'panel') return { name: 'panel' };
   if (parts[0] === 'ustawienia') return { name: 'settings' };
   if (parts[0] === 'konto') return { name: 'account', tab: parts[1] || '' };
+  if (parts[0] === 'uzytkownik' && parts[1]) return { name: 'user', pub: decodeURIComponent(parts[1]).replace(/[^A-Za-z0-9]/g, '') };
   if (parts[0] === 'kategoria' && parts[1]) return { name: 'home', category: decodeURIComponent(parts[1]) };
   if (parts[0] === 'tag' && parts[1]) return { name: 'home', tag: decodeURIComponent(parts[1]) };
   if (parts[0] === 'artysta' && parts[1]) return { name: 'home', artist: decodeURIComponent(parts[1]) };
@@ -1565,6 +1566,7 @@ function cardHtml(a, opts = {}) {
       <img src="${Utils.esc(thumbFor(a, opts.cover))}"${imgFocus(a, thumbFor(a, opts.cover))} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     </a>
     <div class="card-body">
+      <div class="kicker"><a href="#/kategoria/${encodeURIComponent(Utils.catsOf(a)[0] || '')}">${Utils.esc(Utils.catsOf(a)[0] || '')}</a>${typeof Visit !== 'undefined' && Visit.isNew(a) ? '<span class="new-mark">Nowe</span>' : ''}${a.urgent ? '<span class="new-mark is-hot">Pilne</span>' : ''}</div>
       <h3 class="card-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
       <p class="card-lead">${Utils.esc(a.lead)}</p>
       <div class="card-meta">
@@ -5691,6 +5693,8 @@ const READER_ERR = {
   banned: 'Twoje konto zostało zablokowane.', rate: 'Za dużo prób – spróbuj ponownie później.', dup: 'Taki komentarz już dodałeś.',
   off: 'Komentarze do tego artykułu są wyłączone.', short: 'Komentarz jest za krótki.', long: 'Komentarz jest za długi (maks. 600 znaków).',
   no_profile: 'Najpierw ustaw nazwę użytkownika na stronie konta.', avatar: 'Nie udało się zapisać zdjęcia.', auth: 'Zaloguj się ponownie.',
+  slow: 'Poczekaj chwilę przed kolejnym komentarzem (tryb wolniejszej dyskusji).', edit_late: 'Komentarz można poprawiać tylko przez 5 minut od publikacji.', gone: 'Tego komentarza już nie ma.', session_revoked: 'Sesja wygasła – zaloguj się ponownie.',
+  'auth/popup-closed-by-user': '', 'auth/cancelled-popup-request': '', 'auth/popup-blocked': 'Przeglądarka zablokowała okno logowania Google. Zezwól na wyskakujące okna dla tej strony.', 'auth/account-exists-with-different-credential': 'Ten adres e-mail ma już konto z hasłem. Zaloguj się hasłem.', 'auth/operation-not-allowed': 'Logowanie przez Google nie jest jeszcze włączone w Firebase.', 'auth/unauthorized-domain': 'Ta domena nie jest dodana w Firebase (Authentication → Settings → Authorized domains).',
   readers_off: 'Komentarze są chwilowo niedostępne.', 'auth/email-already-in-use': 'Ten adres e-mail ma już konto. Zaloguj się.',
   'auth/weak-password': 'Hasło musi mieć co najmniej 6 znaków.', 'auth/invalid-email': 'Nieprawidłowy adres e-mail.',
   'auth/invalid-credential': 'Nieprawidłowy e-mail lub hasło.', 'auth/wrong-password': 'Nieprawidłowy e-mail lub hasło.', 'auth/user-not-found': 'Nieprawidłowy e-mail lub hasło.',
@@ -5726,7 +5730,24 @@ const Readers = {
     if (!r.ok) { const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
     return d;
   },
-  async loadMe() { try { this.me = await this.api('/me'); } catch { this.me = null; } },
+  async loadMe() {
+    try { this.me = await this.api('/me'); }
+    catch (e) { this.me = null; if (e && e.error === 'session_revoked') { try { await this.auth.signOut(); toast('Zostałeś wylogowany ze wszystkich urządzeń. Zaloguj się ponownie.'); } catch { /* ignoruj */ } } }
+  },
+  async google() {
+    const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({ prompt: 'select_account' });
+    const cred = await this.auth.signInWithPopup(prov);
+    this.user = cred.user;
+    await this.loadMe();
+    return cred;
+  },
+  /** „Wyloguj ze wszystkich urządzeń”: serwer unieważnia wcześniejsze sesje, potem wylogowujemy też to urządzenie. */
+  async signOutEverywhere() {
+    await this.api('/signout-all', { method: 'POST' });
+    try { await Push.unlink(); } catch { /* ignoruj */ }
+    try { const cur = Auth.mode === 'firebase' && FirebaseProvider.auth && FirebaseProvider.auth.currentUser; if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); } catch { /* ignoruj */ }
+    await this.auth.signOut();
+  },
   loggedIn() { return !!this.user; },
   verified() { if (this.me && typeof this.me.verified === 'boolean') return this.me.verified; return !!(this.user && this.user.emailVerified); },
   hasName() { return !!(this.me && this.me.name); },
@@ -5817,11 +5838,11 @@ async function initComments(a) {
   const box = $('#comments');
   if (!box || box.dataset.article !== a.id) return;
   placeComments();
-  Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = ''; Cmt.replyTo = null; Cmt.focus = currentRoute().k || 0;
+  Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.closed = false; Cmt.slow = 0; Cmt.editing = 0; Cmt.reporting = 0; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = ''; Cmt.replyTo = null; Cmt.focus = currentRoute().k || 0;
   try {
     const d = await actorApi('/comments?article=' + encodeURIComponent(a.id));
     if (!$('#comments') || $('#comments').dataset.article !== a.id) return;
-    Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.ok = d.enabled !== false;
+    Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.closed = !!d.closed; Cmt.slow = Number(d.slow) || 0; Cmt.ok = d.enabled !== false;
   } catch { return; }          // brak API (np. tryb demonstracyjny) – sekcja zostaje ukryta
   const want = Cmt.focus; Cmt.focus = 0;
   if (want) {
@@ -5862,7 +5883,12 @@ function cmtTextHtml(c) {
 function commentItemHtml(c, kids) {
   const admin = Auth.isAdmin();
   const own = c.mine && !admin ? `<button type="button" class="cmt-act" data-cmt="delete" data-id="${c.id}">Usuń</button>` : '';
-  const rep = !c.mine && Readers.loggedIn() && !isStaffActor() ? `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>` : '';
+  const canEdit = c.mine && !Cmt.off && ['ok', 'pending'].includes(c.status) && Date.now() - c.at < CMT_EDIT_MS;
+  const edit = canEdit ? `<button type="button" class="cmt-act" data-cmt="edit" data-id="${c.id}">Edytuj</button>` : '';
+  const rep = !c.mine && Readers.loggedIn() && !isStaffActor()
+    ? (Cmt.reporting === c.id
+      ? `<span class="cmt-why"><em>Powód:</em>${[['spam', 'Spam'], ['obraza', 'Obraza'], ['spoiler', 'Spoiler']].map(([v, l]) => `<button type="button" class="cmt-act" data-cmt="report-do" data-id="${c.id}" data-reason="${v}">${l}</button>`).join('')}<button type="button" class="cmt-act" data-cmt="report-cancel" data-id="${c.id}">Anuluj</button></span>`
+      : `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>`) : '';
   const adm = admin ? `<button type="button" class="cmt-act" data-cmt="admin-delete" data-id="${c.id}">Usuń</button>` : '';
   const canReply = !Cmt.off && c.status === 'ok';
   const reply = canReply ? `<button type="button" class="cmt-act" data-cmt="reply" data-id="${c.id}">Odpowiedz</button>` : '';
@@ -5871,10 +5897,10 @@ function commentItemHtml(c, kids) {
   return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}" id="c-${c.id}">
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
-      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${roleBadge(c)}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
-      ${cmtTextHtml(c)}
+      <div class="cmt-head">${c.u ? `<a class="cmt-name" href="#/uzytkownik/${Utils.esc(c.u)}"><b>${Utils.esc(c.name)}</b></a>` : `<b>${Utils.esc(c.name)}</b>`}${roleBadge(c)}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time>${c.edited ? '<span class="cmt-edited">· edytowano</span>' : ''}</div>
+      ${Cmt.editing === c.id ? `<div class="cmt-edit"><textarea id="cmt-edit-text" rows="3" maxlength="600">${Utils.esc(c.text)}</textarea><div class="cmt-row"><button type="button" class="btn btn-primary btn-sm" data-cmt="edit-save" data-id="${c.id}">Zapisz</button><button type="button" class="btn btn-sm" data-cmt="edit-cancel" data-id="${c.id}">Anuluj</button><small>Poprawki możliwe do 5 minut od publikacji.</small></div></div>` : cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
-      <div class="cmt-actions">${reply}${link}${own}${rep}${adm}</div>
+      <div class="cmt-actions">${reply}${link}${edit}${own}${rep}${adm}</div>
       ${sub}
     </div>
   </li>`;
@@ -5894,9 +5920,10 @@ function drawComments() {
   else if (!isStaffActor() && !Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
   else if (!isStaffActor() && !Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
   else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="600" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.me.name)}…" aria-label="Komentarz"></textarea>
-      <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div></form>`;
+      <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div>${Cmt.slow && !isStaffActor() && !canMod() ? `<small class="cmt-slow">Tryb wolniejszej dyskusji: odstęp ${Cmt.slow >= 60 ? Cmt.slow / 60 + ' min' : Cmt.slow + ' s'} między komentarzami.</small>` : ''}</form>`;
   const keep = $('#cmt-text') ? $('#cmt-text').value : '';
-  box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span></h2>
+  const closeBtn = canMod() && (Cmt.closed || !Cmt.off) ? `<button type="button" class="cmt-act cmt-close" data-cmt="close-toggle">${Cmt.closed ? 'Otwórz komentarze' : 'Zamknij komentarze'}</button>` : '';
+  box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span>${closeBtn}</h2>
     ${form}
     ${Cmt.msg ? `<p class="cmt-msg">${Utils.esc(Cmt.msg)}</p>` : ''}
     ${visible.length ? `<ul class="cmt-list">${shown.map(c => commentItemHtml(c, kids.get(c.id))).join('')}</ul>` : (Cmt.off ? '' : '<p class="cmt-empty">Bądź pierwszy – napisz, co myślisz.</p>')}
@@ -5917,7 +5944,7 @@ async function sendComment(e) {
     if (d.censored && !d.held) Cmt.msg = 'Opublikowano. Niektóre słowa zostały automatycznie ocenzurowane.';
     else if (!d.held && Push.supported() && Notification.permission !== 'granted') Cmt.msg = 'Opublikowano. Włącz powiadomienia (dzwonek na górze), a damy Ci znać, gdy ktoś odpowie na Twój komentarz.';
     $('#cmt-text').value = '';
-  } catch (err) { Cmt.msg = readerErr(err); }
+  } catch (err) { Cmt.msg = err && err.error === 'slow' && err.data && err.data.wait ? `Poczekaj jeszcze ${err.data.wait} s przed kolejnym komentarzem (tryb wolniejszej dyskusji).` : readerErr(err); }
   finally { Cmt.sending = false; drawComments(); }
 }
 
@@ -5942,6 +5969,28 @@ async function commentAction(act, id, btn) {
       return;
     }
     if (act === 'cancel-reply') { Cmt.replyTo = null; drawComments(); return; }
+    if (act === 'edit') { Cmt.editing = id; Cmt.reporting = 0; drawComments(); const t = $('#cmt-edit-text'); if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } return; }
+    if (act === 'edit-cancel') { Cmt.editing = 0; drawComments(); return; }
+    if (act === 'edit-save') {
+      const t = $('#cmt-edit-text'); const text = t ? t.value.trim() : '';
+      if (text.length < 2) { toast('Komentarz jest za krótki.', 'error'); return; }
+      btn.disabled = true;
+      try {
+        const d = await actorApi('/comments/edit', { method: 'POST', body: JSON.stringify({ id, text }) });
+        const c = Cmt.list.find(x => x.id === id); if (c) { c.text = d.text; c.status = d.status; c.edited = d.edited; }
+        Cmt.editing = 0; Cmt.msg = d.held ? 'Po poprawce komentarz zawiera link, więc czeka na zatwierdzenie redakcji.' : d.censored ? 'Zapisano. Niektóre słowa zostały automatycznie ocenzurowane.' : '';
+        drawComments();
+      } catch (ex) { btn.disabled = false; throw ex; }
+      return;
+    }
+    if (act === 'report-cancel') { Cmt.reporting = 0; drawComments(); return; }
+    if (act === 'close-toggle') {
+      const want = !Cmt.closed;
+      await adminApi('/admin/closed', { method: 'POST', body: JSON.stringify({ article: Cmt.article, closed: want }) });
+      Cmt.closed = want; Cmt.off = want; Cmt.editing = 0; Cmt.replyTo = null;
+      toast(want ? 'Komentarze pod tym artykułem zostały zamknięte.' : 'Komentarze znów są otwarte.');
+      drawComments(); return;
+    }
     if (act === 'link') {
       const url = `${location.origin}${location.pathname}#/artykul/${encodeURIComponent(Cmt.article)}?k=${id}`;
       try { await navigator.clipboard.writeText(url); toast('Skopiowano link do komentarza.'); }
@@ -5955,7 +6004,10 @@ async function commentAction(act, id, btn) {
       await actorApi('/comments/delete', { method: 'POST', body: JSON.stringify({ id }) });
       Cmt.list = Cmt.list.filter(c => c.id !== id && c.parent !== id);
     } else if (act === 'report') {
-      await actorApi('/comments/report', { method: 'POST', body: JSON.stringify({ id }) });
+      Cmt.reporting = id; Cmt.editing = 0; drawComments(); return;
+    } else if (act === 'report-do') {
+      await actorApi('/comments/report', { method: 'POST', body: JSON.stringify({ id, reason: btn.dataset.reason }) });
+      Cmt.reporting = 0; drawComments();
       toast('Dziękujemy za zgłoszenie. Redakcja je sprawdzi.');
       return;
     } else if (act === 'admin-delete') {
@@ -6001,6 +6053,7 @@ function setReaderMode(m) {
   $('#rm-tab-login').classList.toggle('is-on', login);
   $('#rm-tab-register').classList.toggle('is-on', reg);
   $('#reader-name-field').hidden = !(reg || nm);
+  const gb = $('#reader-google-box'); if (gb) gb.hidden = !((login || reg) && Readers.enabled());
   $('#reader-pass-field').hidden = rst || nm;
   $('#reader-terms').hidden = !reg;
   $('#reader-submit').textContent = reg ? 'Załóż konto' : rst ? 'Wyślij link' : nm ? 'Zapisz' : 'Zaloguj się';
@@ -6047,6 +6100,32 @@ async function submitReader(e) {
   } finally { btn.disabled = false; }
 }
 
+/* ---- publiczny profil użytkownika ---- */
+async function renderUserProfile(pub) {
+  const el = $('#view-user');
+  el.innerHTML = '<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div><p class="muted">Ładowanie…</p>';
+  let d;
+  try {
+    const r = await fetch(CONFIG.API_BASE + '/profile/' + encodeURIComponent(pub), { cache: 'no-store' });
+    if (!r.ok) throw new Error('gone');
+    d = await r.json();
+  } catch { if (currentRoute().name === 'user') el.innerHTML = notFoundHtml('Nie ma takiego użytkownika.'); return; }
+  if (currentRoute().name !== 'user' || currentRoute().pub !== pub) return;
+  const since = d.created ? new Date(d.created).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const items = (d.comments || []).map(c => {
+    const a = state.articles.find(x => x.id === c.article);
+    const t = c.text.length > 240 ? c.text.slice(0, 240).replace(/\s+\S*$/, '') + '…' : c.text;
+    return `<li class="up-c"><a class="up-art" href="#/artykul/${encodeURIComponent(c.article)}?k=${c.id}">${Utils.esc(a ? a.title : 'Artykuł')}</a><p>${Utils.esc(t).replace(/\n/g, '<br>')}</p><time>${ago(c.at)}</time></li>`;
+  }).join('');
+  el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
+    <section class="panel up-card">
+      <div class="avatar up-av">${readerAvatar(d.name, d.av, d.pub)}</div>
+      <div class="up-main"><h1 class="up-name">${Utils.esc(d.name)}</h1>
+        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div></div>
+    </section>
+    ${d.banned ? '<p class="cmt-note">To konto zostało zablokowane.</p>' : `<h2 class="up-h">Komentarze</h2>${items ? `<ul class="up-list">${items}</ul>` : '<p class="muted">Ten użytkownik nie ma jeszcze komentarzy.</p>'}`}`;
+}
+
 /* ---- strona konta czytelnika ---- */
 function renderAccount() {
   const el = $('#view-account');
@@ -6070,7 +6149,7 @@ function renderAccount() {
       <section class="panel st-card">
         <div class="st-head"><h2 class="st-h">Profil</h2><p class="st-sub">Tak widzą Cię inni w komentarzach.</p></div>
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
-          <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
+          <div class="settings-avatar-actions"><label class="btn btn-sm file-btn">Wybierz zdjęcie<input type="file" id="acc-avatar-file" accept="image/*" hidden></label>${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
         <label class="field"><span class="field-label">Nazwa użytkownika</span>
           <input type="text" id="acc-name" maxlength="${me.role === 'owner' ? 30 : 20}" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
           <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Nazwę możesz zmienić raz na 30 dni.'}</small></label>
@@ -6083,6 +6162,8 @@ function renderAccount() {
         <div class="st-row"><span class="muted">Potwierdzenie e-mail</span>${Readers.verified() ? '<strong class="ok-text">Potwierdzony</strong>' : '<span><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link</button> <button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></span>'}</div>
         <div class="st-row"><span class="muted">Hasło</span><button type="button" class="btn btn-sm" id="acc-reset">Wyślij link do zmiany hasła</button></div>
         <div class="st-row"><span class="muted">Sesja</span><button type="button" class="btn btn-sm" id="acc-logout">Wyloguj</button></div>
+        <div class="st-row"><span class="muted">Wszystkie urządzenia</span><button type="button" class="btn btn-sm btn-danger" id="acc-signout-all">Wyloguj ze wszystkich</button></div>
+        ${Readers.me && Readers.me.pub ? `<div class="st-row"><span class="muted">Twój profil publiczny</span><a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz</a></div>` : ''}
       </section>
     </div>`}`;
   if (tab === 'komentarze') renderModComments($('#acc-mod'), false);
@@ -6134,6 +6215,23 @@ function bindReaderEvents() {
   document.addEventListener('click', async e => {
     const rt = e.target.closest('[data-rd-retry]'); if (rt) { rt.disabled = true; try { await Readers.refresh(); } catch { /* ignoruj */ } renderReaderCard(); return; }
     const c = e.target.closest('[data-cmt]'); if (c) { commentAction(c.dataset.cmt, Number(c.dataset.id) || 0, c); return; }
+    if (e.target.closest('[data-rm-google]')) {
+      const b = e.target.closest('[data-rm-google]'); b.disabled = true; const err = $('#reader-error'); err.hidden = true;
+      try {
+        await Readers.google();
+        if (!Readers.hasName()) {
+          const dn = String((Readers.user && Readers.user.displayName) || '').replace(/[^\p{L}\p{N}_. -]/gu, '').trim().slice(0, 20);
+          $('#reader-name').value = dn; setReaderMode('name');
+        } else { closeModal('reader-modal'); toast('Zalogowano.'); }
+      } catch (ex) { const m = readerErr(ex); if (m && !/^Coś poszło/.test(m) || ex.code === undefined) { err.className = 'form-error'; err.hidden = false; err.textContent = m; } }
+      finally { b.disabled = false; }
+      return;
+    }
+    if (e.target.id === 'acc-signout-all') {
+      if (!confirm('Wylogować to konto ze wszystkich urządzeń? Na każdym będziesz musiał zalogować się ponownie.')) return;
+      try { await Readers.signOutEverywhere(); toast('Wylogowano ze wszystkich urządzeń.'); location.hash = '#/'; } catch (ex) { toast(readerErr(ex), 'error'); }
+      return;
+    }
     if (e.target.id === 'acc-register') openReaderModal('register');
     else if (e.target.id === 'acc-logout') { await Readers.logout(); location.hash = '#/'; }
     else if (e.target.id === 'acc-reset') { try { await Readers.reset(Readers.user.email); toast('Wysłaliśmy link do zmiany hasła.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
@@ -6155,15 +6253,22 @@ const Mod = { all: false };
 const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor' };
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
+const CMT_EDIT_MS = 5 * 60 * 1000;
 const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
 const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
 const roleBadge = c => c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
+const MOD_REASON = { spam: 'spam', obraza: 'obraza', spoiler: 'spoiler', inne: 'inne' };
+function modReasons(csv) {
+  const n = {}; String(csv || '').split(',').filter(Boolean).forEach(r => { n[r] = (n[r] || 0) + 1; });
+  return Object.entries(n).map(([r, k]) => (MOD_REASON[r] || r) + (k > 1 ? ' ×' + k : '')).join(', ');
+}
 function modItemHtml(c) {
   const a = state.articles.find(x => x.id === c.article);
   const approve = c.status === 'hidden' ? 'Przywróć' : 'Zatwierdź';
   return `<article class="mc" data-id="${c.id}" data-status="${c.status}">
     <div class="mc-head"><b>${Utils.esc(c.name || 'Użytkownik')}</b>${roleBadge(c)}<span class="mc-st is-${c.status}">${MOD_ST[c.status] || c.status}${c.reports ? ' · zgłoszeń: ' + c.reports : ''}</span><time>${ago(c.at)}</time></div>
+    ${c.reasons ? `<small class="mc-why">Powody zgłoszeń: ${Utils.esc(modReasons(c.reasons))}</small>` : ''}
     <a class="mc-art" href="#/artykul/${encodeURIComponent(c.article)}?k=${c.id}">${Utils.esc(a ? a.title : c.article)}</a>
     <p class="mc-text">${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
     <div class="mc-actions">${c.status !== 'ok' ? `<button type="button" data-mod-act="approve">${approve}</button>` : '<button type="button" data-mod-act="hide">Ukryj</button>'}<button type="button" class="is-danger" data-mod-act="delete">Usuń</button></div>
@@ -6176,7 +6281,9 @@ async function renderModComments(el, all) {
   el.innerHTML = '<p class="muted">Ładowanie…</p>';
   try {
     const d = await adminApi('/admin/comments?status=' + (all ? 'all' : 'attention'));
-    el.innerHTML = `<div class="mod-bar"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="mc-link" data-mod="${all ? 'attention' : 'all'}">${all ? 'Tylko do sprawdzenia' : 'Pokaż ostatnie'}</button></div>
+    const set = canManage() ? await adminApi('/admin/settings').catch(() => null) : null;
+    const slowBar = set ? `<label class="mod-slow"><span>Tryb wolniejszej dyskusji</span><select data-mod-slow aria-label="Tryb wolniejszej dyskusji">${[[0, 'Wyłączony'], [30, 'Odstęp 30 s'], [60, 'Odstęp 1 min'], [300, 'Odstęp 5 min']].map(([v, l]) => `<option value="${v}" ${set.slow === v ? 'selected' : ''}>${l}</option>`).join('')}</select><small>Dotyczy czytelników; redakcja i Właściciel są wyłączeni z limitu.</small></label>` : '';
+    el.innerHTML = `${slowBar}<div class="mod-bar"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="mc-link" data-mod="${all ? 'attention' : 'all'}">${all ? 'Tylko do sprawdzenia' : 'Pokaż ostatnie'}</button></div>
       <div class="mod-list">${d.comments.length ? d.comments.map(modItemHtml).join('') : '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'}</div>`;
   } catch (ex) { el.innerHTML = `<p class="form-error">${Utils.esc(ex.message || 'Nie udało się pobrać komentarzy.')}</p>`; }
 }
@@ -6239,7 +6346,7 @@ async function loadModUsers(el) {
 function renderModUsersPanel(el) {
   if (!el) return;
   el.dataset.modusers = '1'; el.dataset.f = el.dataset.f || '';
-  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-filters" role="group" aria-label="Filtr użytkowników">${MU_FILTERS.map(([v, l]) => `<button type="button" class="mu-f ${(el.dataset.f || '') === v ? 'is-on' : ''}" data-mod-f="${v}">${l}</button>`).join('')}</div><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
+  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b><button type="button" class="mc-link" data-mod-backup>Pobierz kopię zapasową</button></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-filters" role="group" aria-label="Filtr użytkowników">${MU_FILTERS.map(([v, l]) => `<button type="button" class="mu-f ${(el.dataset.f || '') === v ? 'is-on' : ''}" data-mod-f="${v}">${l}</button>`).join('')}</div><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
   loadModUsers(el);
 }
 /** Zakładka „Komentarze” w panelu redaktora: moderacja + (dla uprawnionych) użytkownicy. */
@@ -6253,7 +6360,19 @@ function renderModeration(all) {
 document.addEventListener('click', async e => {
   const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]'), fl = e.target.closest('[data-mod-f]');
   try {
-    if (fl) { const box = fl.closest('[data-modusers]'); box.dataset.f = fl.dataset.modF; $$('.mu-f', box).forEach(b => b.classList.toggle('is-on', b === fl)); loadModUsers(box); }
+    if (e.target.closest('[data-mod-backup]')) {
+      const b = e.target.closest('[data-mod-backup]'); b.disabled = true; const old = b.textContent; b.textContent = 'Przygotowuję…';
+      try {
+        const h = await actorAuth();
+        const r = await fetch(CONFIG.API_BASE + '/admin/export', { headers: h, cache: 'no-store' });
+        if (!r.ok) throw new Error('Nie udało się pobrać kopii zapasowej.');
+        const url = URL.createObjectURL(await r.blob());
+        const a = document.createElement('a'); a.href = url; a.download = 'sliska-kopia-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast('Kopia zapasowa pobrana.');
+      } finally { b.disabled = false; b.textContent = old; }
+    }
+    else if (fl) { const box = fl.closest('[data-modusers]'); box.dataset.f = fl.dataset.modF; $$('.mu-f', box).forEach(b => b.classList.toggle('is-on', b === fl)); loadModUsers(box); }
     else if (m) { renderModComments(m.closest('[data-modroot]'), m.dataset.mod === 'all'); }
     else if (a) {
       const item = a.closest('.mc'); if (!item || a.disabled) return;
@@ -6284,6 +6403,11 @@ document.addEventListener('change', async e => {
   loadModUsers(box);
 });
 document.addEventListener('change', async e => {
+  const sl = e.target.closest('[data-mod-slow]'); if (!sl) return;
+  try { await adminApi('/admin/settings', { method: 'POST', body: JSON.stringify({ slow: Number(sl.value) }) }); toast(Number(sl.value) ? 'Tryb wolniejszej dyskusji włączony.' : 'Tryb wolniejszej dyskusji wyłączony.'); }
+  catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+document.addEventListener('change', async e => {
   const sel = e.target.closest('[data-mod-verify]'); if (!sel) return;
   const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
   try {
@@ -6304,7 +6428,7 @@ document.addEventListener('input', e => { if (e.target.matches('.mod-q')) { clea
 
 /* ---------- Routing ---------- */
 function showView(name) {
-  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account'].forEach(v => { $('#view-' + v).hidden = v !== name; });
+  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account', 'user'].forEach(v => { $('#view-' + v).hidden = v !== name; });
   $('#layout').dataset.view = name;
 }
 
@@ -6389,6 +6513,10 @@ function routeCore() {
     showView('notfound');
     document.title = `Nie znaleziono – ${CONFIG.SITE_NAME}`;
     $('#view-notfound').innerHTML = notFoundHtml('Strona, której szukasz, nie istnieje albo adres jest nieprawidłowy.');
+  } else if (r.name === 'user') {
+    showView('user');
+    document.title = `Profil użytkownika – ${CONFIG.SITE_NAME}`;
+    renderUserProfile(r.pub);
   } else if (r.name === 'account') {
     showView('account');
     document.title = `Twoje konto – ${CONFIG.SITE_NAME}`;
