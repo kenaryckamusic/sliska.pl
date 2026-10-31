@@ -2638,3 +2638,67 @@ h1, h2, h3, .panel-title, .st-h, .section-title, .hero-title, .card-title, .tile
 /* przycisk ręcznego powiadomienia push (tylko Właściciel) */
 .btn-push-send { color: var(--accent); border-color: currentColor; background: transparent; }
 .btn-push-send:hover { background: var(--chip-bg); }
+
+/* =========================================================
+   Panel · Moje konto · Ustawienia – wspólny układ
+   ========================================================= */
+.hub-nav { display: inline-flex; gap: 4px; padding: 4px; margin: 2px 0 18px; border-radius: 14px; background: var(--soft); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.hub-nav::-webkit-scrollbar { display: none; }
+.hub-nav[hidden] { display: none; }
+.hub-tab { display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; color: var(--muted); font-weight: 700; font-size: .9rem; text-decoration: none; white-space: nowrap; transition: background .2s, color .2s, box-shadow .2s; }
+.hub-tab svg { flex: none; opacity: .85; }
+.hub-tab:hover { color: var(--text); }
+.hub-tab.is-active { background: var(--card); color: var(--text); box-shadow: 0 1px 6px rgba(0, 0, 0, .14); }
+.hub-tab.is-active svg { color: var(--accent); opacity: 1; }
+.panel-sub { margin: -2px 0 14px; }
+
+/* panel: kafelki statystyk */
+.panel-kpis { gap: 12px; margin-bottom: 20px; }
+.kpi { position: relative; display: grid; grid-template-columns: auto 1fr; grid-template-areas: "ico num" "ico lab"; column-gap: 14px; row-gap: 2px; align-items: center; padding: 16px 18px; border-radius: 18px; text-align: left; cursor: pointer; transition: transform .2s, box-shadow .2s, border-color .2s; }
+.kpi:hover { border-color: var(--accent); }
+.kpi .kpi-ico { grid-area: ico; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px; background: var(--chip-bg); color: var(--accent); font-style: normal; }
+.kpi b { grid-area: num; align-self: end; font-size: 1.65rem; }
+.kpi span { grid-area: lab; align-self: start; }
+@media (max-width: 960px) { .panel-kpis { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 460px) { .kpi { padding: 12px; column-gap: 10px; } .kpi .kpi-ico { width: 36px; height: 36px; border-radius: 11px; } .kpi b { font-size: 1.35rem; } }
+.ptabs { padding: 5px; }
+.ptab[hidden] { display: none; }
+.panel-item { border-radius: 14px; }
+
+/* moje konto: karta tożsamości */
+.acc-hero { padding: 0; overflow: hidden; gap: 0; margin-bottom: 18px; }
+.acc-cover { height: 96px; background: radial-gradient(120% 160% at 0% 0%, #ff4d5f 0%, var(--accent) 48%, #6d000f 100%); }
+.acc-hero-body { display: flex; align-items: flex-end; flex-wrap: wrap; gap: 14px 18px; padding: 0 22px 20px; margin-top: -42px; }
+.acc-hero-av { width: 92px; height: 92px; flex: none; font-size: 2rem; box-shadow: 0 0 0 4px var(--card), 0 6px 18px rgba(0, 0, 0, .25); }
+.acc-hero-main { flex: 1 1 220px; min-width: 0; padding-bottom: 2px; }
+.acc-hero-name { margin: 0 0 6px; font-size: 1.45rem; line-height: 1.15; overflow-wrap: anywhere; }
+.acc-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.acc-chip { display: inline-flex; align-items: center; padding: 3px 11px; border-radius: 99px; background: var(--soft); color: var(--muted); font-size: .78rem; font-weight: 700; }
+.acc-chip.is-ok { background: rgba(34, 197, 94, .14); color: #15803d; }
+.acc-chip.is-warn { background: rgba(245, 158, 11, .16); color: #b45309; }
+:root[data-theme="dark"] .acc-chip.is-ok { color: #4ade80; }
+:root[data-theme="dark"] .acc-chip.is-warn { color: #fbbf24; }
+.acc-hero-actions { display: flex; gap: 8px; flex-wrap: wrap; padding-bottom: 4px; }
+.acc-grid { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.acc-col { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+@media (max-width: 1100px) { .acc-grid { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 520px) { .acc-hero-av { width: 76px; height: 76px; } .acc-hero-body { padding: 0 16px 16px; margin-top: -36px; } .acc-hero-name { font-size: 1.2rem; } }
+#view-account .st-card, #view-account .st-profile-block .st-card { margin: 0; }
+#view-account .st-profile-block { display: flex; flex-direction: column; gap: 16px; }
+#view-account .st-profile-block .st-actions-inline { position: static; }
+#view-account .st-profile-block .st-actions-inline .btn { min-width: 0; width: 100%; }
+#view-account .st-profile-block .panel:last-of-type { margin-bottom: 0; }
+#view-account .acc-grid .st-row .btn { flex: none; }
+#view-settings #st-profile-block { display: none; }
+#st-profile-block .st-actions-inline { display: flex; }
+
+/* ustawienia: karty z ikonami */
+.st-h { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; }
+.st-ico { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 10px; background: var(--chip-bg); color: var(--accent); font-style: normal; flex: none; }
+.settings-form .st-card { border-radius: 18px; }
+.st-switch:first-of-type { border-top: 0; }
+.acc-hero-body { align-items: flex-start; }
+.acc-hero-main { padding-top: 48px; }
+.acc-hero-actions { padding-top: 50px; }
+@media (max-width: 520px) { .acc-hero-main { padding-top: 40px; } .acc-hero-actions { padding-top: 0; flex: 1 1 100%; } }
+#view-account .st-row { align-items: center; }

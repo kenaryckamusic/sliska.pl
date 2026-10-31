@@ -3465,10 +3465,13 @@ function clearPointer(draftId) {
 }
 
 function setPanelTab(t) {
+  const pu = $('#ptab-users'); if (pu) pu.hidden = !canManage();
+  if (t === 'users' && !canManage()) t = 'drafts';
   $$('#view-panel .ptab').forEach(b => { const on = b.dataset.ptab === t; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
   $$('#view-panel .ptab-pane').forEach(p => { p.hidden = p.dataset.pane !== t; });
   try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
   if (t === 'comments') renderModeration(false);
+  if (t === 'users') renderModUsersPanel($('#panel-users'));
 }
 
 function updatePanelCounts() {
@@ -3478,6 +3481,7 @@ function updatePanelCounts() {
   const tipsOpen = (state.tips || []).filter(t => TIP_OPEN.includes(tipStatus(t))).length;
   set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', tipsOpen);
   set('kpi-mine', me ? publishedArticles().filter(a => a.author === me).length : publishedArticles().length);
+  const kl = $('#kpi-mine') && $('#kpi-mine').closest('a'); if (kl) kl.setAttribute('href', me ? '#/redaktor/' + encodeURIComponent(me) : '#/redakcja');
   const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: tipsOpen };
   $$('#view-panel .ptab').forEach(b => { const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
 }
@@ -3487,6 +3491,7 @@ async function renderPanel() {
   const hi = h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
   const first = (state.profile.name || '').split(/\s+/)[0];
   $('#panel-hello').textContent = `${hi}${first ? ', ' + first : ''}. Oto Twoje materiały i narzędzia redakcji.`;
+  fillHub();
   let t = state.profile.panelTab || 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || t; } catch { /* ignoruj */ }
   setPanelTab(t);
   renderTips().then(updatePanelCounts);
@@ -5895,7 +5900,8 @@ function deleteFigure() {
 /* =========================================================
    Konta czytelników i komentarze
    ========================================================= */
-const READER_ERR = { too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
+const READER_ERR = {
+  endpoint: 'Worker jest w starej wersji – wgraj najnowszy og-worker.js (Edit code → Deploy).', too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
   name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'W nazwie dozwolone są litery, cyfry, spacja oraz _ . -',
   name_bad: 'Ta nazwa jest niedozwolona. Wybierz inną.', name_taken: 'Ta nazwa jest już zajęta.',
   name_cooldown: 'Nazwę użytkownika możesz zmieniać raz na 30 dni.', verify: 'Potwierdź adres e-mail (link w wiadomości od nas), żeby komentować.',
@@ -6348,15 +6354,30 @@ function renderAccount() {
   const me = Readers.me || {};
   const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
   const rt = currentRoute().tab;
+  const staff = Auth.isAdmin();
+  if (rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
   const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : '';
-  const tabsHtml = canMod() ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a>` : ''}</div>` : '';
+  stashProfileBlock();
+  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a>` : ''}</div>` : '';
+  const pubLink = Readers.me && Readers.me.pub ? `<a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz profil publiczny</a>` : '';
+  const vChip = Readers.verified() ? '<span class="acc-chip is-ok">E-mail potwierdzony</span>' : '<span class="acc-chip is-warn">E-mail niepotwierdzony</span>';
   el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
-    <h1 class="panel-title">Twoje konto</h1>
-    <p class="panel-sub">${Utils.esc(me.name || '')}${ROLE_LABEL[me.role] ? ' · ' + ROLE_LABEL[me.role] : ''}</p>
+    <h1 class="panel-title">Moje konto</h1>
+    <nav class="hub-nav" data-hub="account" aria-label="Przejdź do"></nav>
+    <section class="panel acc-hero">
+      <div class="acc-cover" aria-hidden="true"></div>
+      <div class="acc-hero-body">
+        <div class="avatar avatar-lg acc-hero-av">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
+        <div class="acc-hero-main"><h2 class="acc-hero-name">${Utils.esc(me.name || 'Twoje konto')}</h2>
+          <div class="acc-chips"><span class="acc-chip">${Utils.esc(ROLE_LABEL[me.role] || (staff ? 'Redaktor' : 'Czytelnik'))}</span>${vChip}</div></div>
+        <div class="acc-hero-actions">${pubLink}</div>
+      </div>
+    </section>
     ${tabsHtml}
-    ${tab ? '<div id="acc-mod" class="panel-list"></div>' : `<div class="settings-form">
+    ${tab ? '<div id="acc-mod" class="panel-list"></div>' : `<div class="acc-grid">
+      <div class="acc-col">
       <section class="panel st-card">
-        <div class="st-head"><h2 class="st-h">Profil</h2><p class="st-sub">Tak widzą Cię inni w komentarzach.</p></div>
+        <div class="st-head"><h2 class="st-h">Profil publiczny</h2><p class="st-sub">Nazwa i zdjęcie widoczne przy Twoich komentarzach.</p></div>
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
           <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
         <label class="field"><span class="field-label">Nazwa użytkownika</span>
@@ -6365,18 +6386,48 @@ function renderAccount() {
         ${next ? '' : '<div class="st-actions"><button type="button" class="btn btn-primary" id="acc-save">Zapisz nazwę</button></div>'}
         <p class="form-error" id="acc-error" hidden></p>
       </section>
-      <section class="panel st-card">
-        <div class="st-head"><h2 class="st-h">Konto</h2></div>
+      <div id="acc-editor-slot"></div>
+      </div>
+      <div class="acc-col">
+            <section class="panel st-card">
+        <div class="st-head"><h2 class="st-h">Logowanie i bezpieczeństwo</h2><p class="st-sub">Adres e-mail, hasło i aktywne sesje.</p></div>
         <div class="st-row"><span class="muted">Adres e-mail</span><strong>${Utils.esc(Readers.user.email || '')}</strong></div>
         <div class="st-row"><span class="muted">Potwierdzenie e-mail</span>${Readers.verified() ? '<strong class="ok-text">Potwierdzony</strong>' : '<span><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link</button> <button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></span>'}</div>
         <div class="st-row"><span class="muted">Hasło</span><button type="button" class="btn btn-sm" id="acc-reset">Wyślij link do zmiany hasła</button></div>
         <div class="st-row"><span class="muted">Sesja</span><button type="button" class="btn btn-sm" id="acc-logout">Wyloguj</button></div>
         <div class="st-row"><span class="muted">Wszystkie urządzenia</span><button type="button" class="btn btn-sm btn-danger" id="acc-signout-all">Wyloguj ze wszystkich</button></div>
-        ${Readers.me && Readers.me.pub ? `<div class="st-row"><span class="muted">Twój profil publiczny</span><a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz</a></div>` : ''}
       </section>
+      </div>
     </div>`}`;
   if (tab === 'komentarze') renderModComments($('#acc-mod'), false);
   else if (tab === 'uzytkownicy') renderModUsersPanel($('#acc-mod'));
+  else if (staff) {
+    const slot = $('#acc-editor-slot'), blk = $('#st-profile-block');
+    if (slot && blk) { slot.appendChild(blk); renderSettings(); }
+  }
+  fillHub();
+}
+
+/** Blok „Profil redaktora” (zdjęcie, nazwa autora, biografia) mieszka w Moim koncie; poza nim wraca do ukrytego formularza ustawień. */
+function stashProfileBlock() {
+  const blk = $('#st-profile-block'), form = $('#settings-form');
+  if (blk && form && !form.contains(blk)) form.prepend(blk);
+}
+
+/** Wspólna nawigacja Panel · Moje konto · Ustawienia (tylko dla redakcji). */
+function fillHub() {
+  const items = [['panel', '#/panel', 'Panel', 'panel'], ['account', '#/konto', 'Moje konto', 'user'], ['settings', '#/ustawienia', 'Ustawienia', 'gear']];
+  const ICONS = {"panel": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/></svg>", "user": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/></svg>", "gear": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z\"/></svg>"};
+  $$('.hub-nav').forEach(n => {
+    n.hidden = !Auth.isAdmin();
+    n.innerHTML = Auth.isAdmin() ? items.map(([k, href, label, ic]) => `<a class="hub-tab${n.dataset.hub === k ? ' is-active' : ''}" href="${href}"${n.dataset.hub === k ? ' aria-current="page"' : ''}>${ICONS[ic]}<span>${label}</span></a>`).join('') : '';
+  });
+}
+
+/** Przejście do wskazanej zakładki Panelu (np. Moderacja). */
+function goPanelTab(t) {
+  try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
+  if (location.hash === '#/panel') { route(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else location.hash = '#/panel';
 }
 
 /** Kafelek profilu po lewej także dla zalogowanego czytelnika (w tym samym miejscu co u redaktora, bez funkcji redakcyjnych). */
@@ -6564,9 +6615,8 @@ function renderModUsersPanel(el) {
 /** Zakładka „Komentarze” w panelu redaktora: moderacja + (dla uprawnionych) użytkownicy. */
 function renderModeration(all) {
   const el = $('#panel-comments'); if (!el) return;
-  el.innerHTML = '<div id="mod-c"></div>' + (canManage() ? '<div id="mod-u" class="mod-users"></div>' : '');
+  el.innerHTML = '<div id="mod-c"></div>';
   renderModComments($('#mod-c'), all);
-  if (canManage()) renderModUsersPanel($('#mod-u'));
 }
 
 document.addEventListener('click', async e => {
@@ -6883,6 +6933,7 @@ function otherAuthors() {
 }
 
 function renderSettings() {
+  if (currentRoute().name === 'settings') { stashProfileBlock(); fillHub(); }
   settingsAvatar = state.profile.avatar || '';
   $('#st-name').value = state.profile.name || '';
   const bioEl = $('#st-bio'), bioN = () => { $('#st-bio-n').textContent = `${Array.from(bioEl.value).length}/150`; };
@@ -6967,11 +7018,12 @@ async function reassignAuthor(claim, nextName, avatar, showPhoto) {
 
 async function saveSettings(e) {
   e.preventDefault();
-  const err = $('#st-error');
+  const errs = [$('#st-error'), $('#st-error-profile')].filter(Boolean);
+  const err = { set hidden(v) { errs.forEach(x => { x.hidden = v; }); }, set textContent(t) { errs.forEach(x => { x.textContent = t; }); } };
   err.hidden = true;
   const prev = state.profile;
   const name = $('#st-name').value.trim().slice(0, 60);
-  const picked = $$('input[name="st-author"]:checked', $('#settings-form')).map(i => i.value);
+  const picked = $$('input[name="st-author"]:checked').map(i => i.value);
   const next = normProfile({
     name, avatar: settingsAvatar,
     defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
@@ -6980,8 +7032,8 @@ async function saveSettings(e) {
   });
   const claim = [...new Set([prev.name, ...(prev.aliases || []), ...picked])].filter(n => n && n !== name);
   const photoChanged = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto;
-  const btn = $('#st-save');
-  btn.disabled = true;
+  const btn = $('#st-save'), btn2 = $('#st-save-profile');
+  btn.disabled = true; if (btn2) btn2.disabled = true;
   try {
     await DataService.saveProfile(next);
     const bio = $('#st-bio').value.trim().replace(/\s+/g, ' ').slice(0, 150);
@@ -7008,7 +7060,7 @@ async function saveSettings(e) {
     err.textContent = ex.message || 'Nie udało się zapisać ustawień.';
     err.hidden = false;
   } finally {
-    btn.disabled = false;
+    btn.disabled = false; if (btn2) btn2.disabled = false;
     btn.textContent = 'Zapisz ustawienia';
   }
 }
@@ -7169,8 +7221,8 @@ function bindEvents() {
 
   // Przyciski nawigacji
   $('#btn-rd-account').addEventListener('click', () => { location.hash = '#/konto'; });
-  $('#btn-rd-mod').addEventListener('click', () => { location.hash = '#/konto/komentarze'; });
-  $('#btn-rd-users').addEventListener('click', () => { location.hash = '#/konto/uzytkownicy'; });
+  $('#btn-rd-mod').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('comments'); else location.hash = '#/konto/komentarze'; });
+  $('#btn-rd-users').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('users'); else location.hash = '#/konto/uzytkownicy'; });
   $('#btn-logout').addEventListener('click', async () => {
     if (!Auth.isAdmin() && Readers.loggedIn()) { await Readers.logout(); location.hash = '#/'; toast('Wylogowano.'); return; }
     await Auth.logout();
