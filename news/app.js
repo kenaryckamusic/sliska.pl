@@ -45,7 +45,7 @@ const CONFIG = {
   // Konta czytelników i komentarze: dane OSOBNEGO projektu Firebase (tylko Authentication). null = funkcja wyłączona.
   READER_FIREBASE: {
     apiKey: 'AIzaSyDi7M7X4cwsfIkxTebYlGsJPFN-NoAtwAU',
-    authDomain: 'sliska-users.firebaseapp.com',
+    authDomain: 'sliska.pl',          // logowanie Google przez własną domenę (worker przekazuje /__/auth/* do sliska-users.firebaseapp.com)
     projectId: 'sliska-users',
     storageBucket: 'sliska-users.firebasestorage.app',
     messagingSenderId: '236153117470',
@@ -1566,7 +1566,6 @@ function cardHtml(a, opts = {}) {
       <img src="${Utils.esc(thumbFor(a, opts.cover))}"${imgFocus(a, thumbFor(a, opts.cover))} alt="" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}" loading="lazy" decoding="async">
     </a>
     <div class="card-body">
-      <div class="kicker"><a href="#/kategoria/${encodeURIComponent(Utils.catsOf(a)[0] || '')}">${Utils.esc(Utils.catsOf(a)[0] || '')}</a>${typeof Visit !== 'undefined' && Visit.isNew(a) ? '<span class="new-mark">Nowe</span>' : ''}${a.urgent ? '<span class="new-mark is-hot">Pilne</span>' : ''}</div>
       <h3 class="card-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h3>
       <p class="card-lead">${Utils.esc(a.lead)}</p>
       <div class="card-meta">
@@ -6149,7 +6148,7 @@ function renderAccount() {
       <section class="panel st-card">
         <div class="st-head"><h2 class="st-h">Profil</h2><p class="st-sub">Tak widzą Cię inni w komentarzach.</p></div>
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
-          <div class="settings-avatar-actions"><label class="btn btn-sm file-btn">Wybierz zdjęcie<input type="file" id="acc-avatar-file" accept="image/*" hidden></label>${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
+          <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
         <label class="field"><span class="field-label">Nazwa użytkownika</span>
           <input type="text" id="acc-name" maxlength="${me.role === 'owner' ? 30 : 20}" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
           <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Nazwę możesz zmienić raz na 30 dni.'}</small></label>
@@ -6223,7 +6222,7 @@ function bindReaderEvents() {
           const dn = String((Readers.user && Readers.user.displayName) || '').replace(/[^\p{L}\p{N}_. -]/gu, '').trim().slice(0, 20);
           $('#reader-name').value = dn; setReaderMode('name');
         } else { closeModal('reader-modal'); toast('Zalogowano.'); }
-      } catch (ex) { const m = readerErr(ex); if (m && !/^Coś poszło/.test(m) || ex.code === undefined) { err.className = 'form-error'; err.hidden = false; err.textContent = m; } }
+      } catch (ex) { const m = ex && ex.code === 'auth/operation-not-allowed' ? 'Logowanie przez Google nie jest jeszcze włączone w Firebase (projekt czytelników): Authentication → Sign-in method → Google → Enable.' : readerErr(ex); if (m && !/^Coś poszło/.test(m) || ex.code === undefined) { err.className = 'form-error'; err.hidden = false; err.textContent = m; } }
       finally { b.disabled = false; }
       return;
     }
