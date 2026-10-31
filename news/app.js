@@ -73,7 +73,8 @@ const CONFIG = {
   LEGAL: {
     ADMIN_NAME: 'SMG Entertainment Sp. z o.o. (NIP 3789021824)',
     ADMIN_ADDRESS: 'ul. Śliska 10, Warszawa',
-    CONTACT_EMAIL: 'sliska10@wp.pl',
+    CONTACT_EMAIL: 'kontakt@sliska.pl',
+    REDAKCJA_EMAIL: 'redakcja@sliska.pl',
     UPDATED: '31 października 2026'
   },
 
@@ -282,21 +283,33 @@ const Utils = {
     return n >= 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
   },
 
-  /** Zdjęcie profilowe: kadruje do kwadratu i zmniejsza (mały rozmiar zapisu). */
-  async fileToSquare(file, size = 160) {
-    const raw = await this.fileToDataUrl(file, 1200, 600);
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('Nie udało się wczytać obrazu.'));
-      i.src = raw;
-    });
-    const side = Math.min(img.naturalWidth, img.naturalHeight);
+  /** Zdjęcie profilowe: kadr do kwadratu, jakość jak od użytkownika (do 1600 px, JPEG 0,95; kompresja rośnie dopiero, gdy plik przekroczy limit zapisu). */
+  async fileToSquare(file, size = 1600, maxChars = 900000) {
+    let bmp = null;
+    try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch { /* starsza przeglądarka */ }
+    let img = bmp;
+    if (!img) {
+      const url = URL.createObjectURL(file);
+      try { img = await new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = () => reject(new Error('Nie udało się wczytać obrazu.')); i.src = url; }); }
+      finally { setTimeout(() => URL.revokeObjectURL(url), 5000); }
+    }
+    const w = img.width || img.naturalWidth, h = img.height || img.naturalHeight;
+    const side = Math.min(w, h);
+    if (!side) throw new Error('Nie udało się wczytać obrazu.');
+    const out = Math.min(size, side);                       // małych zdjęć nie powiększamy
     const canvas = document.createElement('canvas');
-    canvas.width = canvas.height = size;
-    canvas.getContext('2d').drawImage(img, (img.naturalWidth - side) / 2, (img.naturalHeight - side) / 2, side, side, 0, 0, size, size);
-    return canvas.toDataURL('image/jpeg', 0.82);
+    canvas.width = canvas.height = out;
+    const cx = canvas.getContext('2d'); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+    cx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, out, out);
+    let q = 0.95, data = canvas.toDataURL('image/jpeg', q);
+    while (data.length > maxChars && q > 0.6) { q -= 0.05; data = canvas.toDataURL('image/jpeg', q); }
+    if (data.length > maxChars) {                           // bardzo „ciężkie” zdjęcie: zmniejszamy rozmiar, nie jakość
+      let px = out;
+      while (data.length > maxChars && px > 400) { px = Math.round(px * 0.85); canvas.width = canvas.height = px; cx.imageSmoothingQuality = 'high'; cx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, px, px); data = canvas.toDataURL('image/jpeg', 0.92); }
+    }
+    return data;
   },
+
 
   placeholder(category) {
     const hues = { 'Muzyka': 265, 'Kontrowersje': 350, 'Dramy': 330, 'Recenzje': 28, 'Inne': 205 };
@@ -1021,6 +1034,7 @@ const state = {
   category: ALL,
   tag: '',
   artist: '',
+  author: '',
   rank: { kind: 'Wszystkie', year: 'Wszystkie' },
   tips: [],
   query: '',
@@ -1422,6 +1436,8 @@ function currentRoute() {
   if (parts[0] === 'kategoria' && parts[1]) return { name: 'home', category: decodeURIComponent(parts[1]) };
   if (parts[0] === 'tag' && parts[1]) return { name: 'home', tag: decodeURIComponent(parts[1]) };
   if (parts[0] === 'artysta' && parts[1]) return { name: 'home', artist: decodeURIComponent(parts[1]) };
+  if (parts[0] === 'redaktor' && parts[1]) return { name: 'home', author: decodeURIComponent(parts[1]) };
+  if (parts[0] === 'redakcja' || parts[0] === 'redaktorzy') return { name: 'authors' };
   if (parts[0] === 'ranking') return { name: 'ranking' };
   if (parts[0] === 'zglos') return { name: 'tip' };
   if (parts[0] === 'prywatnosc' || parts[0] === 'regulamin') return { name: 'legal', doc: parts[0] };
@@ -1438,6 +1454,7 @@ function adminButtons(id) {
   return `<span class="admin-actions">
     <button type="button" class="btn btn-sm" data-action="edit" data-id="${safe}">Edytuj</button>
     <button type="button" class="btn btn-sm" data-action="ig-post" data-id="${safe}" title="Grafiki na Instagram, Story, X i recenzję – z opisem do wklejenia">Grafika</button>
+    ${canManage() ? `<button type="button" class="btn btn-sm btn-push-send" data-action="push-send" data-id="${safe}" title="Wyślij powiadomienie push o tym artykule do wszystkich subskrybentów">🔔 Powiadom</button>` : ''}
     <button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="${safe}">Usuń</button>
   </span>`;
 }
@@ -1476,7 +1493,30 @@ function fitTicker() {
 }
 
 /* ---------- Strona kolekcji: wykonawca / tag ---------- */
+function authorHeadHtml(list) {
+  const name = state.author;
+  const e = Authors.find(name) || { name, photo: Authors.photo(name, '') };
+  const bio = Authors.bio(name);
+  const reviews = list.filter(a => a.review && a.review.score !== null && a.review.score !== undefined).length;
+  const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
+  const stats = [`${list.length} ${plural(list.length, 'artykuł', 'artykuły', 'artykułów')}`];
+  if (reviews) stats.push(`${reviews} ${plural(reviews, 'recenzja', 'recenzje', 'recenzji')}`);
+  return `<header class="collection-head author-head">
+    <a class="btn btn-sm" href="#/redakcja">← Redakcja</a>
+    <div class="author-hero">
+      <span class="avatar avatar-lg" aria-hidden="true">${avatarHtml({ name: e.name || name, avatar: e.photo })}</span>
+      <div class="author-hero-text">
+        <span class="collection-kind">Redaktor</span>
+        <h1 class="collection-name is-tag">${Utils.esc(e.name || name)}</h1>
+        ${bio ? `<p class="author-bio">${Utils.esc(bio)}</p>` : ''}
+        <p class="collection-stats">${stats.map(Utils.esc).join(' · ')}</p>
+      </div>
+    </div>
+  </header>`;
+}
+
 function collectionHeadHtml(list) {
+  if (state.author) return authorHeadHtml(list);
   const isArtist = !!state.artist;
   const name = isArtist ? state.artist : state.tag;
   const reviews = list.filter(a => a.review && a.review.score !== null && a.review.score !== undefined && (!isArtist || Utils.same(a.review.artist, name)));
@@ -1491,6 +1531,70 @@ function collectionHeadHtml(list) {
     <h1 class="collection-name${isArtist ? '' : ' is-tag'}">${isArtist ? '' : '#'}${Utils.esc(name)}</h1>
     <p class="collection-stats">${stats.map(Utils.esc).join(' · ')}</p>
   </header>`;
+}
+
+/* ---------- Redaktorzy: profile, biografie, lista ---------- */
+const Authors = {
+  bios: new Map(), loaded: false,
+  async load(force) {
+    if (this.loaded && !force) return;
+    try {
+      const r = await fetch(CONFIG.API_BASE + '/authors', { cache: 'no-store' });
+      if (!r.ok) return;
+      const d = await r.json();
+      this.bios = new Map((d.authors || []).map(x => [Utils.fold(x.name), { name: x.name, bio: x.bio, av: x.av || 0 }]));
+      this.loaded = true;
+    } catch { /* bez biografii strona nadal działa */ }
+  },
+  bio(name) { const b = this.bios.get(Utils.fold(name)); return b ? b.bio : ''; },
+  hasPhoto(name) { const b = this.bios.get(Utils.fold(name)); return !!(b && b.av); },
+  /** Zdjęcie w pełnej jakości (z Workera), a gdy go brak – miniatura z artykułu. */
+  photo(name, fallback) { const b = this.bios.get(Utils.fold(name)); return b && b.av ? `${CONFIG.API_BASE}/author-avatar?n=${encodeURIComponent(b.name)}&v=${b.av}` : (fallback || ''); },
+  /** Redaktorzy z opublikowanych artykułów (bez nowinek) + osoby, które mają tylko biografię. */
+  list() {
+    const m = new Map();
+    publishedArticles().filter(a => !a.quick && a.author).forEach(a => {
+      const k = Utils.fold(a.author);
+      const e = m.get(k) || { name: a.author, photo: '', n: 0, last: '' };
+      e.n++;
+      if (!e.photo && a.authorPhoto) e.photo = a.authorPhoto;
+      if (a.createdAt > e.last) e.last = a.createdAt;
+      m.set(k, e);
+    });
+    this.bios.forEach((b, k) => { if (!m.has(k)) m.set(k, { name: b.name, photo: '', n: 0, last: '' }); });
+    m.forEach(e => { e.photo = this.photo(e.name, e.photo); });
+    return [...m.values()].sort((x, y) => y.n - x.n || x.name.localeCompare(y.name, 'pl'));
+  },
+  find(name) { const k = Utils.fold(name); return this.list().find(e => Utils.fold(e.name) === k) || null; },
+  href(name) { return '#/redaktor/' + encodeURIComponent(name); }
+};
+
+function renderAuthors() {
+  const el = $('#view-authors');
+  const draw = () => {
+    if (currentRoute().name !== 'authors') return;
+    const q = Utils.fold(($('#au-q') && $('#au-q').value) || '').trim();
+    const list = Authors.list().filter(e => !q || Utils.fold(e.name).includes(q));
+    const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
+    $('#au-list').innerHTML = list.length ? list.map(e => {
+      const bio = Authors.bio(e.name);
+      return `<a class="au-card" href="${Authors.href(e.name)}">
+        <span class="avatar avatar-lg" aria-hidden="true">${avatarHtml({ name: e.name, avatar: e.photo })}</span>
+        <span class="au-body"><strong>${Utils.esc(e.name)}</strong>
+          ${bio ? `<span class="au-bio">${Utils.esc(bio)}</span>` : ''}
+          <span class="au-n">${e.n} ${plural(e.n, 'artykuł', 'artykuły', 'artykułów')}</span></span>
+      </a>`;
+    }).join('') : '<p class="muted">Nikogo takiego nie znaleziono.</p>';
+  };
+  if (!$('#au-list')) {
+    el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
+      <header class="rank-head"><span class="rank-eyebrow">Ludzie Śliska News</span><h1 class="rank-title">Redakcja</h1></header>
+      <input type="search" class="mod-q" id="au-q" placeholder="Szukaj redaktora…" aria-label="Szukaj redaktora" autocomplete="off">
+      <div class="au-list" id="au-list"></div>`;
+    $('#au-q').addEventListener('input', draw);
+  }
+  draw();
+  if (!Authors.loaded) Authors.load().then(draw);
 }
 
 /* ---------- Strona główna ---------- */
@@ -1546,12 +1650,41 @@ function plural(n, one, few, many) {
   return many;
 }
 
+/** Czy artykuł dotyczy wykonawcy – automatycznie, bez ręcznego powiązania:
+ *  recenzja tego wykonawcy, tag, jego nazwa w tytule lub leadzie albo co najmniej 2 wzmianki w treści.
+ *  Przy nazwach wieloczłonowych ostatni wyraz dopuszcza polską końcówkę („Hemingwaya”, „Hemingwayem”). */
+const ARTIST_SRC = new Map();
+function artistPattern(name) {
+  const key = Utils.fold(name).replace(/[^a-z0-9]+/g, ' ').trim();
+  if (!key) return null;
+  let src = ARTIST_SRC.get(key);
+  if (src) return src;
+  const parts = key.split(' ');
+  // nazwy wieloczłonowe: każdy człon ≥ 4 liter dopuszcza polską końcówkę („Taco” → „Tacem”, „Hemingway” → „Hemingwaya”)
+  const stem = w => (parts.length > 1 && w.length >= 4) ? w.replace(/[aeiouy]$/, '') + '[a-z]{0,3}' : w;
+  src = '(^|[^a-z0-9])' + parts.map(stem).join('[^a-z0-9]+') + '(?![a-z0-9])';
+  ARTIST_SRC.set(key, src);
+  return src;
+}
+function articleMentions(a, name) {
+  if (a.review && Utils.same(a.review.artist, name)) return true;
+  if (Utils.tagsOf(a).some(t => Utils.same(t, name))) return true;
+  const src = artistPattern(name);
+  if (!src) return false;
+  if (new RegExp(src).test(Utils.fold(`${a.title} ${a.lead}`))) return true;
+  const re = new RegExp(src, 'g'), body = SearchIndex.get(a).text;
+  let n = 0;
+  while (re.exec(body)) { if (++n >= 2) return true; }
+  return false;
+}
+
 function filteredArticles() {
   const q = state.query.trim();
   return publishedArticles().filter(a => {
     if (state.category !== ALL && !Utils.catsOf(a).includes(state.category)) return false;
     if (state.tag && !Utils.tagsOf(a).some(t => Utils.same(t, state.tag))) return false;
-    if (state.artist && !(a.review && Utils.same(a.review.artist, state.artist)) && !Utils.tagsOf(a).some(t => Utils.same(t, state.artist))) return false;
+    if (state.artist && !articleMentions(a, state.artist)) return false;
+    if (state.author && !Utils.same(a.author, state.author)) return false;
     if (state.onlyNew && !Visit.isNew(a)) return false;
     if (!q) return true;
     return SearchIndex.matches(a, q);
@@ -1583,7 +1716,6 @@ function heroHtml(a, useCover) {
     <div class="hero-tags"><span class="hero-flag">Temat dnia</span>${Utils.chipsHtml(a)}</div>
     <div class="hero-content">
       <h2 class="hero-title"><a href="#/artykul/${id}">${Utils.esc(a.title)}</a></h2>
-      <p class="hero-lead">${Utils.esc(a.lead)}</p>
       <div class="card-meta">
         <time datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)} · ${Utils.esc(a.author)}</time>
         ${adminButtons(a.id)}
@@ -1621,7 +1753,7 @@ function renderHome() {
   const list = filteredArticles();
   const isReviews = state.category === 'Recenzje';
   // Blok na górze: Temat dnia (lub najnowszy) + 2 kafle – tylko na „Wszystkie” bez wyszukiwania
-  const coll = state.tag || state.artist;
+  const coll = state.tag || state.artist || state.author;
   const showTop = state.category === ALL && !coll && !state.query.trim() && list.length > 0;
   const hero = showTop ? (list.find(a => a.featured) || list[0]) : null;
   const tiles = showTop ? list.filter(a => a !== hero).slice(0, 2) : [];
@@ -1680,13 +1812,14 @@ function renderSideList() {
   const layout = $('#layout');
   const side = $('#side-right');
   const current = r.name === 'article' ? r.id : null;
-  const coll = r.name === 'home' && (state.tag || state.artist);
+  const coll = r.name === 'home' && (state.tag || state.artist || state.author);
   const onCategory = r.name === 'home' && (state.category !== ALL || coll) && !state.query.trim();
   const visibleHere = r.name === 'article' || onCategory;
   // Pomijamy artykuły z kategorii, w której jesteśmy (i bieżący artykuł)
   const ctx = (r.name === 'article' || r.name === 'home') ? state.category : ALL;
+  const shownHere = coll ? new Set(filteredArticles().map(a => a.id)) : null;     // to, co już jest na liście po lewej, nie powtarza się z boku
   const list = publishedArticles()
-    .filter(a => a.id !== current && (ctx === ALL || !Utils.catsOf(a).includes(ctx)))
+    .filter(a => a.id !== current && !(shownHere && shownHere.has(a.id)) && (ctx === ALL || !Utils.catsOf(a).includes(ctx)))
     .slice(0, 6);
   const cur = current ? state.articles.find(x => x.id === current) : null;
   const wantComments = !!(cur && !cur.quick && isPublished(cur) && Readers.enabled() && window.matchMedia(SIDE_MQ).matches);
@@ -1720,17 +1853,19 @@ function authorAvatarHtml(a) {
 }
 
 /** Zmniejsza zdjęcie profilowe do miniatury (żeby nie obciążać każdego artykułu). */
-function shrinkAvatar(src, size = 96) {
+function shrinkAvatar(src, size = 400) {
   return new Promise(resolve => {
     if (!src) { resolve(''); return; }
     const img = new Image();
     img.onload = () => {
       try {
         const c = document.createElement('canvas');
-        c.width = c.height = size;
         const s = Math.min(img.naturalWidth, img.naturalHeight) || size;
-        c.getContext('2d').drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
-        resolve(c.toDataURL('image/jpeg', 0.8));
+        const out = Math.min(size, s);
+        c.width = c.height = out;
+        const cx = c.getContext('2d'); cx.imageSmoothingEnabled = true; cx.imageSmoothingQuality = 'high';
+        cx.drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, out, out);
+        resolve(c.toDataURL('image/jpeg', 0.92));
       } catch { resolve(''); }
     };
     img.onerror = () => resolve('');
@@ -1762,7 +1897,7 @@ function articleHtml(a, plain) {
         </div>
         <h1>${Utils.esc(a.title)}</h1>
         <div class="article-meta">
-          <span class="author-line">${authorAvatarHtml(a)}<strong>${Utils.esc(a.author)}</strong></span>
+          <span class="author-line">${authorAvatarHtml(a)}<a class="author-link" href="${Authors.href(a.author)}"><strong>${Utils.esc(a.author)}</strong></a></span>
           <time datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)}</time>
           <span>${minutes} min czytania</span>
         </div>
@@ -3095,6 +3230,7 @@ function legalHtml(doc) {
   const admin = legalVal(L.ADMIN_NAME);
   const addr = legalVal(L.ADMIN_ADDRESS);
   const mail = legalVal(L.CONTACT_EMAIL);
+  const redMail = legalVal(L.REDAKCJA_EMAIL);
   if (doc === 'o-nas') {
     const cats = CATEGORIES.map(c => `<a class="chip" href="#/kategoria/${encodeURIComponent(c)}">${Utils.esc(c)}</a>`).join(' ');
     return `<h1>O nas i kontakt</h1>
@@ -3102,18 +3238,22 @@ function legalHtml(doc) {
       <h2>Czym jest Śliska News</h2>
       <p>Piszemy o tym, co dzieje się w muzyce i wokół niej: o nowych płytach i recenzjach, o kontrowersjach i o dramach, które rozgrzewają internet. Staramy się podawać informacje rzetelnie, z podaniem źródeł, a opinie – oznaczać jako opinie.</p>
       <p>Znajdziesz u nas: ${cats}. Oceny płyt zbieramy w <a href="#/ranking">rankingu ocen</a>.</p>
+      <h2>Redakcja</h2>
+      <p>Zobacz, kto pisze: <a href="#/redakcja">lista redaktorów</a> z krótkimi biogramami i ich artykułami.</p>
+      <h2>Wilgotna Brocha Media</h2>
+      <p>Wilgotna Brocha Media jest spółką zależną Śliska News. Materiały podpisane „dla Wilgotna Brocha” powstają w jej ramach i są częścią tego serwisu.</p>
       <h2>Masz temat albo wskazówkę?</h2>
       <p>Skorzystaj z formularza <a href="#/zglos">Zgłoś temat</a>. Czytamy każde zgłoszenie, choć nie możemy obiecać odpowiedzi ani publikacji.</p>
       <h2>Sprostowania</h2>
-      <p>Jeśli zauważysz błąd w artykule, napisz do nas na ${mail}. Poprawiamy pomyłki i w razie potrzeby publikujemy sprostowanie.</p>
+      <p>Jeśli zauważysz błąd w artykule, napisz do nas na ${redMail}. Poprawiamy pomyłki i w razie potrzeby publikujemy sprostowanie.</p>
       <h2>Kontakt z redakcją</h2>
-      <p>E-mail: ${mail}<br>Instagram: <a href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer">@sliska.pl</a><br>Wydawca: ${admin}<br>Adres: ${addr}</p>`;
+      <p>E-mail: ${redMail}<br>Instagram: <a href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer">@sliska.pl</a><br>Wydawca: ${admin}<br>Adres: ${addr}</p>`;
   }
   if (doc === 'regulamin') {
     return `<h1>Regulamin serwisu Śliska News</h1>
       <p class="legal-date">Obowiązuje od: ${Utils.esc(L.UPDATED)}</p>
       <h2>1. Postanowienia ogólne</h2>
-      <p>Serwis „Śliska News” (dalej: Serwis) to serwis informacyjny o muzyce, kontrowersjach i dramach ze świata rozrywki, prowadzony przez ${admin}, ${addr}. Kontakt z redakcją: ${mail}.</p>
+      <p>Serwis „Śliska News” (dalej: Serwis) to serwis informacyjny o muzyce, kontrowersjach i dramach ze świata rozrywki, prowadzony przez ${admin}, ${addr}. Kontakt z redakcją: ${redMail}.</p>
       <p>Korzystanie z Serwisu jest bezpłatne. Do korzystania z Serwisu potrzebna jest przeglądarka internetowa z włączoną obsługą JavaScript.</p>
       <h2>2. Treści Serwisu</h2>
       <p>Artykuły, zdjęcia, grafiki, logo i inne treści w Serwisie są chronione prawem autorskim. Kopiowanie i rozpowszechnianie ich w całości lub w części wymaga zgody redakcji, z wyjątkiem przypadków dozwolonych przez prawo (np. prawo cytatu, z podaniem źródła i linkiem do Serwisu).</p>
@@ -3122,7 +3262,7 @@ function legalHtml(doc) {
       <p>Każdy może przesłać redakcji zgłoszenie przez formularz „Zgłoś temat”. Wysyłając zgłoszenie, oświadczasz, że masz prawo przekazać zawarte w nim informacje i materiały oraz że nie naruszają one praw osób trzecich ani przepisów prawa. Prosimy nie przesyłać treści bezprawnych, obraźliwych ani danych wrażliwych.</p>
       <p>Redakcja nie gwarantuje odpowiedzi ani publikacji. Nadesłane informacje mogą posłużyć jako inspiracja do własnych tekstów. Przekazanie zgłoszenia nie oznacza przeniesienia autorskich praw majątkowych, a ewentualne wykorzystanie nadesłanych materiałów wymaga odrębnej zgody ich autora.</p>
       <h2>4. Konta i komentarze</h2>
-      <p>Konto czytelnika jest bezpłatne i dobrowolne; pozwala komentować artykuły (poza szybkimi newsami) oraz ustawić nazwę użytkownika i zdjęcie profilowe. Nazwę możesz zmienić raz na 30 dni. Komentujesz pod własną nazwą i odpowiadasz za treść swoich wpisów.</p>
+      <p>Konto czytelnika jest bezpłatne i dobrowolne; pozwala komentować artykuły (poza nowinkami) oraz ustawić nazwę użytkownika i zdjęcie profilowe. Nazwę możesz zmienić raz na 30 dni. Komentujesz pod własną nazwą i odpowiadasz za treść swoich wpisów.</p>
       <p>Zabronione są komentarze wulgarne, obraźliwe, nawołujące do nienawiści, naruszające prawa osób trzecich, reklamowe oraz zawierające linki. Redakcja może ukryć lub usunąć komentarz, zmienić nieodpowiednią nazwę użytkownika oraz zablokować konto naruszające regulamin. Komentarze możesz zgłaszać przyciskiem „Zgłoś”. Przy wybranych artykułach komentarze mogą być wyłączone.</p>
       <h2>5. Odpowiedzialność</h2>
       <p>Redakcja nie odpowiada za treść zewnętrznych stron, do których prowadzą linki w Serwisie, ani za przerwy w działaniu Serwisu wynikające z przyczyn niezależnych od niej.</p>
@@ -4130,19 +4270,31 @@ function enhanceGalleries(root) {
       </div>
       <div class="gx-thumbs" role="tablist">${srcs.map((u, i) => `<button type="button" class="gx-thumb" role="tab" data-i="${i}" aria-label="Zdjęcie ${i + 1}"><img src="${Utils.esc(u)}" alt="" loading="lazy" draggable="false"></button>`).join('')}</div>
       ${caption ? `<figcaption>${Utils.esc(caption)}</figcaption>` : ''}`;
-    const stage = fig.querySelector('.gx-stage'), img = fig.querySelector('.gx-img'), bg = fig.querySelector('.gx-bg');
+    const stage = fig.querySelector('.gx-stage'); let img = fig.querySelector('.gx-img'); const bg = fig.querySelector('.gx-bg');
     const count = fig.querySelector('.gx-count'), thumbs = Array.from(fig.querySelectorAll('.gx-thumb'));
     let cur = 0, busy = 0;
+    const SLIDE_MS = 380;
     const show = (n, instant) => {
+      const dir = n > cur ? 1 : n < cur ? -1 : 0;     // kierunek liczony przed zawinięciem (ostatnie → pierwsze)
       cur = (n + srcs.length) % srcs.length;
       const token = ++busy;
-      const apply = () => {
-        if (token !== busy) return;
-        img.src = srcs[cur]; img.alt = caption || `Zdjęcie ${cur + 1} z ${srcs.length}`;
-        bg.style.backgroundImage = `url("${srcs[cur].replace(/"/g, '%22')}")`;
-        stage.classList.remove('is-swap');
-      };
-      if (instant) apply(); else { stage.classList.add('is-swap'); setTimeout(apply, 130); }
+      stage.querySelectorAll('.gx-img').forEach(el => { if (el !== img) el.remove(); });   // dokończ poprzednie przesunięcie
+      img.style.transition = 'none'; img.style.transform = '';
+      const alt = caption || `Zdjęcie ${cur + 1} z ${srcs.length}`;
+      bg.style.backgroundImage = `url("${srcs[cur].replace(/"/g, '%22')}")`;
+      if (instant || !dir || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        img.src = srcs[cur]; img.alt = alt;
+      } else {
+        const old = img, inc = old.cloneNode(false);
+        inc.src = srcs[cur]; inc.alt = alt;
+        inc.style.transition = 'none'; inc.style.transform = `translateX(${dir * 100}%)`;
+        old.after(inc); void inc.offsetWidth;
+        const ease = `transform ${SLIDE_MS}ms cubic-bezier(.22,.7,.2,1)`;
+        inc.style.transition = ease; old.style.transition = ease;
+        inc.style.transform = 'translateX(0)'; old.style.transform = `translateX(${-dir * 100}%)`;
+        img = inc;
+        setTimeout(() => { if (token === busy) { old.remove(); inc.style.transition = ''; inc.style.transform = ''; } }, SLIDE_MS + 40);
+      }
       count.textContent = `${cur + 1} / ${srcs.length}`;
       thumbs.forEach((t, i) => { t.classList.toggle('is-on', i === cur); t.setAttribute('aria-selected', String(i === cur)); });
       const t = thumbs[cur], box = fig.querySelector('.gx-thumbs');
@@ -4278,7 +4430,8 @@ function articleQuotes(a) {
   return Array.from(doc.querySelectorAll('aside.article-quote')).map(q => {
     const t = q.querySelector('.q-text');
     const au = q.querySelector('.q-author');
-    return { text: t ? t.textContent.trim() : '', author: au ? au.textContent.trim() : '' };
+    const parts = t ? Array.from(t.querySelectorAll('.q-part')).map(x => x.textContent.trim()).filter(Boolean) : [];
+    return { text: parts.length ? parts.join(' … ') : (t ? t.textContent.trim() : ''), author: au ? au.textContent.trim() : '' };
   }).filter(q => q.text);
 }
 
@@ -4615,6 +4768,12 @@ function searchSuggestions(q) {
       e.n++; names.set(k, e);
     }
   });
+  pub.forEach(a => {
+    if (a.quick || !a.author) return;
+    const k = 'r:' + Utils.fold(a.author);
+    const e = names.get(k) || { label: a.author, type: 'author', n: 0 };
+    e.n++; names.set(k, e);
+  });
   pub.forEach(a => Utils.tagsOf(a).forEach(t => {
     const k = Utils.fold(t);
     const e = names.get(k) || { label: t, type: 'tag', n: 0 };
@@ -4622,25 +4781,26 @@ function searchSuggestions(q) {
   }));
   const scored = [];
   names.forEach((e, k) => {
-    const ws = k.split(/\s+/);
+    const ws = k.replace(/^r:/, '').split(/\s+/);
     let s = null;
-    if (k.startsWith(fq)) s = 0;
+    const kk = k.replace(/^r:/, '');
+    if (kk.startsWith(fq)) s = 0;
     else if (ws.some(w => w.startsWith(fq))) s = 1;
-    else if (k.includes(fq)) s = 2;
+    else if (kk.includes(fq)) s = 2;
     else if (fq.length >= 4) { const max = fq.length <= 6 ? 1 : 2; if (ws.some(w => editDistance(fq, w, max) <= max)) s = 3; }
     if (s !== null) scored.push({ ...e, s });
   });
   scored.sort((a, b) => a.s - b.s || b.n - a.n);
-  return { names: scored.slice(0, 5), arts: pub.filter(a => SearchIndex.matches(a, q)).slice(0, 3) };
+  return { names: scored.slice(0, 6), arts: pub.filter(a => SearchIndex.matches(a, q)).slice(0, 3) };
 }
 
 function renderSearchSuggest() {
   const input = $('#search-input'), box = $('#search-suggest');
   const { names, arts } = searchSuggestions(input.value);
   if (!names.length && !arts.length) { box.hidden = true; input.setAttribute('aria-expanded', 'false'); return; }
-  const nameHtml = names.map(n => `<button type="button" class="sg-item" role="option" data-href="${n.type === 'artist' ? '#/artysta/' : '#/tag/'}${encodeURIComponent(n.label)}"><span class="sg-ico">${n.type === 'artist' ? '♪' : '#'}</span><span class="sg-text">${Utils.esc(n.label)}</span><small>${n.n} ${plural(n.n, 'artykuł', 'artykuły', 'artykułów')}</small></button>`).join('');
+  const nameHtml = names.map(n => `<button type="button" class="sg-item" role="option" data-href="${n.type === 'artist' ? '#/artysta/' : n.type === 'author' ? '#/redaktor/' : '#/tag/'}${encodeURIComponent(n.label)}"><span class="sg-ico">${n.type === 'artist' ? '♪' : n.type === 'author' ? '✎' : '#'}</span><span class="sg-text">${Utils.esc(n.label)}</span><small>${n.type === 'author' ? 'redaktor · ' : ''}${n.n} ${plural(n.n, 'artykuł', 'artykuły', 'artykułów')}</small></button>`).join('');
   const artHtml = arts.map(a => `<button type="button" class="sg-item" role="option" data-href="#/artykul/${encodeURIComponent(a.id)}"><span class="sg-ico">→</span><span class="sg-text">${Utils.esc(a.title)}</span></button>`).join('');
-  box.innerHTML = (nameHtml ? `<div class="sg-head">Wykonawcy i tagi</div>${nameHtml}` : '') + (artHtml ? `<div class="sg-head">Artykuły</div>${artHtml}` : '');
+  box.innerHTML = (nameHtml ? `<div class="sg-head">Wykonawcy, redaktorzy i tagi</div>${nameHtml}` : '') + (artHtml ? `<div class="sg-head">Artykuły</div>${artHtml}` : '');
   box.hidden = false;
   input.setAttribute('aria-expanded', 'true');
 }
@@ -4653,7 +4813,7 @@ function hideSearchSuggest() {
 }
 
 
-/* ---------- Szybkie Newsy ---------- */
+/* ---------- Nowinki z Poślizgiem ---------- */
 function quickHost(link) { try { return new URL(link).hostname.replace(/^www\./, ''); } catch { return ''; } }
 
 function quickDayLabel(iso) {
@@ -4672,7 +4832,7 @@ function quickItemHtml(a, withAdmin) {
     ? `<span class="quick-from">Źródło:</span> <a class="quick-src" href="${Utils.esc(a.link)}" target="_blank" rel="noopener noreferrer">${Utils.esc(srcName || 'link')} →</a>`
     : (srcName ? `<span class="quick-from">Źródło:</span> <span class="quick-src quick-src-plain">${Utils.esc(srcName)}</span>` : '');
   const admin = withAdmin && Auth.isAdmin()
-    ? `<span class="admin-actions"><button type="button" class="btn btn-sm" data-action="quick-edit" data-id="${Utils.esc(a.id)}">Edytuj</button><button type="button" class="btn btn-sm btn-danger" data-action="quick-delete" data-id="${Utils.esc(a.id)}">Usuń</button></span>` : '';
+    ? `<span class="admin-actions"><button type="button" class="btn btn-sm" data-action="quick-edit" data-id="${Utils.esc(a.id)}">Edytuj</button>${canManage() ? `<button type="button" class="btn btn-sm btn-push-send" data-action="push-send" data-id="${Utils.esc(a.id)}" title="Wyślij powiadomienie push o tej nowince">🔔 Powiadom</button>` : ''}<button type="button" class="btn btn-sm btn-danger" data-action="quick-delete" data-id="${Utils.esc(a.id)}">Usuń</button></span>` : '';
   return `<li class="quick-item">
     <time class="quick-time" datetime="${Utils.esc(a.createdAt)}">${Utils.formatTime(a.createdAt)}</time>
     <div class="quick-body">
@@ -4685,10 +4845,10 @@ function quickItemHtml(a, withAdmin) {
 function quickStripHtml() {
   const list = publishedQuick().slice(0, 3);
   if (!list.length && !Auth.isAdmin()) return '';
-  return `<section class="quick-strip" aria-label="Szybkie Newsy">
-    <div class="quick-head"><h2 class="section-title">Szybkie Newsy</h2>
+  return `<section class="quick-strip" aria-label="Nowinki z Poślizgiem">
+    <div class="quick-head"><h2 class="section-title">Nowinki z Poślizgiem</h2>
       <span><button type="button" class="btn btn-sm admin-only" data-action="quick-new">+ Dodaj</button> <a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
-    ${list.length ? `<ul class="quick-list">${list.map(a => quickItemHtml(a, false)).join('')}</ul>` : '<p class="muted">Nie ma jeszcze szybkich newsów.</p>'}
+    ${list.length ? `<ul class="quick-list">${list.map(a => quickItemHtml(a, false)).join('')}</ul>` : '<p class="muted">Nie ma jeszcze nowinek.</p>'}
   </section>`;
 }
 
@@ -4704,20 +4864,20 @@ function renderQuick() {
   });
   el.innerHTML = `
     <div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a>
-      <div class="top-actions"><button type="button" class="btn btn-primary admin-only" data-action="quick-new">+ Dodaj szybki news</button></div></div>
+      <div class="top-actions"><button type="button" class="btn btn-primary admin-only" data-action="quick-new">+ Dodaj nowinkę</button></div></div>
     <header class="rank-head">
       <span class="rank-eyebrow">Krótko i na temat</span>
-      <h1 class="rank-title">Szybkie Newsy</h1>
+      <h1 class="rank-title">Nowinki z Poślizgiem</h1>
     </header>
     ${groups.length ? groups.map(g => `<section class="quick-day"><h2 class="quick-day-title">${g.label}</h2><ul class="quick-list">${g.items.map(a => quickItemHtml(a, true)).join('')}</ul></section>`).join('')
-      : '<div class="empty-state"><p>Nie ma jeszcze szybkich newsów. Zajrzyj tu niedługo.</p></div>'}
+      : '<div class="empty-state"><p>Nie ma jeszcze nowinek. Zajrzyj tu niedługo.</p></div>'}
     ${list.length > shown.length ? '<div class="load-more"><button type="button" class="btn" data-action="quick-more">Pokaż starsze</button></div>' : ''}`;
 }
 
 function openQuickModal(id) {
   const a = id ? state.articles.find(x => x.id === id) : null;
   state.quickId = a ? a.id : null;
-  $('#quick-title').textContent = a ? 'Edytuj szybki news' : 'Nowy szybki news';
+  $('#quick-title').textContent = a ? 'Edytuj nowinkę' : 'Nowa nowinka';
   $('#qk-submit').textContent = a ? 'Zapisz' : 'Opublikuj';
   $('#qk-delete').hidden = !a;
   $('#qk-text').value = a ? a.title : '';
@@ -4760,7 +4920,7 @@ async function submitQuick(e) {
     await DataService.save(article);
     upsertLocalState(article);
     closeModal('quick-modal');
-    toast(existing ? 'Szybki news zapisany.' : 'Szybki news opublikowany.');
+    toast(existing ? 'Nowinka zapisana.' : 'Nowinka opublikowana.');
     refreshViews();
   } catch (ex) {
     err(ex.message || 'Nie udało się zapisać.');
@@ -4770,12 +4930,12 @@ async function submitQuick(e) {
 }
 
 async function deleteQuick(id) {
-  if (!confirm('Usunąć ten szybki news?')) return;
+  if (!confirm('Usunąć tę nowinkę?')) return;
   try {
     await DataService.remove(id);
     setArticles(state.articles.filter(x => x.id !== id));
     closeModal('quick-modal');
-    toast('Szybki news usunięty.');
+    toast('Nowinka usunięta.');
     refreshViews();
   } catch (ex) { toast(ex.message || 'Nie udało się usunąć.', 'error'); }
 }
@@ -4809,7 +4969,7 @@ async function renderQuickStory(a) {
   // ta sama rama, logo, kicker i stopka co w pozostałych grafikach
   drawFrame(ctx, W, H, { a, family, dateY: topY + 28, dateSize: 34, padRight: PAD });
   await drawLogoWhite(ctx, PAD, topY, 330, family);
-  drawKicker(ctx, 'SZYBKI NEWS', PAD, topY + 120, { family });
+  drawKicker(ctx, 'NOWINKI Z POŚLIZGIEM', PAD, topY + 120, { family });
 
   const maxH = footY - 120 - (topY + 260);
   const t = fitText(ctx, family, a.title, W - PAD * 2, maxH, 92, 46, 900, 1.16);
@@ -5039,7 +5199,16 @@ function registerFigureBlot() {
       const node = super.create();
       const text = document.createElement('p');
       text.className = 'q-text';
-      text.textContent = value.text || '';
+      const parts = Array.isArray(value.parts) && value.parts.length > 1 ? value.parts : null;
+      if (parts) {                                  // cytat z przerywnikami: cytat, zwykły tekst, dalszy ciąg cytatu…
+        text.classList.add('has-mid');
+        parts.forEach((t, i) => {
+          const sp = document.createElement('span');
+          sp.className = i % 2 ? 'q-mid' : 'q-part';
+          sp.textContent = t;
+          text.appendChild(sp);
+        });
+      } else text.textContent = value.text || '';
       node.appendChild(text);
       if (value.author || value.source) {
         const by = document.createElement('p');
@@ -5064,6 +5233,11 @@ function registerFigureBlot() {
       const q = node.querySelector('.q-text');
       const a = node.querySelector('.q-author');
       const src = node.querySelector('.q-source');
+      const spans = q ? Array.from(q.children).filter(x => x.classList.contains('q-part') || x.classList.contains('q-mid')) : [];
+      if (spans.length > 1) {
+        const parts = spans.map(x => x.textContent);
+        return { text: parts[0], parts, author: a ? a.textContent : '', source: src ? src.textContent : '' };
+      }
       return { text: q ? q.textContent : '', author: a ? a.textContent : '', source: src ? src.textContent : '' };
     }
   }
@@ -5597,6 +5771,40 @@ function insertImageIntoEditor(e) {
   closeModal('image-modal');
 }
 
+const QM_MAX_MID = 2;              // do 2 przerywników = do 3 części cytatu
+let qmParts = [''];                // parzyste indeksy: cytat, nieparzyste: przerywnik (zwykły tekst)
+
+function qmRead() {
+  $$('#quote-form [data-qp]').forEach(el => { qmParts[Number(el.dataset.qp)] = el.value; });
+}
+
+function qmRender(focus) {
+  const box = $('#qm-extra');
+  box.innerHTML = qmParts.slice(1).map((v, k) => {
+    const i = k + 1, mid = i % 2 === 1, last = i === qmParts.length - 1;
+    return `<div class="qm-block ${mid ? 'is-mid' : 'is-part'}">
+      <label class="field"><span class="field-label">${mid ? `Przerywnik ${(i + 1) / 2} <small class="hint">(zwykły tekst w cytacie, np. – powiedziała piosenkarka –)</small>` : 'Dalszy ciąg cytatu'}</span>
+        ${mid ? `<input type="text" data-qp="${i}" maxlength="160" placeholder="Np. – powiedziała piosenkarka –">`
+              : `<textarea data-qp="${i}" rows="3" maxlength="600" placeholder="Wpisz dalszą część cytatu…"></textarea>`}</label>
+      ${last ? `<button type="button" class="btn btn-sm qm-del" data-qm="del" aria-label="Usuń ${mid ? 'przerywnik' : 'ciąg dalszy'}">Usuń</button>` : ''}
+    </div>`;
+  }).join('');
+  qmParts.forEach((v, i) => { const el = $(`#quote-form [data-qp="${i}"]`); if (el) el.value = v; });
+  const mids = Math.floor(qmParts.length / 2), lastIsMid = qmParts.length % 2 === 0;
+  const add = $('#qm-add');
+  add.innerHTML = lastIsMid
+    ? '<button type="button" class="btn btn-sm" data-qm="cont">Kontynuuj cytat</button>'
+    : (mids < QM_MAX_MID ? '<button type="button" class="btn btn-sm" data-qm="mid">+ Dodaj przerywnik</button>' : `<small class="hint">Maksymalnie ${QM_MAX_MID} przerywniki.</small>`);
+  if (focus) { const el = $(`#quote-form [data-qp="${qmParts.length - 1}"]`); if (el) el.focus(); }
+}
+
+function qmAction(kind) {
+  qmRead();
+  if (kind === 'mid' || kind === 'cont') qmParts.push('');
+  else if (kind === 'del') qmParts.pop();
+  qmRender(kind !== 'del');
+}
+
 function openQuoteModal(edit) {
   const isEdit = !!edit && typeof edit.index === 'number';
   editor.editingQuote = isEdit ? edit.index : null;
@@ -5604,22 +5812,24 @@ function openQuoteModal(edit) {
   $('#quote-title').textContent = isEdit ? 'Edytuj cytat' : 'Wstaw cytat';
   $('#qm-submit').textContent = isEdit ? 'Zapisz' : 'Wstaw';
   $('#qm-delete').hidden = !isEdit;
-  $('#qm-text').value = isEdit ? edit.text : '';
+  qmParts = isEdit ? (Array.isArray(edit.parts) && edit.parts.length ? edit.parts.slice(0, QM_MAX_MID * 2 + 1) : [edit.text || '']) : [''];
   $('#qm-source').value = isEdit ? edit.source : '';
   $('#qm-author').value = isEdit ? edit.author : '';
   $('#qm-error').hidden = true;
+  qmRender(false);
   openModal('quote-modal');
 }
 
 function submitQuote(e) {
   e.preventDefault();
-  const text = $('#qm-text').value.trim();
-  if (!text) {
-    $('#qm-error').textContent = 'Wpisz treść cytatu.';
-    $('#qm-error').hidden = false;
-    return;
-  }
-  const value = { text, source: $('#qm-source').value.trim(), author: $('#qm-author').value.trim() };
+  qmRead();
+  const parts = qmParts.map(t => t.replace(/[ \t]+$/gm, '').trim());
+  while (parts.length > 1 && !parts[parts.length - 1]) parts.pop();       // puste pola na końcu pomijamy
+  const err = m => { $('#qm-error').textContent = m; $('#qm-error').hidden = false; };
+  if (!parts[0]) return err('Wpisz treść cytatu.');
+  if (parts.some(t => !t)) return err('Uzupełnij przerywnik lub dalszy ciąg cytatu albo usuń puste pole.');
+  const value = { text: parts[0], source: $('#qm-source').value.trim(), author: $('#qm-author').value.trim() };
+  if (parts.length > 1) value.parts = parts;
   if (editor.editingQuote !== null) {
     const index = editor.editingQuote;
     editor.quill.deleteText(index, 1, 'user');
@@ -5685,7 +5895,7 @@ function deleteFigure() {
 /* =========================================================
    Konta czytelników i komentarze
    ========================================================= */
-const READER_ERR = {
+const READER_ERR = { too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
   name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'W nazwie dozwolone są litery, cyfry, spacja oraz _ . -',
   name_bad: 'Ta nazwa jest niedozwolona. Wybierz inną.', name_taken: 'Ta nazwa jest już zajęta.',
   name_cooldown: 'Nazwę użytkownika możesz zmieniać raz na 30 dni.', verify: 'Potwierdź adres e-mail (link w wiadomości od nas), żeby komentować.',
@@ -6191,14 +6401,17 @@ function renderReaderCard() {
   else if (Auth.isAdmin()) $('#profile-role').textContent = 'Redaktor';
 }
 
-async function shrinkToJpeg(file, size = 160) {
+async function shrinkToJpeg(file, size = 1200, maxChars = 1300000) {
   const img = await loadImage(URL.createObjectURL(file), false);
-  const c = document.createElement('canvas'); c.width = c.height = size;
-  const ctx = c.getContext('2d');
-  const k = Math.max(size / img.naturalWidth, size / img.naturalHeight);
-  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
-  ctx.drawImage(img, (size - img.naturalWidth * k) / 2, (size - img.naturalHeight * k) / 2, img.naturalWidth * k, img.naturalHeight * k);
-  return c.toDataURL('image/jpeg', 0.82);
+  const w = img.naturalWidth, h = img.naturalHeight, side = Math.min(w, h);
+  const out = Math.min(size, side);                         // bez powiększania i bez zbędnej utraty jakości
+  const c = document.createElement('canvas'); c.width = c.height = out;
+  const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, out, out);
+  ctx.drawImage(img, (w - side) / 2, (h - side) / 2, side, side, 0, 0, out, out);
+  let q = 0.95, data = c.toDataURL('image/jpeg', q);
+  while (data.length > maxChars && q > 0.6) { q -= 0.05; data = c.toDataURL('image/jpeg', q); }
+  return data;
 }
 
 function bindReaderEvents() {
@@ -6308,7 +6521,7 @@ function userVerified(u) { return u.staff || u.role === 'owner' ? true : u.vfy =
 function modUserHtml(u) {
   const staff = !!u.staff;
   const isOwner = u.role === 'owner';
-  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor (pisze artykuły)']];
+  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor']];
   const sel = `<label class="mu-sel"><span>Rola</span><select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
   const vOpts = [['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']];
   const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
@@ -6427,7 +6640,7 @@ document.addEventListener('input', e => { if (e.target.matches('.mod-q')) { clea
 
 /* ---------- Routing ---------- */
 function showView(name) {
-  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account', 'user'].forEach(v => { $('#view-' + v).hidden = v !== name; });
+  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account', 'user', 'authors'].forEach(v => { $('#view-' + v).hidden = v !== name; });
   $('#layout').dataset.view = name;
 }
 
@@ -6440,13 +6653,14 @@ function refreshViews() {
   if (route.name === 'home') renderHome();
   else if (route.name === 'article') renderArticleView(route.id);
   else if (route.name === 'ranking') renderRanking();
+  else if (route.name === 'authors') renderAuthors();
   else if (route.name === 'quick') renderQuick();
   else if (route.name === 'panel') renderPanel();
 }
 
 /** Pamięta miejsce na liście: po wejściu w artykuł i cofnięciu wracasz dokładnie tam, gdzie byłeś. */
 const ScrollMemory = { cur: location.hash || '#/', prev: '', n: 0, pos: {} };
-const LIST_ROUTES = /^#\/($|kategoria|tag|artysta|ranking|zapisane|szybkie)/;
+const LIST_ROUTES = /^#\/($|kategoria|tag|artysta|redaktor|redakcja|ranking|zapisane|szybkie)/;
 
 function route() {
   const key = location.hash || '#/';
@@ -6478,7 +6692,7 @@ function routeCore() {
   }
 
   $$('.main-nav .nav-link').forEach(l => l.classList.toggle('is-active',
-    (l.id === 'nav-ranking' && r.name === 'ranking') || (l.id === 'nav-quick' && r.name === 'quick') || (l.id === 'nav-home' && r.name === 'home' && !r.tag && !r.artist && !r.category)));
+    (l.id === 'nav-ranking' && r.name === 'ranking') || (l.id === 'nav-quick' && r.name === 'quick') || (l.id === 'nav-authors' && (r.name === 'authors' || (r.name === 'home' && r.author))) || (l.id === 'nav-home' && r.name === 'home' && !r.tag && !r.artist && !r.author && !r.category)));
 
   if (r.name === 'article') {
     showView('article');
@@ -6490,8 +6704,8 @@ function routeCore() {
     renderRanking();
   } else if (r.name === 'quick') {
     showView('quick');
-    document.title = `Szybkie Newsy – ${CONFIG.SITE_NAME}`;
-    setMeta('Szybkie Newsy', 'Krótkie newsy ze świata muzyki i rozrywki – jedno zdanie i link do źródła.');
+    document.title = `Nowinki z Poślizgiem – ${CONFIG.SITE_NAME}`;
+    setMeta('Nowinki z Poślizgiem', 'Krótkie newsy ze świata muzyki i rozrywki – jedno zdanie i link do źródła.');
     renderQuick();
   } else if (r.name === 'saved') {
     showView('saved');
@@ -6512,6 +6726,11 @@ function routeCore() {
     showView('notfound');
     document.title = `Nie znaleziono – ${CONFIG.SITE_NAME}`;
     $('#view-notfound').innerHTML = notFoundHtml('Strona, której szukasz, nie istnieje albo adres jest nieprawidłowy.');
+  } else if (r.name === 'authors') {
+    showView('authors');
+    document.title = `Redakcja – ${CONFIG.SITE_NAME}`;
+    setMeta('Redakcja', 'Poznaj redaktorów Śliska News i przeglądaj ich artykuły.');
+    renderAuthors();
   } else if (r.name === 'user') {
     showView('user');
     document.title = `Profil użytkownika – ${CONFIG.SITE_NAME}`;
@@ -6537,13 +6756,15 @@ function routeCore() {
     const wanted = r.category && CATEGORIES.includes(r.category) ? r.category : ALL;
     if (wanted !== state.category) state.visible = CONFIG.PAGE_SIZE;
     state.category = wanted;
-    const collChanged = (r.tag || '') !== state.tag || (r.artist || '') !== state.artist;
+    const collChanged = (r.tag || '') !== state.tag || (r.artist || '') !== state.artist || (r.author || '') !== state.author;
     state.tag = r.tag || '';
     state.artist = r.artist || '';
+    state.author = r.author || '';
     if (collChanged) state.visible = CONFIG.PAGE_SIZE;
     updateCategoryNav();
     if (r.tag) { document.title = `#${r.tag} – ${CONFIG.SITE_NAME}`; setMeta(`#${r.tag}`, `Artykuły z tagiem ${r.tag} w Śliska News.`); }
     else if (r.artist) { document.title = `${r.artist} – ${CONFIG.SITE_NAME}`; setMeta(r.artist, `Wszystkie teksty i recenzje o ${r.artist} w Śliska News.`); }
+    else if (r.author) { document.title = `${r.author} – redaktor – ${CONFIG.SITE_NAME}`; setMeta(r.author, `Artykuły redaktora ${r.author} w Śliska News.`); if (!Authors.loaded) Authors.load().then(() => { if (state.author === r.author) renderHome(); }); }
     else setMeta();
     renderHome();
   }
@@ -6664,6 +6885,11 @@ function otherAuthors() {
 function renderSettings() {
   settingsAvatar = state.profile.avatar || '';
   $('#st-name').value = state.profile.name || '';
+  const bioEl = $('#st-bio'), bioN = () => { $('#st-bio-n').textContent = `${Array.from(bioEl.value).length}/150`; };
+  bioEl.value = Authors.bio(state.profile.name || ''); bioEl.dataset.orig = bioEl.value; bioN();
+  bioEl.oninput = bioN;
+  if (!Authors.loaded) Authors.load().then(() => { if (!bioEl.dataset.touched && bioEl.value === bioEl.dataset.orig) { bioEl.value = Authors.bio(state.profile.name || ''); bioEl.dataset.orig = bioEl.value; bioN(); } });
+  bioEl.addEventListener('input', () => { bioEl.dataset.touched = '1'; }, { once: true });
   $('#st-photo').checked = state.profile.showPhoto !== false;
   const sel = $('#st-cat');
   sel.innerHTML = '<option value="">Brak (wybieram za każdym razem)</option>' + CATEGORIES.map(c => `<option value="${Utils.esc(c)}">${Utils.esc(c)}</option>`).join('');
@@ -6758,6 +6984,14 @@ async function saveSettings(e) {
   btn.disabled = true;
   try {
     await DataService.saveProfile(next);
+    const bio = $('#st-bio').value.trim().replace(/\s+/g, ' ').slice(0, 150);
+    let bioFailed = false;
+    const pubPhoto = next.showPhoto !== false ? (next.avatar || '') : '';       // publiczny profil dostaje zdjęcie w pełnej jakości
+    const photoSync = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto || (!!pubPhoto !== Authors.hasPhoto(name));
+    if (name && (bio !== ($('#st-bio').dataset.orig || '') || (prev.name && prev.name !== name) || photoSync)) {
+      try { await actorApi('/author', { method: 'POST', body: JSON.stringify({ name, bio, ...(photoSync ? { avatar: pubPhoto } : {}), old: prev.name && prev.name !== name ? prev.name : '' }) }); await Authors.load(true); }
+      catch (e2) { console.warn('Biografia nie zapisała się:', e2); bioFailed = true; }
+    }
     state.profile = next;
     writeLocalProfile(next);
     renderProfile();
@@ -6766,7 +7000,7 @@ async function saveSettings(e) {
       btn.textContent = 'Aktualizuję artykuły…';
       n = await reassignAuthor(claim, name, next.avatar, next.showPhoto);
     }
-    toast(n ? `Zapisano. Zaktualizowano ${n} ${plural(n, 'artykuł', 'artykuły', 'artykułów')}.` : 'Ustawienia zapisane.');
+    toast(bioFailed ? 'Ustawienia zapisane, ale biografia nie – wgraj najnowszy kod Workera.' : n ? `Zapisano. Zaktualizowano ${n} ${plural(n, 'artykuł', 'artykuły', 'artykułów')}.` : 'Ustawienia zapisane.');
     renderSettings();
     refreshViews();
   } catch (ex) {
@@ -6780,6 +7014,21 @@ async function saveSettings(e) {
 }
 
 /* ---------- Akcje (przyciski z data-action) ---------- */
+async function sendPushManual(id, btn) {
+  if (!canManage()) return;
+  const a = (state.articles || []).find(x => x.id === id);
+  const t = a && a.title ? `„${a.title}”` : 'ten wpis';
+  if (!confirm(`Wysłać powiadomienie push o: ${t} do wszystkich subskrybentów?`)) return;
+  if (btn) btn.disabled = true;
+  try {
+    const d = await adminApi('/news/api/push/send', { method: 'POST', body: JSON.stringify({ id }) });
+    toast(d.more ? 'Powiadomienie wysyłane – reszta urządzeń w ciągu minuty.' : `Powiadomienie wysłane (${d.sent || 0} urządzeń).`);
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+  if (btn) setTimeout(() => { btn.disabled = false; }, 3000);
+}
+
 function handleAction(action, id, btn) {
   if (action === 'save') {
     const now = Saved.toggle(id);
@@ -6810,6 +7059,7 @@ function handleAction(action, id, btn) {
   if (action === 'quick-new') { openQuickModal(); return; }
   if (action === 'quick-edit') { openQuickModal(id); return; }
   if (action === 'quick-delete') { deleteQuick(id); return; }
+  if (action === 'push-send') { sendPushManual(id, btn); return; }
   if (action === 'edit') location.hash = '#/edytor/' + encodeURIComponent(id);
   else if (action === 'delete') openRemoveModal(id);
   else if (action === 'delete-draft') deleteDraft(id);
@@ -6970,6 +7220,7 @@ function bindEvents() {
 
   // Cytat (modal)
   $('#quote-form').addEventListener('submit', submitQuote);
+  $('#quote-form').addEventListener('click', e => { const b = e.target.closest('[data-qm]'); if (b) qmAction(b.dataset.qm); });
   $('#qm-delete').addEventListener('click', deleteQuote);
   $('#embed-form').addEventListener('submit', submitEmbed);
   $('#em-delete').addEventListener('click', deleteEmbed);

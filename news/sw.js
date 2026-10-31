@@ -39,7 +39,7 @@ self.addEventListener('push', e => {
     let d = {};
     try { const r = await fetch('/news/api/latest', { cache: 'no-store' }); d = await r.json(); } catch { /* brak sieci */ }
     const more = d.more > 0 ? ` (+${d.more} więcej)` : '';
-    await self.registration.showNotification(d.quick ? 'Szybki News' : 'Nowe w Śliska News', {
+    await self.registration.showNotification(d.quick ? 'Nowinka z Poślizgiem' : 'Nowe w Śliska News', {
       body: d.title ? d.title + more : 'Na stronie pojawił się nowy artykuł.',
       icon: '/news/icons/icon-192.png',
       badge: '/news/icons/icon-192.png',
