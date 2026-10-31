@@ -2170,3 +2170,11 @@ body.gx-lock { overflow: hidden; }
 /* push przy szybkim newsie */
 .field-check { display: flex; align-items: center; gap: 8px; font-size: .9rem; margin: 6px 0 10px; cursor: pointer; }
 .field-check input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+/* Telefon: autor w osobnym wierszu, pod nim data · czas czytania (bez kropki na początku linii) */
+@media (max-width: 640px) {
+  .article-meta { gap: 8px 0; padding: 14px 0; }
+  .article-meta > .author-line { flex: 0 0 100%; font-size: 1rem; }
+  .article-meta > .author-line + *::before { display: none; }
+  .article-meta > time, .article-meta > span:not(.author-line) { font-size: .85rem; }
+}
