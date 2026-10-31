@@ -1642,6 +1642,7 @@ function renderArticleView(id) {
     ${articleHtml(a, state.plain.get(a.id))}
     ${pagerHtml}
     ${relatedHtml}`;
+  enhanceGalleries(el);
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
 }
@@ -3722,10 +3723,142 @@ function deleteGallery() {
   closeModal('gallery-modal');
 }
 
+
+/* ---------- Galeria w artykule: scena + miniatury + pełny ekran ---------- */
+const GX_ICON = {
+  prev: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  next: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  full: '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+  close: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>'
+};
+
+/** Dodaje do galerii nawigację przesuwaniem (mysz/palec), klawiaturę, miniatury i podgląd pełnoekranowy. */
+function enhanceGalleries(root) {
+  (root || document).querySelectorAll('figure.article-gallery:not(.gx)').forEach(fig => {
+    if (fig.closest('.ql-editor')) return;
+    const srcs = Array.from(fig.querySelectorAll('.gallery-track img')).map(i => i.getAttribute('src')).filter(Boolean);
+    if (srcs.length < 2) return;
+    const capEl = fig.querySelector('figcaption');
+    const caption = capEl ? capEl.textContent : '';
+    fig.classList.add('gx');
+    fig.setAttribute('tabindex', '0');
+    fig.setAttribute('role', 'group');
+    fig.setAttribute('aria-roledescription', 'galeria');
+    fig.innerHTML = `
+      <div class="gx-stage">
+        <div class="gx-bg" aria-hidden="true"></div>
+        <img class="gx-img" alt="" draggable="false">
+        <button type="button" class="gx-nav gx-prev" aria-label="Poprzednie zdjęcie">${GX_ICON.prev}</button>
+        <button type="button" class="gx-nav gx-next" aria-label="Następne zdjęcie">${GX_ICON.next}</button>
+        <span class="gx-count" aria-live="polite"></span>
+        <button type="button" class="gx-full" aria-label="Powiększ zdjęcie">${GX_ICON.full}</button>
+      </div>
+      <div class="gx-thumbs" role="tablist">${srcs.map((u, i) => `<button type="button" class="gx-thumb" role="tab" data-i="${i}" aria-label="Zdjęcie ${i + 1}"><img src="${Utils.esc(u)}" alt="" loading="lazy" draggable="false"></button>`).join('')}</div>
+      ${caption ? `<figcaption>${Utils.esc(caption)}</figcaption>` : ''}`;
+    const stage = fig.querySelector('.gx-stage'), img = fig.querySelector('.gx-img'), bg = fig.querySelector('.gx-bg');
+    const count = fig.querySelector('.gx-count'), thumbs = Array.from(fig.querySelectorAll('.gx-thumb'));
+    let cur = 0, busy = 0;
+    const show = (n, instant) => {
+      cur = (n + srcs.length) % srcs.length;
+      const token = ++busy;
+      const apply = () => {
+        if (token !== busy) return;
+        img.src = srcs[cur]; img.alt = caption || `Zdjęcie ${cur + 1} z ${srcs.length}`;
+        bg.style.backgroundImage = `url("${srcs[cur].replace(/"/g, '%22')}")`;
+        stage.classList.remove('is-swap');
+      };
+      if (instant) apply(); else { stage.classList.add('is-swap'); setTimeout(apply, 130); }
+      count.textContent = `${cur + 1} / ${srcs.length}`;
+      thumbs.forEach((t, i) => { t.classList.toggle('is-on', i === cur); t.setAttribute('aria-selected', String(i === cur)); });
+      const t = thumbs[cur], box = fig.querySelector('.gx-thumbs');
+      if (t && box) box.scrollTo({ left: t.offsetLeft - (box.clientWidth - t.clientWidth) / 2, behavior: instant ? 'auto' : 'smooth' });
+      [cur + 1, cur - 1].forEach(k => { const im = new Image(); im.src = srcs[(k + srcs.length) % srcs.length]; });
+    };
+    show(0, true);
+    fig._gx = { show: n => show(n), get cur() { return cur; }, srcs, caption };
+    fig.querySelector('.gx-prev').addEventListener('click', e => { e.stopPropagation(); show(cur - 1); });
+    fig.querySelector('.gx-next').addEventListener('click', e => { e.stopPropagation(); show(cur + 1); });
+    fig.querySelector('.gx-full').addEventListener('click', e => { e.stopPropagation(); openGxLightbox(srcs, cur, caption, n => show(n, true)); });
+    thumbs.forEach(t => t.addEventListener('click', () => show(Number(t.dataset.i))));
+    fig.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') { e.preventDefault(); show(cur - 1); }
+      else if (e.key === 'ArrowRight') { e.preventDefault(); show(cur + 1); }
+    });
+    gxSwipe(stage, dir => show(cur + dir), () => openGxLightbox(srcs, cur, caption, n => show(n, true)));
+  });
+}
+
+/** Przesuwanie palcem / myszą; krótkie kliknięcie wywołuje onTap. */
+function gxSwipe(el, onStep, onTap) {
+  let x0 = null, y0 = 0, moved = false, id = null;
+  el.addEventListener('pointerdown', e => {
+    if (e.target.closest('button')) return;
+    x0 = e.clientX; y0 = e.clientY; moved = false; id = e.pointerId;
+  });
+  el.addEventListener('pointermove', e => {
+    if (x0 === null || e.pointerId !== id) return;
+    if (Math.abs(e.clientX - x0) > 8) moved = true;
+  });
+  const end = e => {
+    if (x0 === null || e.pointerId !== id) return;
+    const dx = e.clientX - x0, dy = e.clientY - y0;
+    x0 = null;
+    if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy)) onStep(dx < 0 ? 1 : -1);
+    else if (!moved && onTap) onTap();
+  };
+  el.addEventListener('pointerup', end);
+  el.addEventListener('pointercancel', () => { x0 = null; });
+}
+
+/** Podgląd pełnoekranowy: strzałki, klawiatura, przesuwanie, Esc zamyka. */
+function openGxLightbox(srcs, start, caption, onChange) {
+  if (document.querySelector('.gx-lb')) return;
+  let cur = start;
+  const lb = document.createElement('div');
+  lb.className = 'gx-lb';
+  lb.setAttribute('role', 'dialog'); lb.setAttribute('aria-modal', 'true'); lb.setAttribute('aria-label', 'Galeria zdjęć');
+  lb.innerHTML = `
+    <div class="gx-lb-top"><span class="gx-lb-count"></span><button type="button" class="gx-lb-close" aria-label="Zamknij">${GX_ICON.close}</button></div>
+    <div class="gx-lb-stage"><img class="gx-lb-img" alt="" draggable="false">
+      <button type="button" class="gx-nav gx-prev" aria-label="Poprzednie zdjęcie">${GX_ICON.prev}</button>
+      <button type="button" class="gx-nav gx-next" aria-label="Następne zdjęcie">${GX_ICON.next}</button></div>
+    <div class="gx-lb-cap">${caption ? Utils.esc(caption) : ''}</div>`;
+  const prevFocus = document.activeElement;
+  document.body.appendChild(lb);
+  document.body.classList.add('gx-lock');
+  const im = lb.querySelector('.gx-lb-img'), ct = lb.querySelector('.gx-lb-count');
+  const show = n => {
+    cur = (n + srcs.length) % srcs.length;
+    im.classList.add('is-swap');
+    setTimeout(() => { im.src = srcs[cur]; im.alt = caption || `Zdjęcie ${cur + 1}`; im.classList.remove('is-swap'); }, 90);
+    ct.textContent = `${cur + 1} / ${srcs.length}`;
+    [cur + 1, cur - 1].forEach(k => { const p = new Image(); p.src = srcs[(k + srcs.length) % srcs.length]; });
+    if (onChange) onChange(cur);
+  };
+  const close = () => {
+    document.removeEventListener('keydown', key, true);
+    lb.remove(); document.body.classList.remove('gx-lock');
+    if (prevFocus && prevFocus.focus) prevFocus.focus({ preventScroll: true });
+  };
+  const key = e => {
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); show(cur - 1); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); show(cur + 1); }
+  };
+  document.addEventListener('keydown', key, true);
+  lb.querySelector('.gx-lb-close').addEventListener('click', close);
+  lb.querySelector('.gx-prev').addEventListener('click', e => { e.stopPropagation(); show(cur - 1); });
+  lb.querySelector('.gx-next').addEventListener('click', e => { e.stopPropagation(); show(cur + 1); });
+  lb.addEventListener('click', e => { if (e.target === lb || e.target.classList.contains('gx-lb-stage')) close(); });
+  gxSwipe(lb.querySelector('.gx-lb-stage'), d => show(cur + d), null);
+  im.src = srcs[cur]; ct.textContent = `${cur + 1} / ${srcs.length}`;
+  lb.querySelector('.gx-lb-close').focus({ preventScroll: true });
+}
+
 /** Przewijanie galerii kliknięciem w lewy / prawy brzeg (na stronie artykułu). */
 function galleryClick(e) {
   const g = e.target.closest && e.target.closest('figure.article-gallery');
-  if (!g || g.closest('.ql-editor')) return;
+  if (!g || g.closest('.ql-editor') || g.classList.contains('gx')) return;
   const t = g.querySelector('.gallery-track');
   if (!t) return;
   const r = g.getBoundingClientRect();
@@ -4964,6 +5097,7 @@ function openPreview() {
     updatedAt: created
   };
   $('#preview-body').innerHTML = articleHtml(preview, Utils.stripHtml(d.content));
+  enhanceGalleries($('#preview-body'));
   openModal('preview-modal');
 }
 
