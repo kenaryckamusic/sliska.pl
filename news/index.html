@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261101r">
+  <link rel="stylesheet" href="style.css?v=20261101u">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -515,6 +515,19 @@
     </div>
   </div>
 
+  <div class="modal" id="push-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="push-ask-title" style="max-width:420px;text-align:center">
+      <div style="font-size:2.6rem;line-height:1">🔔</div>
+      <h2 id="push-ask-title">Nie przegap nowości</h2>
+      <p class="muted" id="push-ask-text">Włącz powiadomienia, a damy Ci znać o nowym artykule i szybkim newsie. Wyłączysz je w każdej chwili dzwonkiem na górze strony.</p>
+      <p class="muted" id="push-ask-ios" hidden>Na iPhonie: kliknij Udostępnij → „Do ekranu początkowego”, otwórz stronę z ikony i włącz dzwonek na górze strony.</p>
+      <div class="modal-actions" style="justify-content:center">
+        <button type="button" class="btn" data-close="push-modal">Nie teraz</button>
+        <button type="button" class="btn btn-primary" id="push-ask-yes">Włącz powiadomienia</button>
+      </div>
+    </div>
+  </div>
+
   <div class="modal" id="report-modal" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="report-title">
       <h2 id="report-title">Zauważyłeś błąd?</h2>
@@ -803,6 +816,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261101r"></script>
+  <script src="app.js?v=20261101u"></script>
 </body>
 </html>

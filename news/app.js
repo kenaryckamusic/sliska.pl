@@ -1232,6 +1232,32 @@ async function updatePushButton() {
   b.title = on ? 'Powiadomienia włączone – kliknij, aby wyłączyć' : 'Włącz powiadomienia o nowych artykułach';
 }
 
+/** Przy każdym wejściu na stronę: prośba o włączenie powiadomień (tylko gdy ktoś jeszcze ich nie włączył). */
+async function maybeAskPush() {
+  try {
+    const iosBrowser = Push.isIos() && !Push.standalone() && !Push.supported();
+    if (!Push.supported() && !iosBrowser) return;
+    if (Push.supported()) {
+      if (Notification.permission === 'denied') return;
+      if (Notification.permission === 'granted' && await Push.sub()) return;
+      const kr = await fetch(`${CONFIG.API_BASE}/push/key`).then(r => r.ok ? r.json() : null).catch(() => null);
+      if (!kr || !kr.key) return;      // backend powiadomień niedostępny (np. tryb demo)
+    }
+    if (document.querySelector('.modal:not([hidden])')) return;
+    $('#push-ask-ios').hidden = !iosBrowser;
+    $('#push-ask-yes').hidden = iosBrowser;
+    $('#push-ask-text').hidden = iosBrowser;
+    openModal('push-modal');
+  } catch { /* brak popupu */ }
+}
+
+async function pushAskYes() {
+  const btn = $('#push-ask-yes'); btn.disabled = true;
+  try { await Push.enable(); closeModal('push-modal'); toast('Gotowe! Dostaniesz powiadomienie o nowym artykule.'); }
+  catch (err) { closeModal('push-modal'); toast(err.message || 'Nie udało się włączyć powiadomień.', 'error'); }
+  finally { btn.disabled = false; updatePushButton(); }
+}
+
 async function togglePush() {
   if (!Push.supported()) {
     toast(Push.isIos() ? 'Na iPhonie: Udostępnij → „Do ekranu początkowego”, otwórz stronę z ikony i dopiero wtedy włącz dzwonek.' : 'Ta przeglądarka nie obsługuje powiadomień.', 'error');
@@ -4711,29 +4737,39 @@ async function shareQuick(id) {
   try { await navigator.clipboard.writeText(`${a.title} ${url}`); toast('Skopiowano do schowka.'); } catch { toast('Nie udało się skopiować.', 'error'); }
 }
 
-/** Story (1080×1920): samo tło + treść newsa + zwykły napis „sliska.pl” – bez linku, naklejek i ozdobników. */
+/** Story (1080×1920): tło marki + logo + treść newsa + zwykły napis „sliska.pl” – bez linku i naklejek. */
 async function renderQuickStory(a) {
-  const W = 1080, H = 1920, PAD = 96;
+  const W = 1080, H = 1920, PAD = 72, topY = 230, footY = H - 520;
   const family = getComputedStyle(document.body).fontFamily;
-  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 40px ${family}`)]); } catch {}
+  try { await Promise.all([document.fonts.load(`900 80px ${family}`), document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 40px ${family}`)]); } catch {}
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
+  // tło: ciemne z czerwoną poświatą (bez zmian)
   const bg = ctx.createLinearGradient(0, 0, 0, H);
   bg.addColorStop(0, '#1a1a1a'); bg.addColorStop(1, '#070707');
   ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
   const glow = ctx.createRadialGradient(W * .85, H * .1, 0, W * .85, H * .1, 900);
   glow.addColorStop(0, 'rgba(214,0,28,.55)'); glow.addColorStop(1, 'rgba(214,0,28,0)');
   ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
-  ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
-  const t = fitText(ctx, family, a.title, W - PAD * 2, 1000, 84, 44, 800, 1.22);
-  ctx.font = `800 ${t.size}px ${family}`;
+
+  // ta sama rama, logo, kicker i stopka co w pozostałych grafikach
+  drawFrame(ctx, W, H, { a, family, dateY: topY + 28, dateSize: 34, padRight: PAD });
+  await drawLogoWhite(ctx, PAD, topY, 330, family);
+  drawKicker(ctx, 'SZYBKI NEWS', PAD, topY + 120, { family });
+
+  const maxH = footY - 120 - (topY + 260);
+  const t = fitText(ctx, family, a.title, W - PAD * 2, maxH, 92, 46, 900, 1.16);
   const total = t.lines.length * t.lh;
-  let y = Math.round((H - total) / 2);
+  let y = Math.round((topY + 260 + footY - 120 - total) / 2);
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.font = `900 ${t.size}px ${family}`;
   for (const l of t.lines) { ctx.fillText(l, PAD, y); y += t.lh; }
-  ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(255,255,255,.85)';
-  ctx.font = `700 44px ${family}`;
-  ctx.fillText('sliska.pl', W / 2, H - 330);
+
+  // stopka jak w pozostałych grafikach: linia + zwykły napis sliska.pl
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - 56, W - PAD * 2, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 32px ${family}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('sliska.pl', PAD, footY);
   return canvasBlob(canvas);
 }
 
@@ -6051,6 +6087,8 @@ function bindEvents() {
   $('#panel-new').addEventListener('click', () => { location.hash = '#/edytor'; });
   $('#btn-push').addEventListener('click', togglePush);
   updatePushButton();
+  $('#push-ask-yes').addEventListener('click', pushAskYes);
+  setTimeout(maybeAskPush, 2500);
   $('#view-panel').addEventListener('click', e => {
     const b = e.target.closest('[data-ptab]'); if (b) setPanelTab(b.dataset.ptab);
     const f = e.target.closest('[data-tipfilter]'); if (f) { tipFilter = f.dataset.tipfilter; renderTipList(); }
