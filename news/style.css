@@ -2312,3 +2312,44 @@ html, body, * { scrollbar-width: none; -ms-overflow-style: none; }
 .rv-who li.is-staff { border-color: var(--accent); }
 .rv-who-name { max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rv-who-note { margin: 0 0 10px; font-size: .8rem; color: var(--muted); }
+
+/* ---- Kafelek profilu dla zalogowanego czytelnika ---- */
+.rd-only { display: none !important; }
+.is-reader .rd-only:not([hidden]) { display: flex !important; }
+.is-reader .profile-card { display: block; }
+.is-reader .profile-stats, .is-reader #btn-new, .is-reader [data-action="quick-new"], .is-reader #btn-panel, .is-reader #btn-settings { display: none !important; }
+a.ptab { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+.cmt-badge.is-owner { background: #111; color: #fff; }
+.cmt-badge.is-editor { background: #2563eb; }
+
+/* ---- Moderacja: minimalistyczna lista ---- */
+.mod-bar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 2px 0 4px; }
+.mod-bar b { font-size: 1.02rem; }
+.mc-link { border: 0; background: none; padding: 0; font: inherit; font-size: .82rem; font-weight: 700; color: var(--accent); cursor: pointer; }
+.mod-list { display: flex; flex-direction: column; }
+.mod-empty { padding: 18px 0; }
+.mc { padding: 14px 2px; border-bottom: 1px solid var(--border); transition: opacity .18s, transform .18s; }
+.mc.is-out { opacity: 0; transform: translateX(10px); }
+.mc-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .92rem; }
+.mc-head time { color: var(--muted); font-size: .78rem; }
+.mc-st { display: inline-flex; align-items: center; gap: 5px; font-size: .75rem; color: var(--muted); }
+.mc-st::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; }
+.mc-st.is-pending::before, .mc-st.is-reported::before { background: #f59e0b; }
+.mc-st.is-hidden::before { background: #9ca3af; }
+.mc-art { display: block; margin-top: 2px; font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-decoration: none; }
+.mc-art:hover { color: var(--accent); }
+.mc-text { margin: 8px 0 8px; font-size: .95rem; line-height: 1.5; overflow-wrap: anywhere; }
+.mc-actions, .mu-actions { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.mc-actions button, .mu-actions button { border: 0; background: none; padding: 0; font: inherit; font-size: .8rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.mc-actions button:hover, .mu-actions button:hover { color: var(--text); }
+.mc-actions .is-danger, .mu-actions .is-danger { color: #c0392b; }
+.mc-actions button:disabled { opacity: .5; cursor: default; }
+.mod-users { margin-top: 30px; }
+.mod-q { width: 100%; box-sizing: border-box; margin: 8px 0 6px; height: 40px; padding: 0 14px; border: 1px solid var(--border); border-radius: 99px; font: inherit; background: var(--surface, #fff); color: inherit; }
+.mu { display: grid; grid-template-columns: 38px 1fr; gap: 4px 12px; padding: 12px 2px; border-bottom: 1px solid var(--border); align-items: center; }
+.mu-av { width: 38px; height: 38px; font-size: .75rem; grid-row: span 2; }
+.mu-main { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mu-main small { color: var(--muted); font-size: .76rem; }
+.mu-ban { color: #c0392b; font-weight: 700; }
+.mu-actions select { height: 30px; padding: 0 8px; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: .8rem; background: var(--surface, #fff); color: inherit; }
+.role-chip b { white-space: nowrap; }

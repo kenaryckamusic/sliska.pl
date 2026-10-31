@@ -1306,7 +1306,7 @@ const fmt1 = n => Utils.formatScore(Math.round(n * 10) / 10);
 
 function votersHtml(list) {
   if (!list || !list.length) return '';
-  return `<div class="rv-who"><b>Kto jak ocenił</b><ul>${list.map(v => `<li${v.staff ? ' class="is-staff"' : ''}><span class="avatar">${readerAvatar(v.name, v.av, v.u)}</span><span class="rv-who-name">${Utils.esc(v.name)}</span><b>${fmt1(v.score)}</b></li>`).join('')}</ul></div>`;
+  return `<div class="rv-who"><b>Kto jak ocenił</b><ul>${list.map(v => `<li${v.staff || v.role ? ' class="is-staff"' : ''}><span class="avatar">${readerAvatar(v.name, v.av, v.u)}</span><span class="rv-who-name">${Utils.esc(v.name)}</span><b>${fmt1(v.score)}</b></li>`).join('')}</ul></div>`;
 }
 
 function voteResultsHtml(editorScore, sum) {
@@ -1415,7 +1415,7 @@ function currentRoute() {
   if (parts[0] === 'szkic' && parts[1]) return { name: 'editor', id: null, draft: decodeURIComponent(parts[1]) };
   if (parts[0] === 'panel') return { name: 'panel' };
   if (parts[0] === 'ustawienia') return { name: 'settings' };
-  if (parts[0] === 'konto') return { name: 'account' };
+  if (parts[0] === 'konto') return { name: 'account', tab: parts[1] || '' };
   if (parts[0] === 'kategoria' && parts[1]) return { name: 'home', category: decodeURIComponent(parts[1]) };
   if (parts[0] === 'tag' && parts[1]) return { name: 'home', tag: decodeURIComponent(parts[1]) };
   if (parts[0] === 'artysta' && parts[1]) return { name: 'home', artist: decodeURIComponent(parts[1]) };
@@ -5752,6 +5752,7 @@ const Readers = {
   async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
+    renderReaderCard();
     const b = $('#btn-account');
     if (b) {
       b.classList.toggle('is-on', this.loggedIn());
@@ -5855,7 +5856,7 @@ function commentItemHtml(c, kids) {
   return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}" id="c-${c.id}">
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
-      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${c.staff ? '<span class="cmt-badge">Redakcja</span>' : ''}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
+      <div class="cmt-head"><b>${Utils.esc(c.name)}</b>${roleBadge(c)}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time></div>
       ${cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
       <div class="cmt-actions">${reply}${link}${own}${rep}${adm}</div>
@@ -5898,7 +5899,8 @@ async function sendComment(e) {
     const d = await actorApi('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text, replyTo: Cmt.replyTo ? Cmt.replyTo.id : undefined, staffName: staffName() }) });
     Cmt.list.unshift(d.comment); Cmt.replyTo = null;
     Cmt.msg = d.held ? 'Komentarz zawiera link lub niedozwolone słowa, więc czeka na zatwierdzenie redakcji.' : '';
-    if (!d.held && Push.supported() && Notification.permission !== 'granted') Cmt.msg = 'Opublikowano. Włącz powiadomienia (dzwonek na górze), a damy Ci znać, gdy ktoś odpowie na Twój komentarz.';
+    if (d.censored && !d.held) Cmt.msg = 'Opublikowano. Niektóre słowa zostały automatycznie ocenzurowane.';
+    else if (!d.held && Push.supported() && Notification.permission !== 'granted') Cmt.msg = 'Opublikowano. Włącz powiadomienia (dzwonek na górze), a damy Ci znać, gdy ktoś odpowie na Twój komentarz.';
     $('#cmt-text').value = '';
   } catch (err) { Cmt.msg = readerErr(err); }
   finally { Cmt.sending = false; drawComments(); }
@@ -5953,9 +5955,9 @@ async function commentAction(act, id, btn) {
 
 /** Zapytania moderatora: token z projektu redakcji (altplus-news). */
 async function adminApi(path, opts = {}) {
-  const u = FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
-  if (!u) throw new Error('Moderacja działa po zalogowaniu kontem redaktora w trybie Firebase.');
-  const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await u.getIdToken() }, cache: 'no-store' });
+  const h = await actorAuth();
+  if (!h.authorization) throw new Error('Moderacja działa po zalogowaniu.');
+  const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...h }, cache: 'no-store' });
   let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
   if (!r.ok) throw new Error(d.error === 'forbidden' ? 'Brak uprawnień moderatora.' : (READER_ERR[d.error] || 'Nie udało się wykonać akcji.'));
   return d;
@@ -6038,9 +6040,14 @@ function renderAccount() {
   }
   const me = Readers.me || {};
   const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
+  const rt = currentRoute().tab;
+  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : '';
+  const tabsHtml = canMod() ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a>` : ''}</div>` : '';
   el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
     <h1 class="panel-title">Twoje konto</h1>
-    <div class="settings-form">
+    <p class="panel-sub">${Utils.esc(me.name || '')}${ROLE_LABEL[me.role] ? ' · ' + ROLE_LABEL[me.role] : ''}</p>
+    ${tabsHtml}
+    ${tab ? '<div id="acc-mod" class="panel-list"></div>' : `<div class="settings-form">
       <section class="panel st-card">
         <div class="st-head"><h2 class="st-h">Profil</h2><p class="st-sub">Tak widzą Cię inni w komentarzach.</p></div>
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
@@ -6058,7 +6065,22 @@ function renderAccount() {
         <div class="st-row"><span class="muted">Hasło</span><button type="button" class="btn btn-sm" id="acc-reset">Wyślij link do zmiany hasła</button></div>
         <div class="st-row"><span class="muted">Sesja</span><button type="button" class="btn btn-sm" id="acc-logout">Wyloguj</button></div>
       </section>
-    </div>`;
+    </div>`}`;
+  if (tab === 'komentarze') renderModComments($('#acc-mod'), false);
+  else if (tab === 'uzytkownicy') renderModUsersPanel($('#acc-mod'));
+}
+
+/** Kafelek profilu po lewej także dla zalogowanego czytelnika (w tym samym miejscu co u redaktora, bez funkcji redakcyjnych). */
+function renderReaderCard() {
+  const on = Readers.loggedIn() && !Auth.isAdmin();
+  document.body.classList.toggle('is-reader', on);
+  if (!on) return;
+  const me = Readers.me || {};
+  $('#profile-name').textContent = me.name || 'Twoje konto';
+  $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);
+  $('#profile-role').textContent = ROLE_LABEL[me.role] || 'Czytelnik';
+  $('#btn-rd-mod').hidden = !canMod();
+  $('#btn-rd-users').hidden = !canManage();
 }
 
 async function shrinkToJpeg(file, size = 160) {
@@ -6094,45 +6116,116 @@ function bindReaderEvents() {
   });
 }
 
-/* ---- moderacja komentarzy w panelu redaktora ---- */
-async function renderModeration(all) {
-  const el = $('#panel-comments'); if (!el) return;
+/* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
+const Mod = { all: false };
+const ROLE_LABEL = { owner: 'Właściciel Portalu', editor: 'Redaktor' };
+const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
+const myRole = () => (Readers.me && Readers.me.role) || '';
+const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
+const canManage = () => Auth.isAdmin() || myRole() === 'owner';
+const roleBadge = c => c.staff ? '<span class="cmt-badge">Redakcja</span>' : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
+
+function modItemHtml(c) {
+  const a = state.articles.find(x => x.id === c.article);
+  const approve = c.status === 'hidden' ? 'Przywróć' : 'Zatwierdź';
+  return `<article class="mc" data-id="${c.id}" data-status="${c.status}">
+    <div class="mc-head"><b>${Utils.esc(c.name || 'Użytkownik')}</b>${roleBadge(c)}<span class="mc-st is-${c.status}">${MOD_ST[c.status] || c.status}${c.reports ? ' · zgłoszeń: ' + c.reports : ''}</span><time>${ago(c.at)}</time></div>
+    <a class="mc-art" href="#/artykul/${encodeURIComponent(c.article)}?k=${c.id}">${Utils.esc(a ? a.title : c.article)}</a>
+    <p class="mc-text">${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
+    <div class="mc-actions">${c.status !== 'ok' ? `<button type="button" data-mod-act="approve">${approve}</button>` : '<button type="button" data-mod-act="hide">Ukryj</button>'}<button type="button" class="is-danger" data-mod-act="delete">Usuń</button></div>
+  </article>`;
+}
+
+async function renderModComments(el, all) {
+  if (!el) return;
+  Mod.all = !!all; el.dataset.modroot = '1';
   el.innerHTML = '<p class="muted">Ładowanie…</p>';
   try {
     const d = await adminApi('/admin/comments?status=' + (all ? 'all' : 'attention'));
-    const title = id => { const a = state.articles.find(x => x.id === id); return a ? a.title : id; };
-    const ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
-    el.innerHTML = `<div class="cmt-row"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="btn btn-sm" data-mod="${all ? 'attention' : 'all'}">${all ? 'Pokaż tylko do sprawdzenia' : 'Pokaż wszystkie ostatnie'}</button></div>
-      ${d.comments.length ? d.comments.map(c => `<div class="panel-item mod-item"><div class="mod-top"><b>${Utils.esc(c.name || 'Użytkownik')}</b> <span class="badge-status">${ST[c.status] || c.status}${c.reports ? ' · zgłoszeń: ' + c.reports : ''}</span> <small class="muted">${ago(c.at)} · <a href="#/artykul/${encodeURIComponent(c.article)}">${Utils.esc(title(c.article))}</a></small></div>
-        <p>${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
-        <div class="cmt-row">${c.status !== 'ok' ? `<button class="btn btn-sm" data-mod-act="approve" data-id="${c.id}">Zatwierdź</button>` : `<button class="btn btn-sm" data-mod-act="hide" data-id="${c.id}">Ukryj</button>`}<button class="btn btn-sm btn-danger" data-mod-act="delete" data-id="${c.id}">Usuń</button></div></div>`).join('') : '<p class="muted">Brak komentarzy do sprawdzenia.</p>'}
-      <h3 class="mod-h">Użytkownicy</h3>
-      <div class="cmt-row"><input type="search" id="mod-q" class="mod-q" placeholder="Szukaj po nazwie…"><button type="button" class="btn btn-sm" data-mod="users">Szukaj</button></div>
-      <div id="mod-users"></div>`;
+    el.innerHTML = `<div class="mod-bar"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="mc-link" data-mod="${all ? 'attention' : 'all'}">${all ? 'Tylko do sprawdzenia' : 'Pokaż ostatnie'}</button></div>
+      <div class="mod-list">${d.comments.length ? d.comments.map(modItemHtml).join('') : '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'}</div>`;
   } catch (ex) { el.innerHTML = `<p class="form-error">${Utils.esc(ex.message || 'Nie udało się pobrać komentarzy.')}</p>`; }
 }
-async function renderModUsers() {
-  const box = $('#mod-users'); if (!box) return;
-  try {
-    const d = await adminApi('/admin/users?q=' + encodeURIComponent($('#mod-q').value.trim()));
-    box.innerHTML = d.users.length ? d.users.map(u => `<div class="panel-item mod-item"><div class="mod-top"><b>${Utils.esc(u.name)}</b> <small class="muted">komentarzy: ${u.comments}${u.banned ? ' · ZABLOKOWANY' : ''}</small></div>
-      <div class="cmt-row"><button class="btn btn-sm" data-mod-user="rename" data-uid="${Utils.esc(u.uid)}" data-name="${Utils.esc(u.name)}">Zmień nazwę</button><button class="btn btn-sm" data-mod-user="cooldown" data-uid="${Utils.esc(u.uid)}">Zdejmij limit 30 dni</button><button class="btn btn-sm ${u.banned ? '' : 'btn-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}" data-uid="${Utils.esc(u.uid)}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div></div>`).join('') : '<p class="muted">Brak użytkowników.</p>';
-  } catch (ex) { box.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p>`; }
+
+/** Zmiana bez przeładowania listy: pozycja przewijania zostaje, znika albo zmienia się tylko ta jedna pozycja. */
+function modApply(item, act) {
+  const status = act === 'delete' ? null : act === 'hide' ? 'hidden' : 'ok';
+  const list = item.parentElement;
+  if (!status || (!Mod.all && !['pending', 'reported'].includes(status))) {
+    item.classList.add('is-out');
+    setTimeout(() => { item.remove(); if (!list.querySelector('.mc')) list.innerHTML = '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'; }, 190);
+    return;
+  }
+  item.dataset.status = status;
+  const st = item.querySelector('.mc-st'); st.className = 'mc-st is-' + status; st.textContent = MOD_ST[status];
+  const first = item.querySelector('.mc-actions button');
+  first.dataset.modAct = status === 'ok' ? 'hide' : 'approve';
+  first.textContent = status === 'ok' ? 'Ukryj' : 'Przywróć';
+  first.disabled = false;
 }
+
+function modUserHtml(u) {
+  const staff = !!u.staff;
+  const opts = [['', 'Czytelnik'], ['editor', 'Redaktor'], ...(Auth.isAdmin() ? [['owner', 'Właściciel Portalu']] : [])];
+  const lock = staff || (u.role === 'owner' && !Auth.isAdmin());
+  const sel = staff ? '' : `<select data-mod-role ${lock ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}${u.role === 'owner' && !Auth.isAdmin() ? '<option value="owner" selected>Właściciel Portalu</option>' : ''}</select>`;
+  return `<div class="mu" data-uid="${Utils.esc(u.uid)}" data-name="${Utils.esc(u.name)}">
+    <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
+    <div class="mu-main"><b>${Utils.esc(u.name)}</b>${roleBadge({ staff, role: u.role })}<small>komentarzy: ${u.comments}${u.banned ? ' · <span class="mu-ban">zablokowany</span>' : ''}</small></div>
+    <div class="mu-actions">${sel}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button><button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div>
+  </div>`;
+}
+
+async function loadModUsers(el) {
+  const list = $('.mu-list', el); if (!list) return;
+  const y = window.scrollY;
+  try {
+    const d = await adminApi('/admin/users?q=' + encodeURIComponent($('.mod-q', el).value.trim()));
+    list.innerHTML = d.users.length ? d.users.map(modUserHtml).join('') : '<p class="muted">Brak użytkowników.</p>';
+    window.scrollTo(0, y);
+  } catch (ex) { list.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p>`; }
+}
+function renderModUsersPanel(el) {
+  if (!el) return;
+  el.dataset.modusers = '1';
+  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
+  loadModUsers(el);
+}
+/** Zakładka „Komentarze” w panelu redaktora: moderacja + (dla uprawnionych) użytkownicy. */
+function renderModeration(all) {
+  const el = $('#panel-comments'); if (!el) return;
+  el.innerHTML = '<div id="mod-c"></div>' + (canManage() ? '<div id="mod-u" class="mod-users"></div>' : '');
+  renderModComments($('#mod-c'), all);
+  if (canManage()) renderModUsersPanel($('#mod-u'));
+}
+
 document.addEventListener('click', async e => {
   const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]');
   try {
-    if (m) { if (m.dataset.mod === 'users') renderModUsers(); else renderModeration(m.dataset.mod === 'all'); }
-    else if (a) { await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id: Number(a.dataset.id), action: a.dataset.modAct }) }); renderModeration(false); }
-    else if (u) {
-      const body = { uid: u.dataset.uid }, k = u.dataset.modUser;
-      if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', u.dataset.name); if (!n) return; body.name = n; }
+    if (m) { renderModComments(m.closest('[data-modroot]'), m.dataset.mod === 'all'); }
+    else if (a) {
+      const item = a.closest('.mc'); if (!item || a.disabled) return;
+      a.disabled = true;
+      try { await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id: Number(item.dataset.id), action: a.dataset.modAct }) }); modApply(item, a.dataset.modAct); }
+      catch (ex) { a.disabled = false; throw ex; }
+    } else if (u) {
+      const row = u.closest('.mu'), body = { uid: row.dataset.uid }, k = u.dataset.modUser;
+      if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
       else if (k === 'cooldown') body.resetCooldown = true;
       else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; body.banned = k === 'ban'; }
-      await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); renderModUsers();
+      await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); loadModUsers(row.closest('[data-modusers]'));
     }
   } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
 });
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-mod-role]'); if (!sel) return;
+  const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
+  try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, role: sel.value }) }); toast('Rola zapisana.'); }
+  catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  loadModUsers(box);
+});
+let modQTimer = 0;
+document.addEventListener('input', e => { if (e.target.matches('.mod-q')) { clearTimeout(modQTimer); const box = e.target.closest('[data-modusers]'); modQTimer = setTimeout(() => loadModUsers(box), 300); } });
 
 /* ---------- Routing ---------- */
 function showView(name) {
@@ -6283,6 +6376,7 @@ function applyAuthUI() {
     location.hash = '#/';
     return;
   }
+  renderReaderCard();
   if (Auth.isAdmin()) loadProfile();
   else { state.profile = EMPTY_PROFILE(); state.profileLoaded = false; state.profileUid = ''; renderProfile(); }
   refreshViews();
@@ -6622,7 +6716,11 @@ function bindEvents() {
   });
 
   // Przyciski nawigacji
+  $('#btn-rd-account').addEventListener('click', () => { location.hash = '#/konto'; });
+  $('#btn-rd-mod').addEventListener('click', () => { location.hash = '#/konto/komentarze'; });
+  $('#btn-rd-users').addEventListener('click', () => { location.hash = '#/konto/uzytkownicy'; });
   $('#btn-logout').addEventListener('click', async () => {
+    if (!Auth.isAdmin() && Readers.loggedIn()) { await Readers.logout(); location.hash = '#/'; toast('Wylogowano.'); return; }
     await Auth.logout();
     if (['editor', 'panel', 'settings'].includes(currentRoute().name)) location.hash = '#/';
     applyAuthUI();
