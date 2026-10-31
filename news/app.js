@@ -42,6 +42,15 @@ const CONFIG = {
   // Jeśli go podasz, panel redaktora odblokuje się tylko dla tego konta.
   // Prawdziwą ochroną zapisu są i tak reguły Firestore.
   ADMIN_UID: '',
+  // Konta czytelników i komentarze: dane OSOBNEGO projektu Firebase (tylko Authentication). null = funkcja wyłączona.
+  READER_FIREBASE: {
+    apiKey: 'AIzaSyDi7M7X4cwsfIkxTebYlGsJPFN-NoAtwAU',
+    authDomain: 'sliska-users.firebaseapp.com',
+    projectId: 'sliska-users',
+    storageBucket: 'sliska-users.firebasestorage.app',
+    messagingSenderId: '236153117470',
+    appId: '1:236153117470:web:6b4bd4db90314fed52470f'
+  },
   LEGACY_PROFILE_UID: 'BxuILURRczbzyR2SWZg4jMltO0B3',   // konto, które dostaje dotychczasowy wspólny profil (nazwa i zdjęcie)
 
   MAX_ARTICLES: 40,        // ile najnowszych artykułów pobierać z bazy (oszczędza limit odczytów)
@@ -1375,6 +1384,7 @@ function currentRoute() {
   if (parts[0] === 'szkic' && parts[1]) return { name: 'editor', id: null, draft: decodeURIComponent(parts[1]) };
   if (parts[0] === 'panel') return { name: 'panel' };
   if (parts[0] === 'ustawienia') return { name: 'settings' };
+  if (parts[0] === 'konto') return { name: 'account' };
   if (parts[0] === 'kategoria' && parts[1]) return { name: 'home', category: decodeURIComponent(parts[1]) };
   if (parts[0] === 'tag' && parts[1]) return { name: 'home', tag: decodeURIComponent(parts[1]) };
   if (parts[0] === 'artysta' && parts[1]) return { name: 'home', artist: decodeURIComponent(parts[1]) };
@@ -1712,6 +1722,8 @@ function articleHtml(a, plain) {
        </aside>`
     : '';
 
+  const commentsHtml = commentsSectionHtml(a);
+
   return `<article class="article">
       <header class="article-header">
         <div class="card-tags">
@@ -1726,7 +1738,7 @@ function articleHtml(a, plain) {
         </div>
       </header>
       ${heroFig}
-      <div class="article-layout ${info.length ? 'has-infobox' : ''}">
+      <div class="article-layout ${info.length ? 'has-infobox' : ''} ${commentsHtml ? 'has-comments' : ''}">
         <div class="article-main">
           <p class="article-lead">${Utils.esc(a.lead)}</p>
           <div class="article-body">${Sanitizer.render(a.content)}</div>
@@ -1734,7 +1746,7 @@ function articleHtml(a, plain) {
           ${tagsBlockHtml(a)}
           ${shareBarHtml(a)}
         </div>
-        ${infobox}
+        ${infobox || commentsHtml ? `<div class="article-aside">${infobox}${commentsHtml}</div>` : ''}
       </div>
     </article>`;
 }
@@ -1851,6 +1863,7 @@ function renderArticleView(id) {
     ${relatedHtml}`;
   enhanceGalleries(el);
   initReaderVote(a);
+  initComments(a);
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
 }
@@ -3095,11 +3108,14 @@ function legalHtml(doc) {
       <h2>3. Zgłaszanie tematów</h2>
       <p>Każdy może przesłać redakcji zgłoszenie przez formularz „Zgłoś temat”. Wysyłając zgłoszenie, oświadczasz, że masz prawo przekazać zawarte w nim informacje i materiały oraz że nie naruszają one praw osób trzecich ani przepisów prawa. Prosimy nie przesyłać treści bezprawnych, obraźliwych ani danych wrażliwych.</p>
       <p>Redakcja nie gwarantuje odpowiedzi ani publikacji. Nadesłane informacje mogą posłużyć jako inspiracja do własnych tekstów. Przekazanie zgłoszenia nie oznacza przeniesienia autorskich praw majątkowych, a ewentualne wykorzystanie nadesłanych materiałów wymaga odrębnej zgody ich autora.</p>
-      <h2>4. Odpowiedzialność</h2>
+      <h2>4. Konta i komentarze</h2>
+      <p>Konto czytelnika jest bezpłatne i dobrowolne; pozwala komentować artykuły (poza szybkimi newsami) oraz ustawić nazwę użytkownika i zdjęcie profilowe. Nazwę możesz zmienić raz na 30 dni. Komentujesz pod własną nazwą i odpowiadasz za treść swoich wpisów.</p>
+      <p>Zabronione są komentarze wulgarne, obraźliwe, nawołujące do nienawiści, naruszające prawa osób trzecich, reklamowe oraz zawierające linki. Redakcja może ukryć lub usunąć komentarz, zmienić nieodpowiednią nazwę użytkownika oraz zablokować konto naruszające regulamin. Komentarze możesz zgłaszać przyciskiem „Zgłoś”. Przy wybranych artykułach komentarze mogą być wyłączone.</p>
+      <h2>5. Odpowiedzialność</h2>
       <p>Redakcja nie odpowiada za treść zewnętrznych stron, do których prowadzą linki w Serwisie, ani za przerwy w działaniu Serwisu wynikające z przyczyn niezależnych od niej.</p>
-      <h2>5. Reklamacje i kontakt</h2>
+      <h2>6. Reklamacje i kontakt</h2>
       <p>Uwagi i reklamacje dotyczące działania Serwisu można zgłaszać na adres ${mail}. Odpowiadamy w rozsądnym terminie, zwykle do 14 dni.</p>
-      <h2>6. Zmiany regulaminu</h2>
+      <h2>7. Zmiany regulaminu</h2>
       <p>Regulamin może się zmieniać. Aktualna wersja jest zawsze dostępna w Serwisie, a data jej obowiązywania podana na początku dokumentu.</p>`;
   }
   return `<h1>Polityka prywatności</h1>
@@ -3112,6 +3128,7 @@ function legalHtml(doc) {
       <li><strong>Dane techniczne</strong> – podczas wizyty w Serwisie serwery (hosting i usługi Google Firebase) mogą zapisywać w dziennikach adres IP, rodzaj przeglądarki i czas wizyty. Cel: zapewnienie działania i bezpieczeństwa Serwisu. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO).</li>
       <li><strong>Oceny recenzji</strong> – ocena, którą oddajesz pod recenzją, oraz losowy identyfikator przeglądarki. Aby jedna osoba nie mogła głosować wielokrotnie, zapisujemy też nieodwracalny skrót (hash) Twojego adresu sieciowego – nie przechowujemy samego adresu IP. Cel: uczciwe zliczanie ocen. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO). Oceny są anonimowe i przechowywane do czasu usunięcia recenzji.</li>
       <li><strong>Powiadomienia o nowych artykułach</strong> – jeśli klikniesz dzwonek, zapisujemy techniczny adres subskrypcji Twojej przeglądarki, aby wysłać powiadomienie. Cel: informowanie o nowych artykułach. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Zgodę wycofasz, klikając dzwonek ponownie lub wyłączając powiadomienia w przeglądarce.</li>
+      <li><strong>Konto czytelnika i komentarze</strong> – adres e-mail, hasło (przechowywane w usłudze Google Firebase Authentication w postaci zabezpieczonej), nazwa użytkownika, opcjonalne zdjęcie profilowe oraz treść i data Twoich komentarzy. Cel: prowadzenie konta i publikowanie komentarzy. Podstawa: umowa o świadczenie usługi konta (art. 6 ust. 1 lit. b RODO). Nazwa użytkownika, zdjęcie i komentarze są publiczne. Dane przechowujemy do usunięcia konta; usunięcia konta lub komentarzy możesz zażądać mailowo.</li>
     </ul>
     <p>Podanie danych jest dobrowolne.</p>
     <h2>3. Komu przekazujemy dane</h2>
@@ -3298,6 +3315,7 @@ function setPanelTab(t) {
   $$('#view-panel .ptab').forEach(b => { const on = b.dataset.ptab === t; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
   $$('#view-panel .ptab-pane').forEach(p => { p.hidden = p.dataset.pane !== t; });
   try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
+  if (t === 'comments') renderModeration(false);
 }
 
 function updatePanelCounts() {
@@ -3469,7 +3487,7 @@ function defaultAuthor() {
 function emptyData() {
   return {
     title: '', lead: '', categories: state.profile.defaultCategory ? [state.profile.defaultCategory] : [], author: defaultAuthor(),
-    image: '', imageCaption: '', imageSource: '', urgent: false, featured: false, status: '', related: [], infobox: [], content: '',
+    image: '', imageCaption: '', imageSource: '', urgent: false, featured: false, commentsOff: false, status: '', related: [], infobox: [], content: '',
     tags: '',
     reviewOn: false, reviewScore: '', reviewKind: 'Albumy', reviewCoverSame: false, reviewCover: '', reviewWork: '', reviewArtist: '', reviewYear: '',
     scheduleOn: false, scheduleAt: ''
@@ -3498,6 +3516,7 @@ function normalizeData(obj) {
     reviewYear: o.reviewYear || '',
     urgent: !!o.urgent,
     featured: !!o.featured,
+    commentsOff: !!o.commentsOff,
     status: Utils.STATUSES[o.status] ? o.status : '',
     related: Array.isArray(o.related) ? o.related.filter(x => typeof x === 'string').slice(0, 3) : [],
     infobox: Array.isArray(o.infobox) ? o.infobox.map(r => ({ label: r.label || '', value: r.value || '' })) : [],
@@ -3551,6 +3570,7 @@ function collectData() {
     reviewYear: $('#f-review-year').value,
     urgent: $('#f-urgent').checked,
     featured: $('#f-featured').checked,
+    commentsOff: $('#f-comments-off').checked,
     status: $('#f-status').value,
     related: editor.related.slice(),
     infobox: $$('.info-row').map(row => ({
@@ -3737,6 +3757,7 @@ function applyData(d) {
   $('#editor-author').textContent = 'Autor: ' + editor.author;
   $('#f-urgent').checked = d.urgent;
   $('#f-featured').checked = d.featured;
+  $('#f-comments-off').checked = !!d.commentsOff;
   $('#f-status').value = d.status || '';
   editor.related = (d.related || []).slice(0, 3);
   renderRelatedPicker();
@@ -5400,6 +5421,7 @@ async function saveArticle(e) {
     review,
     urgent: d.urgent,
     featured: d.featured,
+    commentsOff: !!d.commentsOff,
     status: d.status,
     related: d.related,
     infobox: d.infobox.map(r => ({ label: r.label.trim(), value: r.value.trim() })).filter(r => r.label && r.value),
@@ -5482,6 +5504,7 @@ function openPreview() {
       : null,
     urgent: d.urgent,
     featured: d.featured,
+    commentsOff: !!d.commentsOff,
     status: d.status,
     related: d.related,
     infobox: d.infobox.map(r => ({ label: r.label.trim(), value: r.value.trim() })),
@@ -5626,9 +5649,354 @@ function deleteFigure() {
   closeModal('image-modal');
 }
 
+
+/* =========================================================
+   Konta czytelników i komentarze
+   ========================================================= */
+const READER_ERR = {
+  name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'W nazwie dozwolone są litery, cyfry, spacja oraz _ . -',
+  name_bad: 'Ta nazwa jest niedozwolona. Wybierz inną.', name_taken: 'Ta nazwa jest już zajęta.',
+  name_cooldown: 'Nazwę użytkownika możesz zmieniać raz na 30 dni.', verify: 'Potwierdź adres e-mail (link w wiadomości od nas), żeby komentować.',
+  banned: 'Twoje konto zostało zablokowane.', rate: 'Za dużo prób – spróbuj ponownie później.', dup: 'Taki komentarz już dodałeś.',
+  off: 'Komentarze do tego artykułu są wyłączone.', short: 'Komentarz jest za krótki.', long: 'Komentarz jest za długi (maks. 600 znaków).',
+  no_profile: 'Najpierw ustaw nazwę użytkownika na stronie konta.', avatar: 'Nie udało się zapisać zdjęcia.', auth: 'Zaloguj się ponownie.',
+  readers_off: 'Komentarze są chwilowo niedostępne.', 'auth/email-already-in-use': 'Ten adres e-mail ma już konto. Zaloguj się.',
+  'auth/weak-password': 'Hasło musi mieć co najmniej 6 znaków.', 'auth/invalid-email': 'Nieprawidłowy adres e-mail.',
+  'auth/invalid-credential': 'Nieprawidłowy e-mail lub hasło.', 'auth/wrong-password': 'Nieprawidłowy e-mail lub hasło.', 'auth/user-not-found': 'Nieprawidłowy e-mail lub hasło.',
+  'auth/too-many-requests': 'Zbyt wiele prób. Spróbuj za kilka minut.', 'auth/network-request-failed': 'Brak połączenia z internetem.',
+  'auth/missing-password': 'Wpisz hasło.', 'auth/operation-not-allowed': 'Logowanie e-mailem nie jest włączone w projekcie czytelników.'
+};
+const readerErr = e => READER_ERR[(e && (e.code || e.error || e.message))] || 'Coś poszło nie tak. Spróbuj ponownie.';
+
+const Readers = {
+  auth: null, user: null, me: null, loading: true,
+  enabled() { const c = CONFIG.READER_FIREBASE; return !!(c && c.apiKey && c.projectId); },
+  async init() {
+    if (!this.enabled()) { this.loading = false; return; }
+    try {
+      const v = CONFIG.FIREBASE_SDK_VERSION;
+      if (!window.firebase || !firebase.initializeApp) await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-app-compat.js`);
+      if (!firebase.auth) await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-auth-compat.js`);
+      const app = firebase.apps.find(a => a.name === 'readers') || firebase.initializeApp(CONFIG.READER_FIREBASE, 'readers');
+      this.auth = app.auth();
+      try { await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch { /* ignoruj */ }
+      this.auth.onAuthStateChanged(async u => {
+        this.user = u; this.me = null;
+        if (u) await this.loadMe();
+        this.loading = false; this.render();
+      });
+    } catch (e) { console.warn('Konta czytelników niedostępne:', e); this.loading = false; this.auth = null; }
+  },
+  async api(path, opts = {}) {
+    const headers = { 'content-type': 'application/json' };
+    if (this.user) { try { headers.authorization = 'Bearer ' + await this.user.getIdToken(); } catch { /* ignoruj */ } }
+    const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) }, cache: 'no-store' });
+    let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
+    if (!r.ok) { const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
+    return d;
+  },
+  async loadMe() { try { this.me = await this.api('/me'); } catch { this.me = null; } },
+  loggedIn() { return !!this.user; },
+  verified() { return !!(this.user && this.user.emailVerified); },
+  hasName() { return !!(this.me && this.me.name); },
+  async register(email, pw, name) {
+    const cred = await this.auth.createUserWithEmailAndPassword(email, pw);
+    this.user = cred.user;
+    try { await cred.user.sendEmailVerification(); } catch { /* ignoruj */ }
+    try { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); } catch (e) { e.accountCreated = true; throw e; }
+    this.render();
+  },
+  async login(email, pw) { await this.auth.signInWithEmailAndPassword(email, pw); },
+  async logout() { await this.auth.signOut(); },
+  async reset(email) { await this.auth.sendPasswordResetEmail(email); },
+  async resend() { await this.user.sendEmailVerification(); },
+  async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); },
+  async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
+  async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
+  render() {
+    const b = $('#btn-account');
+    if (b) {
+      b.hidden = !this.enabled() || !this.auth;
+      b.classList.toggle('is-on', this.loggedIn());
+      b.title = this.loggedIn() ? 'Twoje konto' + (this.me && this.me.name ? ' (' + this.me.name + ')' : '') : 'Zaloguj się lub załóż konto';
+    }
+    if (currentRoute().name === 'account') renderAccount();
+    drawComments();
+  }
+};
+
+const ago = ms => {
+  const m = Math.floor((Date.now() - ms) / 60000);
+  if (m < 1) return 'przed chwilą';
+  if (m < 60) return m + ' min temu';
+  const h = Math.floor(m / 60);
+  if (h < 24) return h + ' ' + plural(h, 'godzinę', 'godziny', 'godzin') + ' temu';
+  const d = Math.floor(h / 24);
+  if (d < 30) return d + ' ' + plural(d, 'dzień', 'dni', 'dni') + ' temu';
+  return new Date(ms).toLocaleDateString('pl-PL');
+};
+const readerAvatar = (name, av, pub) => av ? `<img src="${CONFIG.API_BASE}/avatar/${Utils.esc(pub)}.jpg?v=${av}" alt="" loading="lazy">` : `<span>${Utils.esc((name || '?').trim().slice(0, 2).toUpperCase())}</span>`;
+
+/* ---- komentarze pod artykułem ---- */
+const Cmt = { article: null, list: [], off: false, ok: false, expanded: false, sending: false, msg: '' };
+const CMT_SHOWN = 5;
+
+function commentsSectionHtml(a) {
+  if (!Readers.enabled() || a.quick || !isPublished(a)) return '';
+  return `<section class="comments" id="comments" data-article="${Utils.esc(a.id)}" hidden aria-label="Komentarze"></section>`;
+}
+
+async function initComments(a) {
+  const box = $('#comments');
+  if (!box || box.dataset.article !== a.id) return;
+  Cmt.article = a.id; Cmt.list = []; Cmt.off = false; Cmt.ok = false; Cmt.expanded = false; Cmt.msg = '';
+  try {
+    const d = await Readers.api('/comments?article=' + encodeURIComponent(a.id));
+    if (!$('#comments') || $('#comments').dataset.article !== a.id) return;
+    Cmt.list = d.comments || []; Cmt.off = !!d.off; Cmt.ok = d.enabled !== false;
+  } catch { return; }          // brak API (np. tryb demonstracyjny) – sekcja zostaje ukryta
+  drawComments();
+}
+
+function commentItemHtml(c) {
+  const admin = Auth.isAdmin();
+  const own = c.mine && !admin ? `<button type="button" class="cmt-act" data-cmt="delete" data-id="${c.id}">Usuń</button>` : '';
+  const rep = !c.mine && Readers.loggedIn() ? `<button type="button" class="cmt-act" data-cmt="report" data-id="${c.id}">Zgłoś</button>` : '';
+  const adm = admin ? `<button type="button" class="cmt-act" data-cmt="admin-delete" data-id="${c.id}">Usuń</button>` : '';
+  return `<li class="cmt${c.status === 'pending' ? ' is-pending' : ''}">
+    <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
+    <div class="cmt-body">
+      <div class="cmt-head"><b>${Utils.esc(c.name)}</b><time>${ago(c.at)}</time></div>
+      <p>${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
+      ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
+      <div class="cmt-actions">${own}${rep}${adm}</div>
+    </div>
+  </li>`;
+}
+
+function drawComments() {
+  const box = $('#comments');
+  if (!box || !Cmt.ok || box.dataset.article !== Cmt.article) return;
+  box.hidden = false;
+  const visible = Cmt.list.filter(c => c.status !== 'pending' || c.mine);
+  const shown = Cmt.expanded ? visible : visible.slice(0, CMT_SHOWN);
+  let form = '';
+  if (Cmt.off) form = '<p class="cmt-note">Komentarze do tego artykułu są wyłączone.</p>';
+  else if (Readers.loading) form = '';
+  else if (!Readers.loggedIn()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
+  else if (!Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
+  else if (!Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
+  else form = `<form class="cmt-form" id="cmt-form"><textarea id="cmt-text" rows="3" maxlength="600" placeholder="Napisz komentarz jako ${Utils.esc(Readers.me.name)}…" aria-label="Komentarz"></textarea>
+      <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div></form>`;
+  const keep = $('#cmt-text') ? $('#cmt-text').value : '';
+  box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span></h2>
+    ${form}
+    ${Cmt.msg ? `<p class="cmt-msg">${Utils.esc(Cmt.msg)}</p>` : ''}
+    ${visible.length ? `<ul class="cmt-list">${shown.map(commentItemHtml).join('')}</ul>` : (Cmt.off ? '' : '<p class="cmt-empty">Bądź pierwszy – napisz, co myślisz.</p>')}
+    ${!Cmt.expanded && visible.length > CMT_SHOWN ? `<button type="button" class="btn btn-sm cmt-more" data-cmt="more">Pokaż resztę komentarzy (${visible.length - CMT_SHOWN})</button>` : ''}`;
+  const t = $('#cmt-text'); if (t && keep) { t.value = keep; $('#cmt-count').textContent = keep.length; }
+}
+
+async function sendComment(e) {
+  e.preventDefault();
+  if (Cmt.sending) return;
+  const text = $('#cmt-text').value.trim();
+  if (text.length < 2) return;
+  Cmt.sending = true; const btn = $('#cmt-send'); btn.disabled = true;
+  try {
+    const d = await Readers.api('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text }) });
+    Cmt.list.unshift(d.comment);
+    Cmt.msg = d.held ? 'Komentarz zawiera link lub niedozwolone słowa, więc czeka na zatwierdzenie redakcji.' : '';
+    $('#cmt-text').value = '';
+  } catch (err) { Cmt.msg = readerErr(err); }
+  finally { Cmt.sending = false; drawComments(); }
+}
+
+async function commentAction(act, id, btn) {
+  try {
+    if (act === 'more') { Cmt.expanded = true; drawComments(); return; }
+    if (act === 'login') { openReaderModal('login'); return; }
+    if (act === 'resend') { await Readers.resend(); Cmt.msg = 'Wysłaliśmy link ponownie.'; drawComments(); return; }
+    if (act === 'refresh') { await Readers.refresh(); if (!Readers.verified()) { Cmt.msg = 'Adres nie jest jeszcze potwierdzony. Kliknij link w wiadomości.'; drawComments(); } return; }
+    if (act === 'delete') {
+      if (!confirm('Usunąć Twój komentarz?')) return;
+      await Readers.api('/comments/delete', { method: 'POST', body: JSON.stringify({ id }) });
+      Cmt.list = Cmt.list.filter(c => c.id !== id);
+    } else if (act === 'report') {
+      await Readers.api('/comments/report', { method: 'POST', body: JSON.stringify({ id }) });
+      toast('Dziękujemy za zgłoszenie. Redakcja je sprawdzi.');
+      return;
+    } else if (act === 'admin-delete') {
+      if (!confirm('Usunąć ten komentarz?')) return;
+      await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id, action: 'delete' }) });
+      Cmt.list = Cmt.list.filter(c => c.id !== id);
+    }
+    Cmt.msg = ''; drawComments();
+  } catch (err) { toast(readerErr(err), 'error'); }
+}
+
+/** Zapytania moderatora: token z projektu redakcji (altplus-news). */
+async function adminApi(path, opts = {}) {
+  const u = FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
+  if (!u) throw new Error('Moderacja działa po zalogowaniu kontem redaktora w trybie Firebase.');
+  const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', authorization: 'Bearer ' + await u.getIdToken() }, cache: 'no-store' });
+  let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
+  if (!r.ok) throw new Error(d.error === 'forbidden' ? 'Brak uprawnień moderatora.' : (READER_ERR[d.error] || 'Nie udało się wykonać akcji.'));
+  return d;
+}
+
+/* ---- okno logowania / rejestracji czytelnika ---- */
+let readerMode = 'login';
+function openReaderModal(mode) {
+  readerMode = mode || 'login';
+  setReaderMode();
+  $('#reader-error').hidden = true;
+  openModal('reader-modal');
+}
+function setReaderMode(m) {
+  if (m) readerMode = m;
+  const reg = readerMode === 'register', rst = readerMode === 'reset', nm = readerMode === 'name';
+  $('#reader-title').textContent = reg ? 'Załóż konto' : rst ? 'Nie pamiętam hasła' : nm ? 'Wybierz nazwę użytkownika' : 'Zaloguj się';
+  $('#reader-name-field').hidden = !(reg || nm);
+  $('#reader-email-field').hidden = nm;
+  $('#reader-pass-field').hidden = rst || nm;
+  $('#reader-terms').hidden = !reg;
+  $('#reader-submit').textContent = reg ? 'Załóż konto' : rst ? 'Wyślij link' : nm ? 'Zapisz' : 'Zaloguj się';
+  $('#reader-switch').innerHTML = reg || rst ? '<a href="#" data-rmode="login">Mam już konto</a>' : nm ? '' : '<a href="#" data-rmode="register">Załóż konto</a> · <a href="#" data-rmode="reset">Nie pamiętam hasła</a>';
+  $('#reader-pass').autocomplete = reg ? 'new-password' : 'current-password';
+}
+async function submitReader(e) {
+  e.preventDefault();
+  const err = $('#reader-error'); err.hidden = true;
+  const email = $('#reader-email').value.trim(), pw = $('#reader-pass').value, name = $('#reader-name').value.trim();
+  const btn = $('#reader-submit'); btn.disabled = true;
+  try {
+    if (readerMode === 'login') { await Readers.login(email, pw); closeModal('reader-modal'); toast('Zalogowano.'); }
+    else if (readerMode === 'reset') { await Readers.reset(email); err.hidden = false; err.className = 'form-ok'; err.textContent = 'Jeśli konto istnieje, wysłaliśmy link do zmiany hasła.'; return; }
+    else if (readerMode === 'name') { await Readers.saveName(name); closeModal('reader-modal'); toast('Zapisano nazwę użytkownika.'); }
+    else {
+      if (!$('#reader-accept').checked) throw { code: 'terms' };
+      await Readers.register(email, pw, name);
+      closeModal('reader-modal');
+      toast('Konto założone! Sprawdź skrzynkę i potwierdź adres e-mail.');
+    }
+  } catch (ex) {
+    if (ex && ex.accountCreated) { setReaderMode('name'); }
+    err.className = 'form-error'; err.hidden = false;
+    err.textContent = ex && ex.code === 'terms' ? 'Zaakceptuj regulamin, żeby założyć konto.' : readerErr(ex);
+  } finally { btn.disabled = false; }
+}
+
+/* ---- strona konta czytelnika ---- */
+function renderAccount() {
+  const el = $('#view-account');
+  if (!Readers.enabled()) { el.innerHTML = notFoundHtml('Konta czytelników nie są jeszcze włączone.'); return; }
+  if (Readers.loading) { el.innerHTML = '<p class="muted">Ładowanie…</p>'; return; }
+  if (!Readers.loggedIn()) {
+    el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div><h1 class="panel-title">Konto czytelnika</h1>
+      <div class="panel st-card"><p class="muted">Załóż konto, żeby komentować artykuły i mieć własny profil.</p><div class="cmt-row"><button type="button" class="btn btn-primary" data-cmt="login">Zaloguj się</button><button type="button" class="btn" id="acc-register">Załóż konto</button></div></div>`;
+    return;
+  }
+  const me = Readers.me || {};
+  const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
+  el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
+    <h1 class="panel-title">Twoje konto</h1>
+    <div class="settings-form">
+      <section class="panel st-card">
+        <div class="st-head"><h2 class="st-h">Profil</h2><p class="st-sub">Tak widzą Cię inni w komentarzach.</p></div>
+        <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
+          <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
+        <label class="field"><span class="field-label">Nazwa użytkownika</span>
+          <input type="text" id="acc-name" maxlength="20" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
+          <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Nazwę możesz zmienić raz na 30 dni.'}</small></label>
+        ${next ? '' : '<div class="st-actions"><button type="button" class="btn btn-primary" id="acc-save">Zapisz nazwę</button></div>'}
+        <p class="form-error" id="acc-error" hidden></p>
+      </section>
+      <section class="panel st-card">
+        <div class="st-head"><h2 class="st-h">Konto</h2></div>
+        <div class="st-row"><span class="muted">Adres e-mail</span><strong>${Utils.esc(Readers.user.email || '')}</strong></div>
+        <div class="st-row"><span class="muted">Potwierdzenie e-mail</span>${Readers.verified() ? '<strong class="ok-text">Potwierdzony</strong>' : '<span><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link</button> <button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></span>'}</div>
+        <div class="st-row"><span class="muted">Hasło</span><button type="button" class="btn btn-sm" id="acc-reset">Wyślij link do zmiany hasła</button></div>
+        <div class="st-row"><span class="muted">Sesja</span><button type="button" class="btn btn-sm" id="acc-logout">Wyloguj</button></div>
+      </section>
+    </div>`;
+}
+
+async function shrinkToJpeg(file, size = 160) {
+  const img = await loadImage(URL.createObjectURL(file), false);
+  const c = document.createElement('canvas'); c.width = c.height = size;
+  const ctx = c.getContext('2d');
+  const k = Math.max(size / img.naturalWidth, size / img.naturalHeight);
+  ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, size, size);
+  ctx.drawImage(img, (size - img.naturalWidth * k) / 2, (size - img.naturalHeight * k) / 2, img.naturalWidth * k, img.naturalHeight * k);
+  return c.toDataURL('image/jpeg', 0.82);
+}
+
+function bindReaderEvents() {
+  $('#btn-account').addEventListener('click', () => { if (Readers.loggedIn()) location.hash = '#/konto'; else openReaderModal('login'); });
+  $('#reader-form').addEventListener('submit', submitReader);
+  $('#reader-modal').addEventListener('click', e => { const a = e.target.closest('[data-rmode]'); if (a) { e.preventDefault(); setReaderMode(a.dataset.rmode); $('#reader-error').hidden = true; } });
+  document.addEventListener('click', async e => {
+    const c = e.target.closest('[data-cmt]'); if (c) { commentAction(c.dataset.cmt, Number(c.dataset.id) || 0, c); return; }
+    if (e.target.id === 'acc-register') openReaderModal('register');
+    else if (e.target.id === 'acc-logout') { await Readers.logout(); location.hash = '#/'; }
+    else if (e.target.id === 'acc-reset') { try { await Readers.reset(Readers.user.email); toast('Wysłaliśmy link do zmiany hasła.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
+    else if (e.target.id === 'acc-save') {
+      const er = $('#acc-error'); er.hidden = true;
+      try { await Readers.saveName($('#acc-name').value.trim()); toast('Zapisano nazwę użytkownika.'); } catch (ex) { er.textContent = readerErr(ex); er.hidden = false; }
+    } else if (e.target.id === 'acc-avatar-remove') { try { await Readers.saveAvatar(null); toast('Zdjęcie usunięte.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
+  });
+  document.addEventListener('submit', e => { if (e.target.id === 'cmt-form') sendComment(e); });
+  document.addEventListener('input', e => { if (e.target.id === 'cmt-text') $('#cmt-count').textContent = e.target.value.length; });
+  document.addEventListener('change', async e => {
+    if (e.target.id !== 'acc-avatar-file' || !e.target.files[0]) return;
+    try { await Readers.saveAvatar(await shrinkToJpeg(e.target.files[0])); toast('Zdjęcie zapisane.'); } catch (ex) { toast(readerErr(ex), 'error'); }
+  });
+}
+
+/* ---- moderacja komentarzy w panelu redaktora ---- */
+async function renderModeration(all) {
+  const el = $('#panel-comments'); if (!el) return;
+  el.innerHTML = '<p class="muted">Ładowanie…</p>';
+  try {
+    const d = await adminApi('/admin/comments?status=' + (all ? 'all' : 'attention'));
+    const title = id => { const a = state.articles.find(x => x.id === id); return a ? a.title : id; };
+    const ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
+    el.innerHTML = `<div class="cmt-row"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="btn btn-sm" data-mod="${all ? 'attention' : 'all'}">${all ? 'Pokaż tylko do sprawdzenia' : 'Pokaż wszystkie ostatnie'}</button></div>
+      ${d.comments.length ? d.comments.map(c => `<div class="panel-item mod-item"><div class="mod-top"><b>${Utils.esc(c.name || 'Użytkownik')}</b> <span class="badge-status">${ST[c.status] || c.status}${c.reports ? ' · zgłoszeń: ' + c.reports : ''}</span> <small class="muted">${ago(c.at)} · <a href="#/artykul/${encodeURIComponent(c.article)}">${Utils.esc(title(c.article))}</a></small></div>
+        <p>${Utils.esc(c.text).replace(/\n/g, '<br>')}</p>
+        <div class="cmt-row">${c.status !== 'ok' ? `<button class="btn btn-sm" data-mod-act="approve" data-id="${c.id}">Zatwierdź</button>` : `<button class="btn btn-sm" data-mod-act="hide" data-id="${c.id}">Ukryj</button>`}<button class="btn btn-sm btn-danger" data-mod-act="delete" data-id="${c.id}">Usuń</button></div></div>`).join('') : '<p class="muted">Brak komentarzy do sprawdzenia.</p>'}
+      <h3 class="mod-h">Użytkownicy</h3>
+      <div class="cmt-row"><input type="search" id="mod-q" class="mod-q" placeholder="Szukaj po nazwie…"><button type="button" class="btn btn-sm" data-mod="users">Szukaj</button></div>
+      <div id="mod-users"></div>`;
+  } catch (ex) { el.innerHTML = `<p class="form-error">${Utils.esc(ex.message || 'Nie udało się pobrać komentarzy.')}</p>`; }
+}
+async function renderModUsers() {
+  const box = $('#mod-users'); if (!box) return;
+  try {
+    const d = await adminApi('/admin/users?q=' + encodeURIComponent($('#mod-q').value.trim()));
+    box.innerHTML = d.users.length ? d.users.map(u => `<div class="panel-item mod-item"><div class="mod-top"><b>${Utils.esc(u.name)}</b> <small class="muted">komentarzy: ${u.comments}${u.banned ? ' · ZABLOKOWANY' : ''}</small></div>
+      <div class="cmt-row"><button class="btn btn-sm" data-mod-user="rename" data-uid="${Utils.esc(u.uid)}" data-name="${Utils.esc(u.name)}">Zmień nazwę</button><button class="btn btn-sm" data-mod-user="cooldown" data-uid="${Utils.esc(u.uid)}">Zdejmij limit 30 dni</button><button class="btn btn-sm ${u.banned ? '' : 'btn-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}" data-uid="${Utils.esc(u.uid)}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button></div></div>`).join('') : '<p class="muted">Brak użytkowników.</p>';
+  } catch (ex) { box.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p>`; }
+}
+document.addEventListener('click', async e => {
+  const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]');
+  try {
+    if (m) { if (m.dataset.mod === 'users') renderModUsers(); else renderModeration(m.dataset.mod === 'all'); }
+    else if (a) { await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id: Number(a.dataset.id), action: a.dataset.modAct }) }); renderModeration(false); }
+    else if (u) {
+      const body = { uid: u.dataset.uid }, k = u.dataset.modUser;
+      if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', u.dataset.name); if (!n) return; body.name = n; }
+      else if (k === 'cooldown') body.resetCooldown = true;
+      else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; body.banned = k === 'ban'; }
+      await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); renderModUsers();
+    }
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+
 /* ---------- Routing ---------- */
 function showView(name) {
-  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick'].forEach(v => { $('#view-' + v).hidden = v !== name; });
+  ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account'].forEach(v => { $('#view-' + v).hidden = v !== name; });
   $('#layout').dataset.view = name;
 }
 
@@ -5713,6 +6081,10 @@ function routeCore() {
     showView('notfound');
     document.title = `Nie znaleziono – ${CONFIG.SITE_NAME}`;
     $('#view-notfound').innerHTML = notFoundHtml('Strona, której szukasz, nie istnieje albo adres jest nieprawidłowy.');
+  } else if (r.name === 'account') {
+    showView('account');
+    document.title = `Twoje konto – ${CONFIG.SITE_NAME}`;
+    renderAccount();
   } else if (r.name === 'settings') {
     showView('settings');
     document.title = `Ustawienia konta – ${CONFIG.SITE_NAME}`;
@@ -6576,6 +6948,7 @@ async function main() {
   renderCatPicker([]);
   buildCategoryNav();
   bindEvents();
+  bindReaderEvents();
   document.body.classList.toggle('is-admin', Auth.isAdmin());
 
   await DataService.init();
@@ -6598,6 +6971,7 @@ async function main() {
   state.ready = true;
   if (Auth.isAdmin()) loadProfile();
   Auth.onChange(() => applyAuthUI());
+  Readers.init();
 
   // Informacja o trybie danych widoczna tylko dla zalogowanej redakcji
   $('#data-mode').textContent = DataService.mode === 'firebase'
