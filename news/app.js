@@ -3774,6 +3774,10 @@ function enhanceGalleries(root) {
       if (t && box) box.scrollTo({ left: t.offsetLeft - (box.clientWidth - t.clientWidth) / 2, behavior: instant ? 'auto' : 'smooth' });
       [cur + 1, cur - 1].forEach(k => { const im = new Image(); im.src = srcs[(k + srcs.length) % srcs.length]; });
     };
+    // proporcje sceny = proporcje pierwszego zdjęcia (w granicach 4:3 – 2:1), żeby nie było pasów
+    const probe = new Image();
+    probe.onload = () => { if (probe.naturalWidth && probe.naturalHeight) stage.style.setProperty('--gx-ar', String(Math.min(2, Math.max(1.33, probe.naturalWidth / probe.naturalHeight)).toFixed(3))); };
+    probe.src = srcs[0];
     show(0, true);
     fig._gx = { show: n => show(n), get cur() { return cur; }, srcs, caption };
     fig.querySelector('.gx-prev').addEventListener('click', e => { e.stopPropagation(); show(cur - 1); });
@@ -4302,7 +4306,7 @@ function quickItemHtml(a, withAdmin) {
 }
 
 function quickStripHtml() {
-  const list = publishedQuick().slice(0, 4);
+  const list = publishedQuick().slice(0, 3);
   if (!list.length && !Auth.isAdmin()) return '';
   return `<section class="quick-strip" aria-label="Szybkie Newsy">
     <div class="quick-head"><h2 class="section-title">Szybkie Newsy</h2>
@@ -5790,7 +5794,16 @@ function bindEvents() {
       flush();
       if (editor.active && editor.dirty) saveCloudDraft(false);
     } else {
+      // powrót na kartę: odśwież dane, ale zostań w tym samym miejscu strony
+      const x = window.scrollX, y = window.scrollY;
       refreshViews();
+      if (y > 0) {
+        const back = () => { if (Math.abs(window.scrollY - y) > 4) window.scrollTo({ left: x, top: y, behavior: 'instant' }); };
+        back();
+        requestAnimationFrame(back);
+        setTimeout(back, 150);
+        setTimeout(back, 600);
+      }
     }
   });
 
