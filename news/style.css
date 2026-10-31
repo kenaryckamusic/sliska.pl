@@ -2449,3 +2449,20 @@ a.ptab { display: inline-flex; align-items: center; justify-content: center; tex
 .mu { align-items: stretch; }
 /* zalogowany: ikonka konta w rogu znika (na komputerze konto jest w kafelku profilu po lewej; na telefonie zostaje jako skrót) */
 @media (min-width: 861px) { body.is-reader #btn-account, body.is-admin #btn-account { display: none; } }
+
+/* profil: plakieta roli w jednej linii pod zdjęciem (komputer); na telefonie pod nazwą */
+.role-chip b { white-space: nowrap; }
+@media (min-width: 861px) {
+  .profile-top { flex-wrap: wrap; row-gap: 8px; }
+  .profile-info { display: contents; }
+  .profile-info strong { flex: 1 1 0; min-width: 0; align-self: flex-end; padding-bottom: 4px; }
+  .profile-top::after { content: ''; order: 2; flex: 0 0 100%; height: 0; }
+  .profile-info .role-chip { order: 3; margin-top: 0; max-width: 100%; }
+}
+/* telefon: przyciski w kafelku profilu zawijają się zamiast wychodzić poza ekran */
+@media (max-width: 860px) {
+  .profile-actions { flex-wrap: wrap; }
+  .profile-actions .btn-ico-row { flex: 1 1 100%; }
+  .profile-info .role-chip { max-width: 100%; }
+}
+.logo:focus-visible { outline: none; }

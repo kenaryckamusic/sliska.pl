@@ -6551,9 +6551,6 @@ function renderSettings() {
   $('#st-authors-card').hidden = !authors.length;
   $('#st-authors').innerHTML = authors.map(([n, c], i) =>
     `<label class="check-row"><input type="checkbox" name="st-author" value="${Utils.esc(n)}"><span><b>${Utils.esc(n)}</b> <em class="muted">· ${c} ${plural(c, 'artykuł', 'artykuły', 'artykułów')}</em></span></label>`).join('');
-  let email = '';
-  try { const u = FirebaseProvider.auth && FirebaseProvider.auth.currentUser; email = (Auth.useFirebase && u && u.email) || ''; } catch { /* ignoruj */ }
-  $('#st-email').textContent = email || (Auth.useFirebase ? '—' : 'tryb lokalny (bez konta e-mail)');
   updateSettingsAvatar();
 }
 
@@ -6824,7 +6821,6 @@ function bindEvents() {
     finally { updateDevicePush(); updatePushButton(); }
   });
   $('#st-test-push').addEventListener('click', testPush);
-  $('#st-logout').addEventListener('click', () => $('#btn-logout').click());
   $('#btn-panel').addEventListener('click', () => { location.hash = '#/panel'; });
   $('#btn-settings').addEventListener('click', () => { location.hash = '#/ustawienia'; });
 
