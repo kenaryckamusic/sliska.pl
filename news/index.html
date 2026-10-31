@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261031k">
+  <link rel="stylesheet" href="style.css?v=20261031p">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -86,17 +86,23 @@
   <aside class="side-left" id="side-left">
     <div class="profile-card" id="profile-card">
       <div class="profile-top">
-        <div class="avatar" id="profile-avatar"></div>
+        <div class="avatar avatar-ring" id="profile-avatar"></div>
         <div class="profile-info">
           <strong id="profile-name">Redaktor</strong>
-          <span class="muted">Zalogowany jako redaktor</span>
+          <span class="role-chip"><i></i>Redaktor</span>
         </div>
       </div>
+      <div class="profile-stats" aria-label="Twoje statystyki">
+        <div><b id="ps-mine">0</b><span>Moje teksty</span></div>
+        <div><b id="ps-today">0</b><span>Dziś</span></div>
+        <div><b id="ps-sched">0</b><span>Zaplanowane</span></div>
+      </div>
       <div class="profile-actions">
-        <button type="button" class="btn btn-primary btn-block" id="btn-new">+ Napisz artykuł</button>
-        <button type="button" class="btn btn-block" id="btn-panel">Robocze i zaplanowane</button>
-        <button type="button" class="btn btn-block" id="btn-settings">Ustawienia konta</button>
-        <button type="button" class="btn btn-block btn-ghost" id="btn-logout">Wyloguj</button>
+        <button type="button" class="btn btn-primary btn-block btn-ico-row" id="btn-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Napisz artykuł</span></button>
+        <button type="button" class="pa-row" data-action="quick-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Szybki news</span></button>
+        <button type="button" class="pa-row" id="btn-panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span>Robocze i plany</span><em id="pa-sched" hidden></em></button>
+        <button type="button" class="pa-row" id="btn-settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Ustawienia konta</span></button>
+        <button type="button" class="pa-row pa-logout" id="btn-logout"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Wyloguj</span></button>
       </div>
     </div>
     <div class="side-card">
@@ -200,6 +206,12 @@
           <input type="file" id="backup-file" accept="application/json,.json" hidden>
         </div>
       </div>
+
+      <h2 class="section-title">Podglądy linków</h2>
+      <div class="panel og-box">
+        <p class="muted">Każdy artykuł dostaje własną grafikę podglądu (taką jak „Grafika na X”), widoczną po wklejeniu linku na Facebooku, Messengerze czy Threads. Nowe i edytowane artykuły zapisują ją automatycznie. Tutaj odświeżysz ją dla wszystkich istniejących.</p>
+        <button type="button" class="btn btn-primary" id="og-refresh">Wygeneruj podglądy dla wszystkich artykułów</button>
+      </div>
     </section>
 
     <!-- WIDOK: EDYTOR -->
@@ -259,13 +271,13 @@
           </div>
 
           <aside class="editor-col-side">
-            <fieldset class="panel checklist-panel">
-              <legend>Gotowość artykułu</legend>
+            <details class="panel fold checklist-panel" id="fold-ready" open>
+              <summary>Gotowość artykułu</summary>
               <ul class="checklist" id="checklist"></ul>
-            </fieldset>
+            </details>
 
-            <fieldset class="panel">
-              <legend>Publikacja</legend>
+            <details class="panel fold" id="fold-publish" open>
+              <summary>Publikacja</summary>
               <label class="check">
                 <input type="checkbox" id="f-schedule-on">
                 <span>Zaplanuj publikację na później</span>
@@ -275,10 +287,10 @@
                 <input type="datetime-local" id="f-schedule-at">
               </label>
               <p class="hint" id="publish-hint"></p>
-            </fieldset>
+            </details>
 
-            <fieldset class="panel">
-              <legend>Ustawienia</legend>
+            <details class="panel fold" id="fold-settings" open>
+              <summary>Ustawienia</summary>
               <div class="field">
                 <span class="field-label">Kategorie *</span>
                 <div class="cat-picker" id="f-categories"></div>
@@ -306,10 +318,10 @@
                   <option value="plotka">Plotka</option>
                 </select>
               </label>
-            </fieldset>
+            </details>
 
-            <fieldset class="panel">
-              <legend>Zdjęcie główne</legend>
+            <details class="panel fold" id="fold-image" open>
+              <summary>Zdjęcie główne</summary>
               <label class="field">
                 <span class="field-label">Adres URL</span>
                 <input type="url" id="f-image-url" placeholder="https://…">
@@ -330,7 +342,7 @@
                 <img alt="Podgląd zdjęcia głównego">
                 <button type="button" class="btn btn-sm btn-danger" id="f-image-remove">Usuń zdjęcie</button>
               </div>
-            </fieldset>
+            </details>
 
             <details class="panel fold" id="fold-review">
               <summary>Recenzja</summary>
@@ -604,30 +616,37 @@
           <label class="ig-format"><input type="radio" name="ig-format" value="post" checked><span><strong>Post</strong><small>Instagram 4:5</small></span></label>
           <label class="ig-format"><input type="radio" name="ig-format" value="story"><span><strong>Story</strong><small>9:16 + naklejka</small></span></label>
           <label class="ig-format"><input type="radio" name="ig-format" value="quote"><span><strong>Cytat</strong><small>Story 9:16</small></span></label>
-          <label class="ig-format"><input type="radio" name="ig-format" value="carousel"><span><strong>Karuzela</strong><small>do 4 slajdów (ZIP)</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="carousel"><span><strong>Karuzela</strong><small>wybierz slajdy (ZIP)</small></span></label>
           <label class="ig-format"><input type="radio" name="ig-format" value="x"><span><strong>X / Twitter</strong><small>16:9</small></span></label>
           <label class="ig-format" id="ig-review-fmt"><input type="radio" name="ig-format" value="review"><span><strong>Recenzja</strong><small>okładka + ocena</small></span></label>
         </div>
-        <div class="ig-quote" id="ig-summary-box" hidden>
-          <label class="field">
-            <span class="field-label">Slajd 2 „W skrócie” (puste = bez tego slajdu)</span>
-            <textarea id="ig-summary" rows="4" maxlength="400" placeholder="Domyślnie zajawka artykułu"></textarea>
-          </label>
+        <div id="ig-carousel-box" hidden>
+          <p class="hint ig-hint">Kliknij slajdy, które chcesz mieć w karuzeli. Kolejność klikania = kolejność slajdów, numeracja i kolory (czerwony, ciemny, czerwony…) ustawią się same.</p>
+          <div class="ig-slide-grid" id="ig-slide-grid"></div>
         </div>
-        <div class="ig-quote" id="ig-quote-box" hidden>
-          <label class="field" id="ig-quote-pick-wrap">
-            <span class="field-label">Cytat z artykułu</span>
-            <select id="ig-quote-pick"></select>
-          </label>
-          <label class="field">
-            <span class="field-label" id="ig-quote-label">Treść cytatu</span>
-            <textarea id="ig-quote-text" rows="4" maxlength="400" placeholder="Wpisz lub wybierz cytat"></textarea>
-          </label>
-          <label class="field">
-            <span class="field-label">Autor</span>
-            <input type="text" id="ig-quote-author" maxlength="100" placeholder="Np. Jan Kowalski">
-          </label>
-        </div>
+        <details class="ig-texts" id="ig-texts" hidden>
+          <summary id="ig-texts-title">Teksty slajdów</summary>
+          <div class="ig-quote" id="ig-summary-box" hidden>
+            <label class="field">
+              <span class="field-label">Tekst slajdu „W skrócie” (puste = zajawka artykułu)</span>
+              <textarea id="ig-summary" rows="3" maxlength="400" placeholder="Domyślnie zajawka artykułu"></textarea>
+            </label>
+          </div>
+          <div class="ig-quote" id="ig-quote-box">
+            <label class="field" id="ig-quote-pick-wrap">
+              <span class="field-label">Cytat z artykułu</span>
+              <select id="ig-quote-pick"></select>
+            </label>
+            <label class="field">
+              <span class="field-label" id="ig-quote-label">Treść cytatu</span>
+              <textarea id="ig-quote-text" rows="3" maxlength="400" placeholder="Wpisz lub wybierz cytat"></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">Autor cytatu</span>
+              <input type="text" id="ig-quote-author" maxlength="100" placeholder="Np. Jan Kowalski">
+            </label>
+          </div>
+        </details>
         <p class="form-error" id="ig-error" hidden></p>
         <div class="modal-actions">
           <span class="spacer"></span>
@@ -706,6 +725,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261031k"></script>
+  <script src="app.js?v=20261031p"></script>
 </body>
 </html>
