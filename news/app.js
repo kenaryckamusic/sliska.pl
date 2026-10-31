@@ -27,6 +27,8 @@ const CONFIG = {
   // Ustaw na true dopiero po wdrożeniu og-worker.js w Cloudflare (patrz INSTRUKCJA.md).
   OG_WORKER: true,
   FIREBASE_OG_COLLECTION: 'og',
+  // Oceny czytelników i powiadomienia push – działają przez Cloudflare Worker (patrz INSTRUKCJA.md)
+  API_BASE: '/news/api',
 
   // Gdy Firebase nie odpowiada: false = pokaż komunikat o błędzie (zalecane na stronie publicznej),
   // true = przełącz się na localStorage z artykułami demonstracyjnymi.
@@ -63,7 +65,7 @@ const CONFIG = {
     ADMIN_NAME: 'SMG Entertainment Sp. z o.o. (NIP 3789021824)',
     ADMIN_ADDRESS: 'ul. Śliska 10, Warszawa',
     CONTACT_EMAIL: 'sliska10@wp.pl',
-    UPDATED: '30 października 2026'
+    UPDATED: '31 października 2026'
   },
 
   FIREBASE_SDK_VERSION: '10.12.2',
@@ -628,6 +630,9 @@ const LocalProvider = {
   async removeTip(id) {
     this._set(CONFIG.LOCAL_TIPS_KEY, this._get(CONFIG.LOCAL_TIPS_KEY).filter(t => t.id !== id));
   },
+  async updateTip(id, patch) {
+    this._set(CONFIG.LOCAL_TIPS_KEY, this._get(CONFIG.LOCAL_TIPS_KEY).map(t => t.id === id ? { ...t, ...patch } : t));
+  },
 
   async getDrafts() {
     return this._get(CONFIG.LOCAL_DRAFTS_KEY).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
@@ -765,6 +770,10 @@ const FirebaseProvider = {
     const snap = await this.db.collection(CONFIG.FIREBASE_TIPS_COLLECTION).orderBy('createdAt', 'desc').limit(200).get();
     return snap.docs.map(d => d.data());
   },
+  async updateTip(id, patch) {
+    if (!this.auth.currentUser) throw new Error('Zaloguj się, aby zmienić status zgłoszenia.');
+    await this.db.collection(CONFIG.FIREBASE_TIPS_COLLECTION).doc(id).update(patch);
+  },
   async removeTip(id) {
     if (!this.auth.currentUser) throw new Error('Zaloguj się, aby usuwać zgłoszenia.');
     try { await this.db.collection(CONFIG.FIREBASE_TIPS_COLLECTION).doc(id).delete(); } catch (err) { throw this._wrap(err); }
@@ -852,7 +861,8 @@ const OfflineProvider = {
   async getAllArticles() { return []; },
   async addTip() { throw new Error('Brak połączenia z bazą danych.'); },
   async getTips() { return []; },
-  async removeTip() { throw new Error('Brak połączenia z bazą danych.'); }
+  async removeTip() { throw new Error('Brak połączenia z bazą danych.'); },
+  async updateTip() { throw new Error('Brak połączenia z bazą danych.'); }
 };
 
 const DataService = {
@@ -897,7 +907,8 @@ const DataService = {
   getAllArticles() { return this.provider.getAllArticles(); },
   addTip(t) { return this.provider.addTip(t); },
   getTips() { return this.provider.getTips(); },
-  removeTip(id) { return this.provider.removeTip(id); }
+  removeTip(id) { return this.provider.removeTip(id); },
+  updateTip(id, patch) { return this.provider.updateTip(id, patch); }
 };
 
 /* =========================================================
@@ -1013,7 +1024,7 @@ const state = {
   tips: [],
   query: '',
   visible: CONFIG.PAGE_SIZE,
-  profile: { name: '', avatar: '' },
+  profile: EMPTY_PROFILE(),
   profileLoaded: false,
   profileUid: '',
   lastTick: Date.now()
@@ -1138,6 +1149,176 @@ function thumbFor(a, useCover) {
     if (c) return c;
   }
   return getImage(a);
+}
+
+
+/* ---------- Oceny czytelników (API w Cloudflare Workerze) ---------- */
+const Votes = {
+  MIN_SHOWN: 3,                       // tyle ocen potrzeba, żeby pokazać średnią
+  _all: null, _allAt: 0,
+  token() {
+    try {
+      let t = localStorage.getItem('sliska_vote_tok');
+      if (!t || !/^[A-Za-z0-9_-]{16,64}$/.test(t)) {
+        t = Array.from(crypto.getRandomValues(new Uint8Array(24)), b => b.toString(36).padStart(2, '0')).join('').slice(0, 32);
+        localStorage.setItem('sliska_vote_tok', t);
+      }
+      return t;
+    } catch { return 'anon' + Math.random().toString(36).slice(2, 12) + Date.now().toString(36); }
+  },
+  async summary(id) {
+    try {
+      const r = await fetch(`${CONFIG.API_BASE}/votes?article=${encodeURIComponent(id)}&token=${encodeURIComponent(this.token())}`, { cache: 'no-store' });
+      if (!r.ok || !/json/.test(r.headers.get('content-type') || '')) return null;
+      const j = await r.json();
+      return typeof j.n === 'number' ? j : null;
+    } catch { return null; }
+  },
+  async send(id, score) {
+    try {
+      const r = await fetch(`${CONFIG.API_BASE}/vote`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ article: id, score, token: this.token() }) });
+      let data = {}; try { data = await r.json(); } catch { /* ignoruj */ }
+      return { status: r.status, data };
+    } catch { return { status: 0, data: {} }; }
+  },
+  async all() {
+    if (this._all && Date.now() - this._allAt < 60000) return this._all;
+    try {
+      const r = await fetch(`${CONFIG.API_BASE}/votes`);
+      if (!r.ok || !/json/.test(r.headers.get('content-type') || '')) return {};
+      this._all = await r.json(); this._allAt = Date.now();
+      return this._all;
+    } catch { return {}; }
+  }
+};
+
+
+/* ---------- Powiadomienia push o nowych artykułach ---------- */
+const Push = {
+  supported() { return location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; },
+  isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
+  standalone() { return window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); },
+  key(b64) { const pad = '='.repeat((4 - b64.length % 4) % 4); const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, c => c.charCodeAt(0)); },
+  async sub() { try { const reg = await navigator.serviceWorker.ready; return await reg.pushManager.getSubscription(); } catch { return null; } },
+  async post(path, endpoint) { return fetch(`${CONFIG.API_BASE}/push/${path}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint }) }); },
+  async enable() {
+    const kr = await fetch(`${CONFIG.API_BASE}/push/key`).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (!kr || !kr.key) throw new Error('Powiadomienia są chwilowo niedostępne.');
+    const perm = await Notification.requestPermission();
+    if (perm !== 'granted') throw new Error('Powiadomienia są zablokowane – włącz je w ustawieniach przeglądarki dla tej strony.');
+    const reg = await navigator.serviceWorker.ready;
+    const sub = (await reg.pushManager.getSubscription()) || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: this.key(kr.key) });
+    const r = await this.post('subscribe', sub.endpoint);
+    if (!r.ok) { try { await sub.unsubscribe(); } catch { /* ignoruj */ } throw new Error('Nie udało się włączyć powiadomień. Spróbuj później.'); }
+  },
+  async disable() {
+    const sub = await this.sub();
+    if (!sub) return;
+    const ep = sub.endpoint;
+    try { await sub.unsubscribe(); } catch { /* ignoruj */ }
+    try { await this.post('unsubscribe', ep); } catch { /* ignoruj */ }
+  }
+};
+
+async function updatePushButton() {
+  const b = $('#btn-push');
+  if (!b) return;
+  const usable = Push.supported() || (Push.isIos() && !Push.standalone());
+  b.hidden = !usable;
+  if (!usable) return;
+  const on = Push.supported() && Notification.permission === 'granted' && !!(await Push.sub());
+  b.classList.toggle('is-on', on);
+  b.setAttribute('aria-pressed', on);
+  b.title = on ? 'Powiadomienia włączone – kliknij, aby wyłączyć' : 'Włącz powiadomienia o nowych artykułach';
+}
+
+async function togglePush() {
+  if (!Push.supported()) {
+    toast(Push.isIos() ? 'Na iPhonie: Udostępnij → „Do ekranu początkowego”, otwórz stronę z ikony i dopiero wtedy włącz dzwonek.' : 'Ta przeglądarka nie obsługuje powiadomień.', 'error');
+    return;
+  }
+  const b = $('#btn-push'); b.disabled = true;
+  try {
+    if (b.classList.contains('is-on')) { await Push.disable(); toast('Powiadomienia wyłączone.'); }
+    else { await Push.enable(); toast('Gotowe! Dostaniesz powiadomienie o nowym artykule.'); }
+  } catch (err) { toast(err.message || 'Nie udało się zmienić powiadomień.', 'error'); }
+  finally { b.disabled = false; updatePushButton(); }
+}
+
+const fmt1 = n => Utils.formatScore(Math.round(n * 10) / 10);
+
+function voteResultsHtml(editorScore, sum) {
+  const enough = sum.n >= Votes.MIN_SHOWN;
+  const diff = enough ? Math.round((sum.avg - editorScore) * 10) / 10 : 0;
+  const verdict = !enough ? '' : Math.abs(diff) < 0.3 ? 'Prawie zgodni z redakcją.' : diff > 0 ? `Czytelnicy dali o ${fmt1(Math.abs(diff))} więcej niż redakcja.` : `Czytelnicy dali o ${fmt1(Math.abs(diff))} mniej niż redakcja.`;
+  return `<div class="rv-bars">
+      <div class="rv-bar"><span class="rv-lab">Redakcja</span><span class="rv-track"><i style="width:${(editorScore * 10).toFixed(0)}%"></i></span><b>${fmt1(editorScore)}</b></div>
+      <div class="rv-bar is-readers"><span class="rv-lab">Czytelnicy</span><span class="rv-track"><i style="width:${enough ? (sum.avg * 10).toFixed(0) : 0}%"></i></span><b>${enough ? fmt1(sum.avg) : '–'}</b></div>
+    </div>
+    <p class="rv-note">${enough ? `${verdict} <span>(${sum.n} ${plural(sum.n, 'ocena', 'oceny', 'ocen')})</span>` : `Średnia pojawi się po ${Votes.MIN_SHOWN} ocenach (teraz: ${sum.n}).`}</p>`;
+}
+
+async function initReaderVote(a) {
+  const box = $('#reader-vote');
+  if (!box || !a.review || a.review.score == null || !isPublished(a)) return;
+  const sum = await Votes.summary(a.id);
+  if (!sum || !$('#reader-vote') || $('#reader-vote').dataset.article !== a.id) return;   // brak API albo użytkownik już zmienił stronę
+  const editor = a.review.score;
+  let mine = typeof sum.mine === 'number' ? sum.mine : null;
+  let cur = { ...sum };
+  let showResults = mine !== null;
+
+  const draw = (err) => {
+    box.hidden = false;
+    if (showResults) {
+      box.innerHTML = `<div class="rv-head"><h2>Oceny czytelników</h2>${mine !== null ? `<span class="rv-mine">Twoja ocena: <b>${fmt1(mine)}</b></span>` : ''}</div>
+        ${voteResultsHtml(editor, cur)}
+        <button type="button" class="rv-link" data-rv="edit">${mine !== null ? 'Zmień swoją ocenę' : 'Oceń i ty'}</button>`;
+    } else {
+      const v = mine !== null ? mine : 7;
+      box.innerHTML = `<div class="rv-head"><h2>A Ty jak oceniasz?</h2></div>
+        <p class="rv-lead">Daj swoją ocenę od 0 do 10 – średnią czytelników zobaczysz od razu po oddaniu głosu.</p>
+        <div class="rv-pick"><output class="rv-val" id="rv-val">${fmt1(v)}</output>
+          <input type="range" id="rv-range" min="0" max="10" step="0.5" value="${v}" aria-label="Twoja ocena od 0 do 10"></div>
+        ${err ? `<p class="form-error">${Utils.esc(err)}</p>` : ''}
+        <div class="rv-actions"><button type="button" class="btn btn-primary" data-rv="send">Oceń</button>
+        <button type="button" class="rv-link" data-rv="peek">Zobacz wyniki bez głosowania</button></div>`;
+      const rg = $('#rv-range', box), out = $('#rv-val', box);
+      rg.addEventListener('input', () => { out.textContent = fmt1(Number(rg.value)); rg.style.setProperty('--p', (rg.value * 10) + '%'); });
+      rg.style.setProperty('--p', (rg.value * 10) + '%');
+    }
+  };
+  box.onclick = async e => {
+    const b = e.target.closest('[data-rv]'); if (!b) return;
+    const act = b.dataset.rv;
+    if (act === 'peek') { showResults = true; draw(); return; }
+    if (act === 'edit') { showResults = false; draw(); return; }
+    if (act === 'send') {
+      const score = Number($('#rv-range', box).value);
+      b.disabled = true;
+      const r = await Votes.send(a.id, score);
+      if (r.status === 200 && r.data.ok) { mine = r.data.mine; cur = { n: r.data.n, avg: r.data.avg }; showResults = true; draw(); toast('Dziękujemy za ocenę!'); Votes._all = null; return; }
+      const msg = r.status === 409 ? 'Z tej sieci ktoś już ocenił tę recenzję – na jedną sieć przypada jedna ocena.'
+        : r.status === 429 ? 'Za dużo ocen w krótkim czasie. Spróbuj za godzinę.'
+        : r.status === 404 ? 'Tej recenzji nie można teraz ocenić.' : 'Nie udało się zapisać oceny. Spróbuj ponownie.';
+      if (r.status === 409 && r.data && typeof r.data.n === 'number') cur = { n: r.data.n, avg: r.data.avg };
+      draw(msg);
+    }
+  };
+  draw();
+}
+
+/** Średnie czytelników w rankingu (po wczytaniu rankingu, bez blokowania widoku). */
+async function decorateRankingVotes() {
+  const rows = $$('#view-ranking .rank-row[data-id]');
+  if (!rows.length) return;
+  const all = await Votes.all();
+  rows.forEach(row => {
+    const v = all[row.dataset.id];
+    const slot = $('.rank-score', row);
+    if (!v || v.n < Votes.MIN_SHOWN || !slot || $('.rank-readers', slot)) return;
+    slot.insertAdjacentHTML('beforeend', `<span class="rank-readers" title="Średnia ocen czytelników (${v.n})">Czytelnicy ${fmt1(v.avg)}</span>`);
+  });
 }
 
 /** Kółko z oceną + tytuł, wykonawca, rok i okładka (zdjęcie główne) – styl Pitchfork. */
@@ -1459,7 +1640,7 @@ function renderSideList() {
 /** Zdjęcie profilowe autora (zapisane w artykule); gdy go brak – inicjały. */
 function authorAvatarHtml(a) {
   let photo = a.authorPhoto || '';
-  if (!photo && state.profile.avatar && a.author && a.author === state.profile.name) photo = state.profile.avatar;
+  if (!photo && state.profile.avatar && state.profile.showPhoto !== false && a.author && a.author === state.profile.name) photo = state.profile.avatar;
   return `<span class="avatar avatar-sm" aria-hidden="true">${avatarHtml({ name: a.author, avatar: photo })}</span>`;
 }
 
@@ -1523,7 +1704,7 @@ function articleHtml(a, plain) {
         <div class="article-main">
           <p class="article-lead">${Utils.esc(a.lead)}</p>
           <div class="article-body">${Sanitizer.render(a.content)}</div>
-          ${hasReview ? reviewHtml(a) : ''}
+          ${hasReview ? reviewHtml(a) + `<section class="reader-vote" id="reader-vote" data-article="${Utils.esc(a.id)}" hidden></section>` : ''}
           ${tagsBlockHtml(a)}
           ${shareBarHtml(a)}
         </div>
@@ -1643,6 +1824,7 @@ function renderArticleView(id) {
     ${pagerHtml}
     ${relatedHtml}`;
   enhanceGalleries(el);
+  initReaderVote(a);
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
 }
@@ -2616,7 +2798,7 @@ function renderRanking() {
     const best = r.score > BEST_SCORE;
     const cover = coverOf(a) || getImage(a);
     const id = encodeURIComponent(a.id);
-    return `<li class="rank-row${best ? ' is-best' : ''}">
+    return `<li class="rank-row${best ? ' is-best' : ''}" data-id="${Utils.esc(a.id)}">
       <span class="rank-pos">${i + 1}</span>
       <a class="rank-cover" href="#/artykul/${id}" tabindex="-1" aria-hidden="true"><img src="${Utils.esc(cover)}" alt="" loading="lazy" decoding="async" data-cat="${Utils.esc(Utils.catsOf(a)[0] || '')}"></a>
       <div class="rank-main">
@@ -2645,6 +2827,7 @@ function renderRanking() {
     ${list.length
       ? `<ol class="rank-list">${rows}</ol>`
       : `<div class="empty-state">${all.length ? 'Brak recenzji dla wybranych filtrów.' : 'Nie ma jeszcze żadnych ocenionych recenzji.'}</div>`}`;
+  decorateRankingVotes();
 }
 
 /* ---------- Zgłoś temat ---------- */
@@ -2720,31 +2903,117 @@ async function submitTip(e) {
   }
 }
 
-async function renderTips() {
+const TIP_STATUS = {
+  new:      { label: 'Nowe',         cls: 'is-new' },
+  progress: { label: 'W toku',       cls: 'is-progress' },
+  later:    { label: 'Odłożone',     cls: 'is-later' },
+  done:     { label: 'Zrealizowane', cls: 'is-done' },
+  rejected: { label: 'Odrzucone',    cls: 'is-rejected' }
+};
+const TIP_OPEN = ['new', 'progress', 'later'];
+const TIP_OVR_KEY = 'sliska_tip_status';
+function tipOverrides() { try { return JSON.parse(localStorage.getItem(TIP_OVR_KEY)) || {}; } catch { return {}; } }
+function tipStatus(t) { return TIP_STATUS[t.status] ? t.status : 'new'; }
+let tipFilter = 'open';
+
+function tipHistory(t) {
+  const st = tipStatus(t);
+  if (st === 'new') return '';
+  const art = t.statusArticleId && state.articles.find(a => a.id === t.statusArticleId);
+  const when = t.statusAt ? Utils.formatDate(t.statusAt) : '';
+  return `<div class="tip-hist is-${st}"><b>${TIP_STATUS[st].label}</b>${when ? ' · ' + when : ''}${art ? ` · artykuł: <a href="#/artykul/${encodeURIComponent(art.id)}">${Utils.esc(art.title)}</a>` : ''}${t.statusNote ? `<br><span>${Utils.esc(t.statusNote)}</span>` : ''}</div>`;
+}
+
+function renderTipList() {
   const el = $('#panel-tips');
-  el.innerHTML = '<p class="muted">Ładowanie…</p>';
-  try {
-    const list = await DataService.getTips();
-    state.tips = list;
-    if (currentRoute().name !== 'panel') return;
-    el.innerHTML = list.length
-      ? list.map(t => `<div class="panel-item tip-item">
+  const all = state.tips || [];
+  const cnt = { open: 0, done: 0, rejected: 0, all: all.length };
+  all.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; else cnt[st]++; });
+  const chips = [['open', 'Do rozpatrzenia'], ['done', 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
+    .map(([k, l]) => `<button type="button" class="tip-filter${tipFilter === k ? ' is-active' : ''}" data-tipfilter="${k}">${l} <i>${cnt[k]}</i></button>`).join('');
+  const list = all.filter(t => { const st = tipStatus(t); return tipFilter === 'all' || (tipFilter === 'open' ? TIP_OPEN.includes(st) : st === tipFilter); });
+  const empty = { open: 'Nic nie czeka na rozpatrzenie.', done: 'Żaden temat nie został jeszcze zrealizowany.', rejected: 'Brak odrzuconych tematów.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
+  el.innerHTML = `<div class="tip-filters">${chips}</div>` + (list.length
+    ? list.map(t => { const st = tipStatus(t); return `<div class="panel-item tip-item">
           <div class="panel-item-main">
+            <span class="tip-status ${TIP_STATUS[st].cls}">${TIP_STATUS[st].label}</span>
             <strong>${Utils.esc(t.title)}</strong>
             <span class="tip-msg">${Utils.esc(t.message)}</span>
             <span class="muted">${Utils.formatDate(t.createdAt)}${t.email ? ' · ' + Utils.esc(t.email) : ''}</span>
+            ${tipHistory(t)}
           </div>
           <div class="panel-item-actions">
+            <button type="button" class="btn btn-sm btn-primary" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status</button>
             ${t.link ? `<a class="btn btn-sm" href="${Utils.esc(t.link)}" target="_blank" rel="noopener noreferrer">Źródło</a>` : ''}
             ${t.email ? `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + t.title)}">Odpisz</a>` : ''}
             <button type="button" class="btn btn-sm btn-danger" data-action="delete-tip" data-id="${Utils.esc(t.id)}">Usuń</button>
           </div>
-        </div>`).join('')
-      : '<p class="muted">Brak zgłoszeń od czytelników.</p>';
+        </div>`; }).join('')
+    : `<p class="muted">${empty}</p>`);
+  updatePanelCounts();
+}
+
+async function renderTips() {
+  const el = $('#panel-tips');
+  el.innerHTML = '<p class="muted">Ładowanie…</p>';
+  try {
+    const ovr = tipOverrides();
+    const list = (await DataService.getTips()).map(t => ovr[t.id] ? { ...t, ...ovr[t.id] } : t);
+    state.tips = list;
+    if (currentRoute().name !== 'panel') return;
+    renderTipList();
   } catch (err) {
     console.warn(err);
     el.innerHTML = '<p class="form-error">Nie udało się wczytać zgłoszeń. Sprawdź reguły Firestore dla kolekcji „tips”.</p>';
   }
+}
+
+let tipEditId = null;
+function openTipStatus(id) {
+  const t = (state.tips || []).find(x => x.id === id);
+  if (!t) return;
+  tipEditId = id;
+  $('#ts-title').textContent = t.title;
+  const cur = tipStatus(t);
+  $$('input[name="ts-status"]').forEach(r => { r.checked = r.value === cur; });
+  $('#ts-note').value = t.statusNote || '';
+  const sel = $('#ts-article');
+  const arts = sortedArticles().filter(a => !a.quick).slice(0, 80);
+  sel.innerHTML = '<option value="">— brak powiązanego artykułu —</option>' + arts.map(a => `<option value="${Utils.esc(a.id)}">${Utils.esc(a.title)}</option>`).join('');
+  sel.value = t.statusArticleId || '';
+  updateTipStatusForm();
+  openModal('tip-status-modal');
+}
+function updateTipStatusForm() {
+  const v = ($('input[name="ts-status"]:checked') || {}).value;
+  $('#ts-article-wrap').hidden = v !== 'done';
+  $('#ts-note').placeholder = v === 'rejected' ? 'Dlaczego odrzucony? (opcjonalnie, tylko dla Ciebie)' : v === 'done' ? 'Notatka (opcjonalnie)' : 'Notatka dla siebie (opcjonalnie)';
+}
+async function saveTipStatus(e) {
+  e.preventDefault();
+  const id = tipEditId;
+  const t = (state.tips || []).find(x => x.id === id);
+  if (!t) return;
+  const status = ($('input[name="ts-status"]:checked') || {}).value || 'new';
+  const patch = {
+    status,
+    statusNote: $('#ts-note').value.trim().slice(0, 400),
+    statusArticleId: status === 'done' ? $('#ts-article').value : '',
+    statusAt: status === 'new' ? '' : new Date().toISOString()
+  };
+  closeModal('tip-status-modal');
+  let local = false;
+  try {
+    await DataService.updateTip(id, patch);
+    const o = tipOverrides(); if (o[id]) { delete o[id]; try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); } catch { /* ignoruj */ } }
+  } catch (err) {
+    console.warn('Status zgłoszenia – zapis w bazie nieudany, zapisuję na tym urządzeniu:', err);
+    const o = tipOverrides(); o[id] = patch;
+    try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); local = true; } catch { toast('Nie udało się zapisać statusu.', 'error'); return; }
+  }
+  Object.assign(t, patch);
+  renderTipList();
+  toast(local ? 'Status zapisany tylko na tym urządzeniu (baza nie pozwala zmieniać zgłoszeń – zobacz instrukcję reguł).' : 'Status zapisany.');
 }
 
 async function deleteTip(id) {
@@ -2815,12 +3084,14 @@ function legalHtml(doc) {
     <ul>
       <li><strong>Zgłoś temat</strong> – treść zgłoszenia, opcjonalnie link i adres e-mail. Cel: rozpatrzenie zgłoszenia i ewentualny kontakt zwrotny. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Dane przechowujemy do czasu rozpatrzenia zgłoszenia, nie dłużej niż 12 miesięcy.</li>
       <li><strong>Dane techniczne</strong> – podczas wizyty w Serwisie serwery (hosting i usługi Google Firebase) mogą zapisywać w dziennikach adres IP, rodzaj przeglądarki i czas wizyty. Cel: zapewnienie działania i bezpieczeństwa Serwisu. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO).</li>
+      <li><strong>Oceny recenzji</strong> – ocena, którą oddajesz pod recenzją, oraz losowy identyfikator przeglądarki. Aby jedna osoba nie mogła głosować wielokrotnie, zapisujemy też nieodwracalny skrót (hash) Twojego adresu sieciowego – nie przechowujemy samego adresu IP. Cel: uczciwe zliczanie ocen. Podstawa: uzasadniony interes administratora (art. 6 ust. 1 lit. f RODO). Oceny są anonimowe i przechowywane do czasu usunięcia recenzji.</li>
+      <li><strong>Powiadomienia o nowych artykułach</strong> – jeśli klikniesz dzwonek, zapisujemy techniczny adres subskrypcji Twojej przeglądarki, aby wysłać powiadomienie. Cel: informowanie o nowych artykułach. Podstawa: Twoja zgoda (art. 6 ust. 1 lit. a RODO). Zgodę wycofasz, klikając dzwonek ponownie lub wyłączając powiadomienia w przeglądarce.</li>
     </ul>
     <p>Podanie danych jest dobrowolne.</p>
     <h2>3. Komu przekazujemy dane</h2>
-    <p>Dane przetwarzają w naszym imieniu dostawcy usług: Google (usługa Firebase – baza danych oraz dostarczanie skryptów strony) oraz dostawca hostingu strony. Dane mogą być przetwarzane poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych lub innych zabezpieczeń przewidzianych w RODO. Nie sprzedajemy danych i nie przekazujemy ich reklamodawcom.</p>
+    <p>Dane przetwarzają w naszym imieniu dostawcy usług: Google (usługa Firebase – baza danych oraz dostarczanie skryptów strony), Cloudflare (obsługa domeny, oceny czytelników i powiadomienia) oraz dostawca hostingu strony. Dane mogą być przetwarzane poza Europejskim Obszarem Gospodarczym na podstawie standardowych klauzul umownych lub innych zabezpieczeń przewidzianych w RODO. Nie sprzedajemy danych i nie przekazujemy ich reklamodawcom.</p>
     <h2>4. Pliki cookies i pamięć przeglądarki</h2>
-    <p>Serwis nie używa własnych plików cookies reklamowych ani analitycznych. W pamięci Twojej przeglądarki (localStorage) zapisujemy wyłącznie dane techniczne potrzebne do działania strony: wybrany motyw jasny/ciemny oraz licznik ograniczający liczbę zgłoszeń. Zapisane na później artykuły również pamiętamy tylko w Twojej przeglądarce. Niektóre artykuły zawierają osadzone odtwarzacze YouTube (w trybie rozszerzonej prywatności youtube-nocookie.com) lub Spotify; po ich uruchomieniu dane przetwarza odpowiednio Google lub Spotify na własnych zasadach. Możesz je usunąć w ustawieniach przeglądarki. Jeśli w przyszłości dodamy narzędzia analityczne, zaktualizujemy tę politykę.</p>
+    <p>Serwis nie używa własnych plików cookies reklamowych ani analitycznych. W pamięci Twojej przeglądarki (localStorage) zapisujemy wyłącznie dane techniczne potrzebne do działania strony: wybrany motyw jasny/ciemny, licznik ograniczający liczbę zgłoszeń oraz losowy identyfikator przeglądarki używany przy ocenianiu recenzji. Zapisane na później artykuły również pamiętamy tylko w Twojej przeglądarce. Niektóre artykuły zawierają osadzone odtwarzacze YouTube (w trybie rozszerzonej prywatności youtube-nocookie.com) lub Spotify; po ich uruchomieniu dane przetwarza odpowiednio Google lub Spotify na własnych zasadach. Możesz je usunąć w ustawieniach przeglądarki. Jeśli w przyszłości dodamy narzędzia analityczne, zaktualizujemy tę politykę.</p>
     <h2>5. Twoje prawa</h2>
     <p>Masz prawo do: dostępu do swoich danych, ich sprostowania, usunięcia, ograniczenia przetwarzania, przenoszenia oraz sprzeciwu wobec przetwarzania opartego na uzasadnionym interesie. Zgodę możesz wycofać w dowolnym momencie – nie wpływa to na zgodność z prawem przetwarzania, którego dokonano przed jej wycofaniem. Aby skorzystać z praw, napisz na ${mail}.</p>
     <p>Masz też prawo wnieść skargę do Prezesa Urzędu Ochrony Danych Osobowych (ul. Stawki 2, 00-193 Warszawa).</p>
@@ -2997,8 +3268,31 @@ function clearPointer(draftId) {
   } catch { /* ignoruj */ }
 }
 
+function setPanelTab(t) {
+  $$('#view-panel .ptab').forEach(b => { const on = b.dataset.ptab === t; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
+  $$('#view-panel .ptab-pane').forEach(p => { p.hidden = p.dataset.pane !== t; });
+  try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
+}
+
+function updatePanelCounts() {
+  const n = id => { const el = $('#' + id); return el ? el.querySelectorAll('.panel-item').length : 0; };
+  const me = (state.profile && state.profile.name) || '';
+  const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+  const tipsOpen = (state.tips || []).filter(t => TIP_OPEN.includes(tipStatus(t))).length;
+  set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', tipsOpen);
+  set('kpi-mine', me ? publishedArticles().filter(a => a.author === me).length : publishedArticles().length);
+  const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: tipsOpen };
+  $$('#view-panel .ptab').forEach(b => { const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
+}
+
 async function renderPanel() {
-  renderTips();
+  const h = new Date().getHours();
+  const hi = h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
+  const first = (state.profile.name || '').split(/\s+/)[0];
+  $('#panel-hello').textContent = `${hi}${first ? ', ' + first : ''}. Oto Twoje materiały i narzędzia redakcji.`;
+  let t = 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || 'drafts'; } catch { /* ignoruj */ }
+  setPanelTab(t);
+  renderTips().then(updatePanelCounts);
   const dEl = $('#panel-drafts');
   const sEl = $('#panel-scheduled');
 
@@ -3017,6 +3311,7 @@ async function renderPanel() {
         </div>
       </div>`).join('')
     : '<p class="muted">Brak zaplanowanych publikacji. W edytorze zaznacz „Zaplanuj publikację na później”.</p>';
+  updatePanelCounts();
 
   dEl.innerHTML = '<p class="muted">Ładowanie…</p>';
   let drafts = [];
@@ -3049,6 +3344,7 @@ async function renderPanel() {
         </div>
       </div>`).join('')
     : '<p class="muted">Brak wersji roboczych. Wszystko, co zaczniesz pisać, zapisuje się tu automatycznie.</p>';
+  updatePanelCounts();
 }
 
 async function deleteDraft(id) {
@@ -3146,7 +3442,7 @@ function defaultAuthor() {
 
 function emptyData() {
   return {
-    title: '', lead: '', categories: [], author: defaultAuthor(),
+    title: '', lead: '', categories: state.profile.defaultCategory ? [state.profile.defaultCategory] : [], author: defaultAuthor(),
     image: '', imageCaption: '', imageSource: '', urgent: false, featured: false, status: '', related: [], infobox: [], content: '',
     tags: '',
     reviewOn: false, reviewScore: '', reviewKind: 'Albumy', reviewCoverSame: false, reviewCover: '', reviewWork: '', reviewArtist: '', reviewYear: '',
@@ -4219,8 +4515,10 @@ const Visit = {
 };
 
 function newBannerHtml() {
+  // Baner „X nowych artykułów” usunięty – znaczniki NOWE na kartach (do 12h) zostają.
+  state.onlyNew = false;
+  return '';
   const n = publishedArticles().filter(a => Visit.isNew(a)).length;
-  if (!n) { state.onlyNew = false; return ''; }
   return `<div class="new-banner"><span><b>${n}</b> ${plural(n, 'nowy artykuł', 'nowe artykuły', 'nowych artykułów')} · ostatnie 12h</span>
     <button type="button" class="btn btn-sm" data-action="toggle-new">${state.onlyNew ? 'Wszystkie' : 'Tylko nowe'}</button></div>`;
 }
@@ -4993,7 +5291,7 @@ async function saveArticle(e) {
     createdAt = new Date().toISOString();
   }
 
-  const ownProfile = author === state.profile.name && state.profile.avatar;
+  const ownProfile = author === state.profile.name && state.profile.avatar && state.profile.showPhoto !== false;
   const authorPhoto = ownProfile ? await shrinkAvatar(state.profile.avatar) : ((editor.existing && editor.existing.authorPhoto) || '');
 
   const article = {
@@ -5004,6 +5302,7 @@ async function saveArticle(e) {
     categories: d.categories,
     tags: Utils.parseTags(d.tags),
     author,
+    authorUid: Auth.uid(),
     authorPhoto,
     image: d.image,
     imageCaption: d.imageCaption.trim(),
@@ -5330,7 +5629,7 @@ function routeCore() {
     renderSettings();
   } else if (r.name === 'panel') {
     showView('panel');
-    document.title = `Robocze i zaplanowane – ${CONFIG.SITE_NAME}`;
+    document.title = `Panel redaktora – ${CONFIG.SITE_NAME}`;
     renderPanel();
   } else if (r.name === 'editor') {
     showView('editor');
@@ -5383,11 +5682,24 @@ function applyAuthUI() {
     return;
   }
   if (Auth.isAdmin()) loadProfile();
-  else { state.profile = { name: '', avatar: '' }; state.profileLoaded = false; state.profileUid = ''; renderProfile(); }
+  else { state.profile = EMPTY_PROFILE(); state.profileLoaded = false; state.profileUid = ''; renderProfile(); }
   refreshViews();
 }
 
 /* ---------- Profil redaktora (nazwa i zdjęcie) ---------- */
+function EMPTY_PROFILE() { return ({ name: '', avatar: '', title: '', defaultCategory: '', showPhoto: true, aliases: [] }); }
+function normProfile(p) {
+  p = p || {};
+  return {
+    name: String(p.name || '').slice(0, 60),
+    avatar: p.avatar || '',
+    title: String(p.title || '').slice(0, 40),
+    defaultCategory: CATEGORIES.includes(p.defaultCategory) ? p.defaultCategory : '',
+    showPhoto: p.showPhoto !== false,
+    aliases: Array.isArray(p.aliases) ? p.aliases.map(x => String(x).slice(0, 60)).filter(Boolean).slice(0, 30) : []
+  };
+}
+
 function avatarHtml(p) {
   if (p.avatar) return `<img src="${Utils.esc(p.avatar)}" alt="">`;
   const initials = (p.name || 'R').trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
@@ -5412,16 +5724,16 @@ function renderProfileStats() {
 
 async function loadProfile() {
   const uid = Auth.uid();
-  if (state.profileUid !== uid) { state.profile = { name: '', avatar: '' }; state.profileLoaded = false; state.profileUid = uid; }   // inne konto = inny profil
+  if (state.profileUid !== uid) { state.profile = EMPTY_PROFILE(); state.profileLoaded = false; state.profileUid = uid; }   // inne konto = inny profil
   if (state.profileLoaded) { renderProfile(); return; }
   state.profileLoaded = true;
   const cached = readLocalProfile();
-  if (cached) state.profile = { name: cached.name || '', avatar: cached.avatar || '' };
+  if (cached) state.profile = normProfile(cached);
   renderProfile();
   try {
     const remote = await DataService.getProfile();
     if (remote) {
-      state.profile = { name: remote.name || '', avatar: remote.avatar || '' };
+      state.profile = normProfile(remote);
       writeLocalProfile(state.profile);
       renderProfile();
     }
@@ -5431,11 +5743,36 @@ async function loadProfile() {
 }
 
 let settingsAvatar = '';
+
+/** Autorzy występujący w artykułach, których nazwa różni się od aktualnej nazwy i nie jest znanym aliasem. */
+function otherAuthors() {
+  const me = state.profile.name, known = new Set(state.profile.aliases || []);
+  const m = new Map();
+  state.articles.forEach(a => {
+    const n = (a.author || '').trim();
+    if (!n || n === me || known.has(n)) return;
+    m.set(n, (m.get(n) || 0) + 1);
+  });
+  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+}
+
 function renderSettings() {
   settingsAvatar = state.profile.avatar || '';
   $('#st-name').value = state.profile.name || '';
+  $('#st-photo').checked = state.profile.showPhoto !== false;
+  const sel = $('#st-cat');
+  sel.innerHTML = '<option value="">Brak (wybieram za każdym razem)</option>' + CATEGORIES.map(c => `<option value="${Utils.esc(c)}">${Utils.esc(c)}</option>`).join('');
+  sel.value = state.profile.defaultCategory || '';
   $('#st-error').hidden = true;
   $('#st-avatar-file').value = '';
+  const authors = otherAuthors();
+  $('#st-authors-card').hidden = !authors.length;
+  $('#st-authors').innerHTML = authors.map(([n, c], i) =>
+    `<label class="check-row"><input type="checkbox" name="st-author" value="${Utils.esc(n)}"><span><b>${Utils.esc(n)}</b> <em class="muted">· ${c} ${plural(c, 'artykuł', 'artykuły', 'artykułów')}</em></span></label>`).join('');
+  let email = '';
+  try { const u = FirebaseProvider.auth && FirebaseProvider.auth.currentUser; email = (Auth.useFirebase && u && u.email) || ''; } catch { /* ignoruj */ }
+  $('#st-email').textContent = email || (Auth.useFirebase ? '—' : 'tryb lokalny (bez konta e-mail)');
+  $('#st-reset').closest('.st-row').hidden = !email;
   updateSettingsAvatar();
 }
 
@@ -5444,11 +5781,43 @@ function updateSettingsAvatar() {
   $('#st-avatar-remove').hidden = !settingsAvatar;
 }
 
+/** Zmienia autora we wszystkich artykułach (i wersjach roboczych) należących do redaktora. */
+async function reassignAuthor(claim, nextName, avatar, showPhoto) {
+  const uid = Auth.uid();
+  const names = new Set(claim);
+  let all = [];
+  try { all = await DataService.getAllArticles(); } catch { all = state.articles; }
+  const photo = avatar && showPhoto ? await shrinkAvatar(avatar) : '';
+  const todo = all.filter(a => a && ((a.authorUid && a.authorUid === uid) || names.has((a.author || '').trim()))
+    && ((a.author || '') !== nextName || (a.authorPhoto || '') !== photo || a.authorUid !== uid));
+  let done = 0;
+  for (const a of todo) {
+    const upd = { ...a, author: nextName, authorUid: uid, authorPhoto: photo };
+    await DataService.save(upd);
+    upsertLocalState(upd);
+    done++;
+  }
+  try {
+    const drafts = await DataService.getDrafts();
+    for (const d of drafts) if (names.has((d.author || '').trim())) await DataService.saveDraft({ ...d, author: nextName });
+  } catch (e) { console.warn('Wersje robocze – pominięto zmianę autora:', e); }
+  return done;
+}
+
 async function saveSettings(e) {
   e.preventDefault();
   const err = $('#st-error');
   err.hidden = true;
-  const next = { name: $('#st-name').value.trim().slice(0, 60), avatar: settingsAvatar };
+  const prev = state.profile;
+  const name = $('#st-name').value.trim().slice(0, 60);
+  const picked = $$('input[name="st-author"]:checked', $('#settings-form')).map(i => i.value);
+  const next = normProfile({
+    name, avatar: settingsAvatar,
+    defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
+    aliases: [...new Set([...(prev.aliases || []), ...(prev.name && prev.name !== name ? [prev.name] : []), ...picked])].filter(n => n && n !== name)
+  });
+  const claim = [...new Set([prev.name, ...(prev.aliases || []), ...picked])].filter(n => n && n !== name);
+  const photoChanged = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto;
   const btn = $('#st-save');
   btn.disabled = true;
   try {
@@ -5456,13 +5825,21 @@ async function saveSettings(e) {
     state.profile = next;
     writeLocalProfile(next);
     renderProfile();
-    toast('Ustawienia zapisane.');
+    let n = 0;
+    if (name && (claim.length || photoChanged)) {
+      btn.textContent = 'Aktualizuję artykuły…';
+      n = await reassignAuthor(claim, name, next.avatar, next.showPhoto);
+    }
+    toast(n ? `Zapisano. Zaktualizowano ${n} ${plural(n, 'artykuł', 'artykuły', 'artykułów')}.` : 'Ustawienia zapisane.');
+    renderSettings();
+    refreshViews();
   } catch (ex) {
     console.error(ex);
     err.textContent = ex.message || 'Nie udało się zapisać ustawień.';
     err.hidden = false;
   } finally {
     btn.disabled = false;
+    btn.textContent = 'Zapisz ustawienia';
   }
 }
 
@@ -5492,6 +5869,7 @@ function handleAction(action, id) {
   }
   if (!Auth.isAdmin()) return;
   if (action === 'delete-tip') { deleteTip(id); return; }
+  if (action === 'tip-status') { openTipStatus(id); return; }
   if (action === 'quick-new') { openQuickModal(); return; }
   if (action === 'quick-edit') { openQuickModal(id); return; }
   if (action === 'quick-delete') { deleteQuick(id); return; }
@@ -5616,6 +5994,22 @@ function bindEvents() {
   });
   $('#btn-new').addEventListener('click', () => { location.hash = '#/edytor'; });
   $('#panel-new').addEventListener('click', () => { location.hash = '#/edytor'; });
+  $('#btn-push').addEventListener('click', togglePush);
+  updatePushButton();
+  $('#view-panel').addEventListener('click', e => {
+    const b = e.target.closest('[data-ptab]'); if (b) setPanelTab(b.dataset.ptab);
+    const f = e.target.closest('[data-tipfilter]'); if (f) { tipFilter = f.dataset.tipfilter; renderTipList(); }
+  });
+  $('#tip-status-form').addEventListener('submit', saveTipStatus);
+  $('#tip-status-form').addEventListener('change', updateTipStatusForm);
+  $('#st-reset').addEventListener('click', async () => {
+    try {
+      const u = FirebaseProvider.auth.currentUser;
+      await FirebaseProvider.auth.sendPasswordResetEmail(u.email);
+      toast('Wysłałem link do zmiany hasła na ' + u.email + '.');
+    } catch (ex) { console.error(ex); toast('Nie udało się wysłać linku. Spróbuj za chwilę.', 'error'); }
+  });
+  $('#st-logout').addEventListener('click', () => $('#btn-logout').click());
   $('#btn-panel').addEventListener('click', () => { location.hash = '#/panel'; });
   $('#btn-settings').addEventListener('click', () => { location.hash = '#/ustawienia'; });
 

@@ -37,7 +37,7 @@
 
   <!-- Edytor WYSIWYG Quill.js (CDN) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.snow.css">
-  <link rel="stylesheet" href="style.css?v=20261101k">
+  <link rel="stylesheet" href="style.css?v=20261101p">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -74,6 +74,7 @@
       </div>
 
       <div class="auth">
+        <button type="button" class="btn btn-icon push-toggle" id="btn-push" aria-label="Powiadomienia o nowych artykułach" title="Włącz powiadomienia o nowych artykułach" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
         <button type="button" class="btn btn-icon theme-toggle" id="btn-theme" aria-label="Przełącz motyw jasny/ciemny" title="Przełącz motyw jasny/ciemny"><svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
         <button type="button" class="btn btn-icon guest-only" id="btn-login" aria-label="Logowanie redakcji" title="Logowanie redakcji"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m10.85 12.15 8.65-8.65"/><path d="m17 6 3 3"/><path d="m14.5 8.5 2.5 2.5"/></svg></button>
       </div>
@@ -85,23 +86,24 @@
 
   <aside class="side-left" id="side-left">
     <div class="profile-card" id="profile-card">
+      <div class="profile-banner" aria-hidden="true"></div>
       <div class="profile-top">
         <div class="avatar avatar-ring" id="profile-avatar"></div>
         <div class="profile-info">
           <strong id="profile-name">Redaktor</strong>
-          <span class="role-chip"><i></i>Redaktor</span>
+          <span class="role-chip"><i></i><b id="profile-role">Redaktor</b></span>
         </div>
       </div>
-      <div class="profile-stats" aria-label="Twoje statystyki">
+      <a class="profile-stats" href="#/panel" aria-label="Twoje statystyki">
         <div><b id="ps-mine">0</b><span>Moje teksty</span></div>
         <div><b id="ps-sched">0</b><span>Zaplanowane</span></div>
-      </div>
+      </a>
       <div class="profile-actions">
         <button type="button" class="btn btn-primary btn-block btn-ico-row" id="btn-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Napisz artykuł</span></button>
-        <button type="button" class="pa-row" data-action="quick-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Szybki news</span></button>
-        <button type="button" class="pa-row" id="btn-panel"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h9l4 4v14H6z"/><path d="M14 3v5h5M9 13h7M9 17h5"/></svg><span>Robocze i plany</span><em id="pa-sched" hidden></em></button>
-        <button type="button" class="pa-row" id="btn-settings"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg><span>Ustawienia konta</span></button>
-        <button type="button" class="pa-row pa-logout" id="btn-logout"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg><span>Wyloguj</span></button>
+        <button type="button" class="pa-row" data-action="quick-new"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></i><span>Szybki news</span></button>
+        <button type="button" class="pa-row" id="btn-panel"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></i><span>Panel</span><em id="pa-sched" hidden></em></button>
+        <button type="button" class="pa-row" id="btn-settings"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></i><span>Ustawienia</span></button>
+        <button type="button" class="pa-row pa-logout" id="btn-logout"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></i><span>Wyloguj</span></button>
       </div>
     </div>
     <div class="side-card">
@@ -140,9 +142,10 @@
         <a class="btn" href="#/">← Powrót do strony głównej</a>
       </div>
       <h1 class="panel-title">Ustawienia konta</h1>
-      <form id="settings-form" class="panel settings-form" novalidate>
-        <div class="field">
-          <span class="field-label">Zdjęcie profilowe</span>
+      <form id="settings-form" class="settings-form" novalidate>
+
+        <section class="panel st-card">
+          <h2 class="st-h">Profil</h2>
           <div class="settings-avatar">
             <div class="avatar avatar-lg" id="st-avatar"></div>
             <div class="settings-avatar-actions">
@@ -150,14 +153,37 @@
               <button type="button" class="btn btn-sm btn-danger" id="st-avatar-remove">Usuń zdjęcie</button>
             </div>
           </div>
-        </div>
-        <label class="field">
-          <span class="field-label">Nazwa użytkownika</span>
-          <input type="text" id="st-name" maxlength="60" placeholder="Imię i nazwisko / pseudonim" autocomplete="off">
-          <small class="hint">Wyświetlana w panelu bocznym i wstawiana jako domyślny autor nowych artykułów.</small>
-        </label>
+          <label class="field">
+            <span class="field-label">Nazwa autora</span>
+            <input type="text" id="st-name" maxlength="60" placeholder="Imię i nazwisko / pseudonim" autocomplete="off">
+            <small class="hint">Po zmianie nazwy zaktualizuję ją we wszystkich Twoich artykułach, także starszych.</small>
+          </label>
+        </section>
+
+        <section class="panel st-card">
+          <h2 class="st-h">Pisanie artykułów</h2>
+          <label class="field">
+            <span class="field-label">Domyślna kategoria nowego artykułu</span>
+            <select id="st-cat"></select>
+          </label>
+          <label class="check-row"><input type="checkbox" id="st-photo"><span>Pokazuj moje zdjęcie przy artykułach</span></label>
+        </section>
+
+        <section class="panel st-card" id="st-authors-card" hidden>
+          <h2 class="st-h">Artykuły pod innymi nazwami</h2>
+          <p class="muted">Te nazwy autorów występują w artykułach. Zaznacz te, które są Twoje – po zapisaniu zmienię je na aktualną nazwę.</p>
+          <div id="st-authors" class="st-authors"></div>
+        </section>
+
+        <section class="panel st-card">
+          <h2 class="st-h">Konto i bezpieczeństwo</h2>
+          <div class="st-row"><span class="muted">Adres e-mail</span><strong id="st-email">—</strong></div>
+          <div class="st-row"><span class="muted">Hasło</span><button type="button" class="btn btn-sm" id="st-reset">Wyślij link do zmiany hasła</button></div>
+          <div class="st-row"><span class="muted">Sesja</span><button type="button" class="btn btn-sm" id="st-logout">Wyloguj</button></div>
+        </section>
+
         <p class="form-error" id="st-error" hidden></p>
-        <div><button type="submit" class="btn btn-primary" id="st-save">Zapisz ustawienia</button></div>
+        <div class="st-actions"><button type="submit" class="btn btn-primary" id="st-save">Zapisz ustawienia</button></div>
       </form>
     </section>
 
@@ -179,37 +205,47 @@
     <!-- WIDOK: 404 -->
     <section id="view-notfound" hidden></section>
 
-    <!-- WIDOK: PANEL REDAKCJI (robocze i zaplanowane) -->
+    <!-- WIDOK: PANEL REDAKTORA -->
     <section id="view-panel" hidden>
       <div class="article-top">
         <a class="btn" href="#/">← Powrót do strony głównej</a>
         <button type="button" class="btn btn-primary" id="panel-new">+ Napisz artykuł</button>
       </div>
-      <h1 class="panel-title">Robocze i zaplanowane</h1>
+      <h1 class="panel-title">Panel redaktora</h1>
+      <p class="panel-sub" id="panel-hello"></p>
 
-      <h2 class="section-title">Wersje robocze</h2>
-      <div id="panel-drafts" class="panel-list"></div>
-
-      <h2 class="section-title">Zaplanowane publikacje</h2>
-      <div id="panel-scheduled" class="panel-list"></div>
-
-      <h2 class="section-title">Zgłoszone tematy</h2>
-      <div id="panel-tips" class="panel-list"></div>
-
-      <h2 class="section-title">Kopia zapasowa</h2>
-      <div class="panel backup-box">
-        <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i zgłoszone tematy do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
-        <div class="backup-actions">
-          <button type="button" class="btn btn-primary" id="backup-export">Pobierz kopię (JSON)</button>
-          <button type="button" class="btn" id="backup-import">Przywróć z pliku…</button>
-          <input type="file" id="backup-file" accept="application/json,.json" hidden>
-        </div>
+      <div class="panel-kpis" id="panel-kpis">
+        <button type="button" class="kpi" data-ptab="drafts"><b id="kpi-drafts">0</b><span>Robocze</span></button>
+        <button type="button" class="kpi" data-ptab="scheduled"><b id="kpi-sched">0</b><span>Zaplanowane</span></button>
+        <button type="button" class="kpi" data-ptab="tips"><b id="kpi-tips">0</b><span>Zgłoszenia</span></button>
+        <a class="kpi" href="#/ustawienia"><b id="kpi-mine">0</b><span>Moje teksty</span></a>
       </div>
 
-      <h2 class="section-title">Podglądy linków</h2>
-      <div class="panel og-box">
-        <p class="muted">Każdy artykuł dostaje własną grafikę podglądu (taką jak „Grafika na X”), widoczną po wklejeniu linku na Facebooku, Messengerze czy Threads. Nowe i edytowane artykuły zapisują ją automatycznie. Tutaj odświeżysz ją dla wszystkich istniejących.</p>
-        <button type="button" class="btn btn-primary" id="og-refresh">Wygeneruj podglądy dla wszystkich artykułów</button>
+      <div class="ptabs" role="tablist" aria-label="Sekcje panelu">
+        <button type="button" role="tab" class="ptab is-active" data-ptab="drafts">Wersje robocze</button>
+        <button type="button" role="tab" class="ptab" data-ptab="scheduled">Zaplanowane</button>
+        <button type="button" role="tab" class="ptab" data-ptab="tips">Zgłoszone tematy</button>
+        <button type="button" role="tab" class="ptab" data-ptab="tools">Narzędzia</button>
+      </div>
+
+      <div class="ptab-pane" data-pane="drafts"><div id="panel-drafts" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="scheduled" hidden><div id="panel-scheduled" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="tips" hidden><div id="panel-tips" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="tools" hidden>
+        <div class="panel backup-box">
+          <h2 class="section-title">Kopia zapasowa</h2>
+          <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i zgłoszone tematy do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
+          <div class="backup-actions">
+            <button type="button" class="btn btn-primary" id="backup-export">Pobierz kopię (JSON)</button>
+            <button type="button" class="btn" id="backup-import">Przywróć z pliku…</button>
+            <input type="file" id="backup-file" accept="application/json,.json" hidden>
+          </div>
+        </div>
+        <div class="panel og-box">
+          <h2 class="section-title">Podglądy linków</h2>
+          <p class="muted">Każdy artykuł dostaje własną grafikę podglądu (taką jak „Grafika na X”), widoczną po wklejeniu linku na Facebooku, Messengerze czy Threads. Nowe i edytowane artykuły zapisują ją automatycznie. Tutaj odświeżysz ją dla wszystkich istniejących.</p>
+          <button type="button" class="btn btn-primary" id="og-refresh">Wygeneruj podglądy dla wszystkich artykułów</button>
+        </div>
       </div>
     </section>
 
@@ -713,6 +749,35 @@
     </div>
   </div>
 
+  <!-- MODAL: STATUS ZGŁOSZONEGO TEMATU -->
+  <div class="modal" id="tip-status-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ts-heading">
+      <h2 id="ts-heading">Co z tym tematem?</h2>
+      <p class="muted" id="ts-title"></p>
+      <form id="tip-status-form">
+        <div class="ts-options">
+          <label class="ts-opt is-new"><input type="radio" name="ts-status" value="new"><span>Nowe</span></label>
+          <label class="ts-opt is-progress"><input type="radio" name="ts-status" value="progress"><span>W toku</span></label>
+          <label class="ts-opt is-done"><input type="radio" name="ts-status" value="done"><span>Zrealizowane</span></label>
+          <label class="ts-opt is-later"><input type="radio" name="ts-status" value="later"><span>Odłożone</span></label>
+          <label class="ts-opt is-rejected"><input type="radio" name="ts-status" value="rejected"><span>Odrzucone</span></label>
+        </div>
+        <label class="field" id="ts-article-wrap" hidden>
+          <span class="field-label">Artykuł, który powstał z tego tematu</span>
+          <select id="ts-article"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Notatka</span>
+          <textarea id="ts-note" rows="3" maxlength="400"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn" data-close="tip-status-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- MODAL: USUWANIE ARTYKUŁU -->
   <div class="modal" id="remove-modal" hidden>
     <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="remove-title">
@@ -721,7 +786,7 @@
       <div class="remove-choices">
         <button type="button" class="remove-choice" id="remove-draft">
           <strong>Schowaj do wersji roboczych</strong>
-          <span>Znika ze strony, ale zostaje w „Robocze i zaplanowane” – możesz go poprawić i opublikować ponownie.</span>
+          <span>Znika ze strony, ale zostaje w Panelu – możesz go poprawić i opublikować ponownie.</span>
         </button>
         <button type="button" class="remove-choice is-danger" id="remove-forever">
           <strong>Usuń na zawsze</strong>
@@ -737,6 +802,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261101k"></script>
+  <script src="app.js?v=20261101p"></script>
 </body>
 </html>
