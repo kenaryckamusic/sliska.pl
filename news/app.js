@@ -29,6 +29,7 @@ const CONFIG = {
   FIREBASE_OG_COLLECTION: 'og',
   // Oceny czytelników i powiadomienia push – działają przez Cloudflare Worker (patrz INSTRUKCJA.md)
   API_BASE: '/news/api',
+  PEEK_CHANCE: 0.5,        // jak często w połowie artykułu pojawia się polecany inny artykuł (0–1)
 
   // Gdy Firebase nie odpowiada: false = pokaż komunikat o błędzie (zalecane na stronie publicznej),
   // true = przełącz się na localStorage z artykułami demonstracyjnymi.
@@ -1341,6 +1342,48 @@ function voteResultsHtml(editorScore, sum) {
     <p class="rv-note">${enough ? `${verdict} <span>(${sum.n} ${plural(sum.n, 'ocena', 'oceny', 'ocen')})</span>` : `Średnia pojawi się po ${Votes.MIN_SHOWN} ocenach (teraz: ${sum.n}).`}</p>`;
 }
 
+
+/* ---- Wyświetlenia i reakcje (bez konta, jedna reakcja na przeglądarkę) ---- */
+const REACTIONS = [['haha', '😂', 'Haha'], ['wrr', '😡', 'Wrr'], ['wow', '😮', 'Wow'], ['smutne', '😢', 'Smutne'], ['ogien', '🔥', 'Ogień']];
+const Reacts = { article: '', counts: {}, mine: '', views: 0, viewed: new Set() };
+async function initReactions(a) {
+  const box = $('#reactions'); if (!box) return;
+  Reacts.article = a.id; Reacts.counts = {}; Reacts.mine = ''; Reacts.views = 0;
+  const tok = Votes.token();
+  try {
+    const count = isPublished(a) && !Auth.isAdmin() && !Reacts.viewed.has(a.id);
+    if (count) Reacts.viewed.add(a.id);
+    const [v, d] = await Promise.all([
+      count ? fetch(CONFIG.API_BASE + '/view', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ article: a.id }) }).then(r => r.ok ? r.json() : {}).catch(() => ({})) : Promise.resolve({}),
+      fetch(CONFIG.API_BASE + '/react?article=' + encodeURIComponent(a.id) + '&tok=' + encodeURIComponent(tok), { cache: 'no-store' }).then(r => r.ok ? r.json() : null)
+    ]);
+    if (!d || Reacts.article !== a.id) return;
+    Reacts.counts = d.counts || {}; Reacts.mine = d.mine || ''; Reacts.views = Math.max(v.views || 0, d.views || 0);
+    drawReactions();
+  } catch { /* brak Workera – sekcja zostaje ukryta */ }
+}
+function drawReactions() {
+  const box = $('#reactions'); if (!box || box.dataset.article !== Reacts.article) return;
+  box.hidden = false;
+  const fmt = n => n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' tys.' : String(n);
+  box.innerHTML = `<div class="rx-head"><b>Jak Ci się podobało?</b><span class="rx-views" title="Wyświetlenia artykułu">👁 ${fmt(Reacts.views)}</span></div>
+    <div class="rx-row">${REACTIONS.map(([k, e, l]) => `<button type="button" class="rx-btn${Reacts.mine === k ? ' is-on' : ''}" data-rx="${k}" aria-pressed="${Reacts.mine === k}"><span class="rx-e" aria-hidden="true">${e}</span><span class="rx-l">${l}</span><b>${Reacts.counts[k] || 0}</b></button>`).join('')}</div>`;
+}
+async function reactTo(kind) {
+  if (!Reacts.article) return;
+  const prev = { mine: Reacts.mine, counts: { ...Reacts.counts } }, next = Reacts.mine === kind ? '' : kind;
+  if (prev.mine) Reacts.counts[prev.mine] = Math.max(0, (Reacts.counts[prev.mine] || 0) - 1);
+  if (next) Reacts.counts[next] = (Reacts.counts[next] || 0) + 1;
+  Reacts.mine = next; drawReactions();
+  try {
+    const r = await fetch(CONFIG.API_BASE + '/react', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ article: Reacts.article, tok: Votes.token(), kind: next }) });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(d.error === 'rate' ? 'Za dużo reakcji naraz. Poczekaj chwilę.' : 'Nie udało się zapisać reakcji.');
+    Reacts.counts = d.counts || Reacts.counts; Reacts.mine = d.mine || ''; drawReactions();
+  } catch (ex) { Reacts.mine = prev.mine; Reacts.counts = prev.counts; drawReactions(); toast(ex.message || 'Nie udało się zapisać reakcji.', 'error'); }
+}
+document.addEventListener('click', e => { const b = e.target.closest('[data-rx]'); if (b) reactTo(b.dataset.rx); });
+
 async function initReaderVote(a) {
   const box = $('#reader-vote');
   if (!box || !a.review || a.review.score == null || !isPublished(a)) return;
@@ -2000,6 +2043,32 @@ function notFoundHtml(text) {
     ${latest.length ? `<section class="related"><h2 class="section-title">Zobacz zamiast tego</h2><div class="related-grid">${latest.map(x => cardHtml(x, { noAdmin: true })).join('')}</div></section>` : ''}`;
 }
 
+/* „Czytaj też” w środku artykułu: czasem, losowy inny artykuł, minimalistyczny blok między akapitami */
+function injectPeek(root, a) {
+  if (!(Math.random() < CONFIG.PEEK_CHANCE)) return;
+  const body = root.querySelector('.article-body');
+  if (!body) return;
+  const kids = [...body.children];
+  if (kids.length < 8) return;
+  const pool = publishedArticles().filter(x => x.id !== a.id);
+  if (!pool.length) return;
+  const pick = pool[Math.floor(Math.random() * pool.length)];
+  let i = Math.floor(kids.length * 0.3);
+  while (i < kids.length - 3 && !(kids[i].tagName === 'P' && kids[i - 1] && kids[i - 1].tagName === 'P')) i++;
+  if (i >= kids.length - 3) return;
+  const id = encodeURIComponent(pick.id), cat = Utils.catsOf(pick)[0] || '';
+  const mins = Utils.readingTime(pick, state.plain.get(pick.id));
+  const box = document.createElement('aside');
+  box.className = 'peek';
+  box.setAttribute('aria-label', 'Polecany artykuł');
+  box.innerHTML = `<a class="peek-link" href="#/artykul/${id}">
+    <span class="peek-text"><span class="peek-kicker">Czytaj też</span><strong class="peek-title">${Utils.esc(pick.title)}</strong>
+    <span class="peek-meta">${cat ? Utils.esc(cat) + ' · ' : ''}${mins} min<span class="peek-go">Czytaj →</span></span></span>
+    <img class="peek-img" src="${Utils.esc(thumbFor(pick))}"${imgFocus(pick, thumbFor(pick))} alt="" data-cat="${Utils.esc(cat)}" loading="lazy" decoding="async">
+  </a>`;
+  kids[i].insertAdjacentElement('beforebegin', box);
+}
+
 function renderArticleView(id) {
   const el = $('#view-article');
   const a = state.articles.find(x => x.id === id);
@@ -2045,11 +2114,14 @@ function renderArticleView(id) {
     </div>
     ${notice}
     ${articleHtml(a, state.plain.get(a.id))}
+    <section class="reactions" id="reactions" data-article="${Utils.esc(a.id)}" aria-label="Reakcje" hidden></section>
     ${pagerHtml}
     ${relatedHtml}`;
   enhanceGalleries(el);
+  injectPeek(el, a);
   $('#side-comments').innerHTML = '';
   initReaderVote(a);
+  initReactions(a);
   initComments(a);
   document.title = `${a.title} – ${CONFIG.SITE_NAME}`;
   setMeta(a.title, a.lead);
@@ -2952,7 +3024,7 @@ async function shareArticle(id) {
   const url = articleUrl(a);
   if (navigator.share) {
     try {
-      await navigator.share({ title: a.title, text: a.lead, url });
+      await navigator.share({ url });
       return;
     } catch (e) {
       if (e && e.name === 'AbortError') return;
@@ -3542,14 +3614,29 @@ function clearPointer(draftId) {
   } catch { /* ignoruj */ }
 }
 
+const OWNER_TABS = ['tips', 'ads', 'users'];       // widzi tylko Właściciel Portalu: zgłoszenia tematów i błędów, reklamy od użytkowników, użytkownicy
+function applyOwnerTabs() {
+  const own = canManage();
+  OWNER_TABS.forEach(k => $$(`#view-panel [data-ptab="${k}"]`).forEach(b => { b.hidden = !own; }));
+}
+/** Dopiero gdy znamy rolę, doładowujemy dane tylko-dla-Właściciela (zgłoszenia tematów, liczba nowych reklam). */
+function ensureOwnerPanes() {
+  applyOwnerTabs();
+  if (currentRoute().name !== 'panel' || !canManage() || state.ownerLoaded) return;
+  state.ownerLoaded = true;
+  renderTips().then(updatePanelCounts);
+  adminApi('/admin/ads').then(d => { const n = (d.ads || []).filter(a => a.status === 'new').length; const b = $('#view-panel [data-ptab="ads"]'); if (b) b.dataset.count = n ? n : ''; }).catch(() => {});
+}
 function setPanelTab(t) {
-  const pu = $('#ptab-users'); if (pu) pu.hidden = !canManage();
-  if (t === 'users' && !canManage()) t = 'drafts';
+  holdHeight(2500);
+  applyOwnerTabs();
+  if (OWNER_TABS.includes(t) && !canManage() && !Readers.loading) t = 'drafts';
   $$('#view-panel .ptab').forEach(b => { const on = b.dataset.ptab === t; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
   $$('#view-panel .ptab-pane').forEach(p => { p.hidden = p.dataset.pane !== t; });
   try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
   if (t === 'comments') renderModeration(false);
   if (t === 'users') renderModUsersPanel($('#panel-users'));
+  if (t === 'ads') renderAdSubs($('#panel-ads'));
 }
 
 function updatePanelCounts() {
@@ -3557,11 +3644,11 @@ function updatePanelCounts() {
   const me = (state.profile && state.profile.name) || '';
   const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
   const tipsOpen = (state.tips || []).filter(t => TIP_OPEN.includes(tipStatus(t))).length;
-  set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', tipsOpen);
+  set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', canManage() ? tipsOpen : 0);
   set('kpi-mine', me ? publishedArticles().filter(a => authorKey(a.author) === authorKey(me)).length : publishedArticles().length);
   const kl = $('#kpi-mine') && $('#kpi-mine').closest('a'); if (kl) kl.setAttribute('href', me ? '#/redaktor/' + encodeURIComponent(me) : '#/redakcja');
-  const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: tipsOpen };
-  $$('#view-panel .ptab').forEach(b => { const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
+  const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: canManage() ? tipsOpen : 0 };
+  $$('#view-panel .ptab').forEach(b => { if (!(b.dataset.ptab in tabs)) return; const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
 }
 
 async function renderPanel() {
@@ -3571,8 +3658,9 @@ async function renderPanel() {
   $('#panel-hello').textContent = `${hi}${first ? ', ' + first : ''}. Oto Twoje materiały i narzędzia redakcji.`;
   fillHub();
   let t = state.profile.panelTab || 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || t; } catch { /* ignoruj */ }
+  state.ownerLoaded = false;
   setPanelTab(t);
-  renderTips().then(updatePanelCounts);
+  ensureOwnerPanes();
   const dEl = $('#panel-drafts');
   const sEl = $('#panel-scheduled');
 
@@ -5095,9 +5183,9 @@ async function shareQuick(id) {
   if (!a) return;
   const url = a.link || (location.href.split('#')[0] + '#/szybkie');
   if (navigator.share) {
-    try { await navigator.share({ title: 'Śliska News', text: a.title, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    try { await navigator.share({ url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
   }
-  try { await navigator.clipboard.writeText(`${a.title} ${url}`); toast('Skopiowano do schowka.'); } catch { toast('Nie udało się skopiować.', 'error'); }
+  try { await navigator.clipboard.writeText(url); toast('Skopiowano do schowka.'); } catch { toast('Nie udało się skopiować.', 'error'); }
 }
 
 /** Story (1080×1920): tło marki + logo + treść newsa + zwykły napis „sliska.pl” – bez linku i naklejek. */
@@ -5262,7 +5350,7 @@ async function shareImage(id, btn) {
     const file = new File([blob], name, { type: 'image/png' });
     const url = articleUrl(a);
     if (navigator.canShare && navigator.canShare({ files: [file] }) && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
-      try { await navigator.share({ files: [file], title: a.title, text: `${a.title}\n${url}`, url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+      try { await navigator.share({ files: [file], text: url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
     }
     const obj = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -6054,7 +6142,7 @@ const READER_ERR = {
   bad_login: 'Nieprawidłowa nazwa/e-mail lub hasło.', rename: 'Najpierw zmień nazwę użytkownika na zgodną z nowymi zasadami.', session_expired: 'Sesja wygasła – zaloguj się ponownie.',
   name_bad: 'Ta nazwa jest niedozwolona. Wybierz inną.', name_taken: 'Ta nazwa jest już zajęta.',
   name_cooldown: 'Nazwę użytkownika możesz zmieniać raz na 30 dni.', verify: 'Potwierdź adres e-mail (link w wiadomości od nas), żeby komentować.',
-  banned: 'Twoje konto zostało zablokowane.', rate: 'Za dużo prób – spróbuj ponownie później.', dup: 'Taki komentarz już dodałeś.',
+  guests_off: 'Komentowanie bez konta jest wyłączone. Zaloguj się, żeby napisać komentarz.', banned: 'Twoje konto zostało zablokowane.', rate: 'Za dużo prób – spróbuj ponownie później.', dup: 'Taki komentarz już dodałeś.',
   off: 'Komentarze do tego artykułu są wyłączone.', short: 'Komentarz jest za krótki.', long: 'Komentarz jest za długi (maks. 600 znaków).',
   no_profile: 'Najpierw ustaw nazwę użytkownika na stronie konta.', avatar: 'Nie udało się zapisać zdjęcia.', auth: 'Zaloguj się ponownie.',
   slow: 'Poczekaj chwilę przed kolejnym komentarzem (tryb wolniejszej dyskusji).', edit_late: 'Komentarz można poprawiać tylko przez 5 minut od publikacji.', gone: 'Tego komentarza już nie ma.', session_revoked: 'Sesja wygasła – zaloguj się ponownie.',
@@ -6297,11 +6385,10 @@ function drawComments() {
   let form = '';
   if (Cmt.off) form = '<p class="cmt-note">Komentarze do tego artykułu są wyłączone.</p>';
   else if (Readers.loading) form = '';
-  else if (!Readers.loggedIn() && !isStaffActor()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
-  else if (!isStaffActor() && !Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
-  else if (!isStaffActor() && !Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
-  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="${isOwnerRole() ? 20000 : 600}" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.me.name)}…" aria-label="Komentarz"></textarea>
-      <div class="cmt-row"><small><span id="cmt-count">0</span>${isOwnerRole() ? '' : '/600'}</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div>${Cmt.slow && !isStaffActor() && !canMod() ? `<small class="cmt-slow">Tryb wolniejszej dyskusji: odstęp ${Cmt.slow >= 60 ? Cmt.slow / 60 + ' min' : Cmt.slow + ' s'} między komentarzami.</small>` : ''}</form>`;
+  else if (Readers.loggedIn() && !isStaffActor() && !Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
+  else if (Readers.loggedIn() && !isStaffActor() && !Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
+  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="${isOwnerRole() ? 20000 : 600}" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.loggedIn() ? Readers.me.name : 'Niezmoczona (numer nadamy sami)')}…" aria-label="Komentarz"></textarea>
+      <div class="cmt-row"><small><span id="cmt-count">0</span>${isOwnerRole() ? '' : '/600'}</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div>${Cmt.slow && !isStaffActor() && !canMod() ? `<small class="cmt-slow">Tryb wolniejszej dyskusji: odstęp ${Cmt.slow >= 60 ? Cmt.slow / 60 + ' min' : Cmt.slow + ' s'} między komentarzami.</small>` : ''}${!Readers.loggedIn() && !isStaffActor() ? '<small class="cmt-guest">Piszesz jako gość. <button type="button" class="cmt-act" data-cmt="login">Zaloguj się</button>, żeby mieć własną nazwę oraz edytować i usuwać komentarze.</small>' : ''}</form>`;
   const keep = $('#cmt-text') ? $('#cmt-text').value : '';
   const closeBtn = canMod() && (Cmt.closed || !Cmt.off) ? `<button type="button" class="cmt-act cmt-close" data-cmt="close-toggle">${Cmt.closed ? 'Otwórz komentarze' : 'Zamknij komentarze'}</button>` : '';
   box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span>${closeBtn}</h2>
@@ -6344,7 +6431,6 @@ async function commentAction(act, id, btn) {
     if (act === 'toggle') { cmtOpen.has(id) ? cmtOpen.delete(id) : cmtOpen.add(id); drawComments(); return; }
     if (act === 'login') { openReaderModal('login'); return; }
     if (act === 'reply') {
-      if (!Readers.loggedIn() && !isStaffActor()) { openReaderModal('login'); return; }
       const c = Cmt.list.find(x => x.id === id); if (!c) return;
       Cmt.replyTo = { id: c.id, name: c.name }; drawComments();
       const t = $('#cmt-text'); if (t) { t.focus(); t.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
@@ -6576,10 +6662,10 @@ function renderAccount() {
   const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
   const rt = currentRoute().tab;
   const staff = Auth.isAdmin();
-  if (rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
-  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : '';
+  if (rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy' || rt === 'reklamy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : rt === 'reklamy' ? 'ads' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
+  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : rt === 'reklamy' && canManage() ? 'reklamy' : '';
   stashProfileBlock();
-  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a>` : ''}</div>` : '';
+  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a><a class="ptab ${tab === 'reklamy' ? 'is-active' : ''}" href="#/konto/reklamy">Reklamy</a>` : ''}</div>` : '';
   const pubLink = Readers.me && Readers.me.pub ? `<a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz profil publiczny</a>` : '';
   const vChip = Readers.verified() ? '<span class="acc-chip is-ok">E-mail potwierdzony</span>' : '<span class="acc-chip is-warn">E-mail niepotwierdzony</span>';
   el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
@@ -6625,6 +6711,7 @@ function renderAccount() {
     </div>`}`;
   if (tab === 'komentarze') renderModComments($('#acc-mod'), false);
   else if (tab === 'uzytkownicy') renderModUsersPanel($('#acc-mod'));
+  else if (tab === 'reklamy') renderAdSubs($('#acc-mod'));
   else if (staff) {
     const slot = $('#acc-editor-slot'), blk = $('#st-profile-block');
     if (slot && blk) { slot.appendChild(blk); renderSettings(); }
@@ -6651,7 +6738,7 @@ function fillHub() {
 /** Przejście do wskazanej zakładki Panelu (np. Moderacja). */
 function goPanelTab(t) {
   try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
-  if (location.hash === '#/panel') { route(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else location.hash = '#/panel';
+  if (location.hash === '#/panel') { holdHeight(2500); route(); } else location.hash = '#/panel';
 }
 
 /** Kafelek profilu po lewej także dla zalogowanego czytelnika (w tym samym miejscu co u redaktora, bez funkcji redakcyjnych). */
@@ -6662,6 +6749,7 @@ function renderReaderCard() {
   const me = Readers.me || {};
   $('#btn-rd-mod').hidden = !canMod();
   $('#btn-rd-users').hidden = !canManage();
+  ensureOwnerPanes();
   { const pu = $('#ptab-users'); if (pu) { pu.hidden = !canManage(); if (!pu.hidden && currentRoute().name === 'panel' && !$('#panel-users').children.length && ($('#view-panel .ptab.is-active') || {}).dataset?.ptab === 'users') renderModUsersPanel($('#panel-users')); } }
   let hint = $('#rd-hint');
   if (!hint) { hint = document.createElement('div'); hint.id = 'rd-hint'; hint.className = 'rd-hint'; const pa = $('#profile-card .profile-actions'); if (pa) pa.parentNode.insertBefore(hint, pa); }
@@ -6746,6 +6834,54 @@ function bindReaderEvents() {
   });
 }
 
+
+/* ---- Zgłoszone reklamy (tylko Właściciel): lista z podglądem i pobieraniem plików ---- */
+const AD_ST = { new: 'Nowe', done: 'Przyjęte', rejected: 'Odrzucone' };
+const AD_FMTS = [['long', 'Długi 1456×180'], ['box', 'Okienko 600×500'], ['card', 'Kafelek 900×1000']];
+async function adImgBlob(id, f) {
+  const h = await actorAuth();
+  const r = await fetch(CONFIG.API_BASE + '/admin/ads/img?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
+  if (!r.ok) throw new Error('img');
+  return URL.createObjectURL(await r.blob());
+}
+async function renderAdSubs(el) {
+  if (!el) return;
+  holdHeight(2500);
+  el.dataset.adsroot = '1';
+  el.innerHTML = '<p class="muted">Ładowanie…</p>';
+  try {
+    const d = await adminApi('/admin/ads');
+    if (!d.ads.length) { el.innerHTML = '<p class="muted">Nikt jeszcze nie wysłał reklamy. Formularz: <a href="reklama.html" target="_blank" rel="noopener">reklama.html</a></p>'; return; }
+    el.innerHTML = `<p class="muted">Zgłoszenia widzisz tylko Ty. Formularz dla reklamodawców: <a href="reklama.html" target="_blank" rel="noopener">reklama.html</a>. Pobrane pliki wrzucasz do folderu <code>ads/</code> i dopisujesz w <code>ads.js</code> (lista <code>ADS</code>).</p>` + d.ads.map(a => {
+      const slug = (a.brand || 'reklama').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'reklama';
+      const fm = AD_FMTS.filter(([f]) => a['has_' + f]);
+      return `<article class="mc adsub" data-id="${a.id}" data-slug="${slug}" data-status="${a.status}">
+        <div class="mc-head"><b>${Utils.esc(a.brand)}</b><span class="mc-st is-${a.status === 'new' ? 'pending' : a.status === 'done' ? 'ok' : 'hidden'}">${AD_ST[a.status] || a.status}</span><time>${ago(a.at)}</time></div>
+        <p class="mc-text">${Utils.esc(a.name)} · <a href="mailto:${Utils.esc(a.email)}?subject=${encodeURIComponent('Twoja reklama w Śliska News')}">${Utils.esc(a.email)}</a><br>Link: <a href="${Utils.esc(a.link)}" target="_blank" rel="noopener nofollow">${Utils.esc(a.link)}</a>${a.note ? '<br>' + Utils.esc(a.note).replace(/\n/g, '<br>') : ''}</p>
+        <div class="adsub-imgs">${fm.map(([f, l]) => `<figure data-f="${f}"><img alt="${l}" data-adimg="${f}"><figcaption>${l} · <button type="button" class="mc-link" data-ads-dl="${f}">Pobierz</button></figcaption></figure>`).join('') || '<small class="muted">Brak grafik.</small>'}</div>
+        ${fm.length < 3 ? `<small class="muted">Brakuje formatów: ${AD_FMTS.filter(([f]) => !a['has_' + f]).map(x => x[1]).join(', ')}</small>` : ''}
+        <div class="mc-actions"><button type="button" data-ads-act="done">Przyjęte</button><button type="button" data-ads-act="rejected">Odrzuć</button>${a.status !== 'new' ? '<button type="button" data-ads-act="new">Przywróć jako nowe</button>' : ''}<button type="button" class="is-danger" data-ads-act="delete">Usuń</button></div>
+      </article>`;
+    }).join('');
+    $$('[data-adimg]', el).forEach(async img => { try { img.src = await adImgBlob(img.closest('.adsub').dataset.id, img.dataset.adimg); } catch { img.alt = 'Nie udało się wczytać'; } });
+  } catch (e) { el.innerHTML = `<p class="muted">${Utils.esc(e.message || 'Nie udało się wczytać zgłoszeń.')}</p>`; }
+}
+document.addEventListener('click', async e => {
+  const dl = e.target.closest('[data-ads-dl]'), act = e.target.closest('[data-ads-act]');
+  if (!dl && !act) return;
+  const art = e.target.closest('.adsub'); if (!art) return;
+  try {
+    if (dl) {
+      const url = await adImgBlob(art.dataset.id, dl.dataset.adsDl);
+      const a = document.createElement('a'); a.href = url; a.download = art.dataset.slug + '-' + dl.dataset.adsDl + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } else {
+      if (act.dataset.adsAct === 'delete' && !confirm('Usunąć to zgłoszenie razem z grafikami?')) return;
+      await adminApi('/admin/ads', { method: 'POST', body: JSON.stringify({ id: Number(art.dataset.id), action: act.dataset.adsAct }) });
+      renderAdSubs(art.closest('[data-adsroot]'));
+    }
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+
 /* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
 const Mod = { all: false };
 const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor' };
@@ -6776,12 +6912,13 @@ function modItemHtml(c) {
 
 async function renderModComments(el, all) {
   if (!el) return;
+  holdHeight(2500);
   Mod.all = !!all; el.dataset.modroot = '1';
   el.innerHTML = '<p class="muted">Ładowanie…</p>';
   try {
     const d = await adminApi('/admin/comments?status=' + (all ? 'all' : 'attention'));
     const set = canManage() ? await adminApi('/admin/settings').catch(() => null) : null;
-    const slowBar = set ? `<label class="mod-slow"><span>Tryb wolniejszej dyskusji</span><select data-mod-slow aria-label="Tryb wolniejszej dyskusji">${[[0, 'Wyłączony'], [30, 'Odstęp 30 s'], [60, 'Odstęp 1 min'], [300, 'Odstęp 5 min']].map(([v, l]) => `<option value="${v}" ${set.slow === v ? 'selected' : ''}>${l}</option>`).join('')}</select><small>Dotyczy czytelników; redakcja i Właściciel są wyłączeni z limitu.</small></label>` : '';
+    const slowBar = set ? `<label class="mod-slow"><span>Tryb wolniejszej dyskusji</span><select data-mod-slow aria-label="Tryb wolniejszej dyskusji">${[[0, 'Wyłączony'], [30, 'Odstęp 30 s'], [60, 'Odstęp 1 min'], [300, 'Odstęp 5 min']].map(([v, l]) => `<option value="${v}" ${set.slow === v ? 'selected' : ''}>${l}</option>`).join('')}</select><small>Dotyczy czytelników; redakcja i Właściciel są wyłączeni z limitu.</small></label><label class="mod-slow mod-guests"><input type="checkbox" data-mod-guests ${set.guests !== false ? 'checked' : ''}><span>Komentarze bez konta (jako „Niezmoczona #numer”)</span></label>` : '';
     el.innerHTML = `${slowBar}<div class="mod-bar"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="mc-link" data-mod="${all ? 'attention' : 'all'}">${all ? 'Tylko do sprawdzenia' : 'Pokaż ostatnie'}</button></div>
       <div class="mod-list">${d.comments.length ? d.comments.map(modItemHtml).join('') : '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'}</div>`;
   } catch (ex) { el.innerHTML = `<p class="form-error">${Utils.esc(ex.message || 'Nie udało się pobrać komentarzy.')}</p>`; }
@@ -6901,6 +7038,11 @@ document.addEventListener('change', async e => {
   loadModUsers(box);
 });
 document.addEventListener('change', async e => {
+  const gs = e.target.closest('[data-mod-guests]'); if (!gs) return;
+  try { await adminApi('/admin/settings', { method: 'POST', body: JSON.stringify({ guests: gs.checked }) }); toast(gs.checked ? 'Goście mogą komentować.' : 'Komentowanie bez konta wyłączone.'); }
+  catch (ex) { gs.checked = !gs.checked; toast(ex.message || 'Nie udało się.', 'error'); }
+});
+document.addEventListener('change', async e => {
   const sl = e.target.closest('[data-mod-slow]'); if (!sl) return;
   try { await adminApi('/admin/settings', { method: 'POST', body: JSON.stringify({ slow: Number(sl.value) }) }); toast(Number(sl.value) ? 'Tryb wolniejszej dyskusji włączony.' : 'Tryb wolniejszej dyskusji wyłączony.'); }
   catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
@@ -6945,6 +7087,15 @@ function refreshViews() {
 }
 
 /** Pamięta miejsce na liście: po wejściu w artykuł i cofnięciu wracasz dokładnie tam, gdzie byłeś. */
+/** Utrzymuje wysokość strony na czas przeładowania zawartości zakładki (inaczej przeglądarka „zjeżdża” na górę, gdy treść na chwilę znika). */
+function holdHeight(ms) {
+  const y = window.scrollY; if (y < 40) return;
+  const b = document.body; b.style.minHeight = (document.documentElement.scrollHeight) + 'px';
+  clearTimeout(holdHeight.t);
+  holdHeight.t = setTimeout(() => { b.style.minHeight = ''; }, ms || 2500);
+  window.scrollTo({ top: y, behavior: 'instant' });
+}
+const SAME_SECTION = new Set(['account', 'panel', 'settings']);
 const ScrollMemory = { cur: location.hash || '#/', prev: '', n: 0, pos: {} };
 const LIST_ROUTES = /^#\/($|kategoria|tag|artysta|redaktor|redakcja|ranking|zapisane|szybkie)/;
 
@@ -6967,7 +7118,9 @@ function route() {
 function routeCore() {
   leaveEditor();
   const r = currentRoute();
-  window.scrollTo({ top: 0, behavior: 'instant' });
+  const sameSection = SAME_SECTION.has(r.name) && routeCore.last === r.name;      // przełączanie zakładek w koncie/panelu nie wraca na górę strony
+  routeCore.last = r.name;
+  if (sameSection) holdHeight(2500); else window.scrollTo({ top: 0, behavior: 'instant' });
   void document.body.offsetHeight;
   document.title = `${CONFIG.SITE_NAME} – najświeższe wiadomości`;
 
@@ -7498,6 +7651,15 @@ function bindEvents() {
   $('#tip-status-form').addEventListener('submit', saveTipStatus);
   $('#view-panel').addEventListener('input', e => { if (e.target.id === 'tip-search') { tipQuery = e.target.value; renderTipList(); } });
   $('#tip-status-form').addEventListener('change', updateTipStatusForm);
+  const adsOff = $('#st-ads-off');
+  if (adsOff) {
+    try { adsOff.checked = localStorage.getItem('sliska_ads_off') === '1'; } catch { /* ignoruj */ }
+    adsOff.addEventListener('change', () => {
+      try { localStorage.setItem('sliska_ads_off', adsOff.checked ? '1' : '0'); } catch { /* ignoruj */ }
+      window.dispatchEvent(new Event('sliska:ads'));
+      toast(adsOff.checked ? 'Reklamy wyłączone na tym urządzeniu.' : 'Reklamy włączone.');
+    });
+  }
   $('#st-device-push').addEventListener('change', async e => {
     const on = e.target.checked; e.target.disabled = true;
     try { if (on) { await Push.enable(); toast('Powiadomienia włączone na tym urządzeniu.'); } else { await Push.disable(); toast('Powiadomienia wyłączone.'); } }
