@@ -708,6 +708,10 @@ const FirebaseProvider = {
       }),
       new Promise(resolve => setTimeout(resolve, 4000))
     ]);
+    try {          // sesja redakcji wygasa po 24 godzinach od zalogowania
+      const u = this.auth.currentUser, t = u && u.metadata && Date.parse(u.metadata.lastSignInTime);
+      if (u && t && Date.now() - t > 24 * 3600e3) { await this.auth.signOut(); setTimeout(() => toast('Sesja wygasła – zaloguj się ponownie.'), 1500); }
+    } catch { /* ignoruj */ }
   },
 
   _wrap(err) {
@@ -1096,6 +1100,7 @@ function openModal(id) {
 }
 
 function closeModal(id) {
+  if (id === 'rename-modal' && typeof renameRequired === 'function' && renameRequired()) return;     // tego okna nie da się zamknąć
   $('#' + id).hidden = true;
   if (!$$('.modal').some(m => !m.hidden)) document.body.classList.remove('modal-open');
 }
@@ -1191,7 +1196,7 @@ const staffName = () => isStaffActor() ? ((state.profile && state.profile.name) 
 async function actorApi(path, opts = {}) {
   const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...(await actorAuth()), ...(opts.headers || {}) }, cache: 'no-store' });
   let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
-  if (!r.ok) { if (d.error === 'session_revoked') { try { Readers.auth && Readers.auth.signOut(); } catch { /* ignoruj */ } } const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
+  if (!r.ok) { if (d.error === 'session_revoked' || d.error === 'session_expired') { try { Readers.auth && Readers.auth.signOut(); } catch { /* ignoruj */ } } const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
   return d;
 }
 
@@ -1493,6 +1498,14 @@ function fitTicker() {
 }
 
 /* ---------- Strona kolekcji: wykonawca / tag ---------- */
+/** Przycisk „wstecz”: jeśli przyszliśmy z artykułu, wraca do tego artykułu (nie na listę). */
+function cameFromArticle() { return /^#\/artykul\//.test((typeof ScrollMemory !== 'undefined' && ScrollMemory.prev) || ''); }
+function backBtn(defHref, defLabel, cls = 'btn btn-sm') {
+  return cameFromArticle()
+    ? `<a class="${cls}" href="${Utils.esc(ScrollMemory.prev)}" data-smartback>← Wróć do artykułu</a>`
+    : `<a class="${cls}" href="${defHref}">${defLabel}</a>`;
+}
+
 function authorHeadHtml(list) {
   const name = state.author;
   const e = Authors.find(name) || { name, photo: Authors.photo(name, '') };
@@ -1501,15 +1514,20 @@ function authorHeadHtml(list) {
   const plural = (n, one, few, many) => n === 1 ? one : (n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many);
   const stats = [`${list.length} ${plural(list.length, 'artykuł', 'artykuły', 'artykułów')}`];
   if (reviews) stats.push(`${reviews} ${plural(reviews, 'recenzja', 'recenzje', 'recenzji')}`);
+  const last = list.map(a => a.createdAt).sort().pop();
+  const pills = [`<span class="au-pill"><b>${list.length}</b> ${plural(list.length, 'artykuł', 'artykuły', 'artykułów')}</span>`];
+  if (reviews) pills.push(`<span class="au-pill"><b>${reviews}</b> ${plural(reviews, 'recenzja', 'recenzje', 'recenzji')}</span>`);
+  if (last) pills.push(`<span class="au-pill">ostatni tekst: <b>${Utils.esc(Utils.formatDate(last).replace(/ \d{1,2}:\d{2}$/, ''))}</b></span>`);
   return `<header class="collection-head author-head">
-    <a class="btn btn-sm" href="#/redakcja">← Redakcja</a>
+    <div class="author-cover" aria-hidden="true"></div>
+    <div class="author-topbar">${backBtn('#/redakcja', '← Redaktorzy', 'btn btn-sm author-back')}</div>
     <div class="author-hero">
       <span class="avatar avatar-lg" aria-hidden="true">${avatarHtml({ name: e.name || name, avatar: e.photo })}</span>
       <div class="author-hero-text">
-        <span class="collection-kind">Redaktor</span>
-        <h1 class="collection-name is-tag">${Utils.esc(e.name || name)}</h1>
-        ${bio ? `<p class="author-bio">${Utils.esc(bio)}</p>` : ''}
-        <p class="collection-stats">${stats.map(Utils.esc).join(' · ')}</p>
+        <span class="author-role">Redaktor</span>
+        <h1 class="collection-name is-tag">${Utils.esc((e.name || name).replace(/^Redaktor\s+/i, ''))}</h1>
+        ${bio ? `<p class="author-bio">${Utils.esc(bio)}</p>` : '<p class="author-bio is-empty">Ten redaktor nie dodał jeszcze biografii.</p>'}
+        <div class="author-pills">${pills.join('')}</div>
       </div>
     </div>
   </header>`;
@@ -1526,7 +1544,7 @@ function collectionHeadHtml(list) {
   if (reviews.length) stats.push(`${reviews.length} ${plural(reviews.length, 'recenzja', 'recenzje', 'recenzji')}`);
   if (avg !== null) stats.push(`średnia ocena ${Utils.formatScore(avg)}`);
   return `<header class="collection-head">
-    <a class="btn btn-sm" href="#/">← Wszystkie artykuły</a>
+    ${backBtn('#/', '← Wszystkie artykuły')}
     <span class="collection-kind">${isArtist ? 'Wykonawca' : 'Tag'}</span>
     <h1 class="collection-name${isArtist ? '' : ' is-tag'}">${isArtist ? '' : '#'}${Utils.esc(name)}</h1>
     <p class="collection-stats">${stats.map(Utils.esc).join(' · ')}</p>
@@ -1897,7 +1915,7 @@ function articleHtml(a, plain) {
         </div>
         <h1>${Utils.esc(a.title)}</h1>
         <div class="article-meta">
-          <span class="author-line">${authorAvatarHtml(a)}<a class="author-link" href="${Authors.href(a.author)}"><strong>${Utils.esc(a.author)}</strong></a></span>
+          <span class="author-line">${authorAvatarHtml(a)}<a class="author-link" href="${Authors.href(a.author)}"><strong>${Utils.esc(bylineName(a.author))}</strong></a></span>
           <time datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)}</time>
           <span>${minutes} min czytania</span>
         </div>
@@ -3108,36 +3126,94 @@ function tipHistory(t) {
   if (st === 'new') return '';
   const art = t.statusArticleId && state.articles.find(a => a.id === t.statusArticleId);
   const when = t.statusAt ? Utils.formatDate(t.statusAt) : '';
-  return `<div class="tip-hist is-${st}"><b>${TIP_STATUS[st].label}</b>${when ? ' · ' + when : ''}${art ? ` · artykuł: <a href="#/artykul/${encodeURIComponent(art.id)}">${Utils.esc(art.title)}</a>` : ''}${t.statusNote ? `<br><span>${Utils.esc(t.statusNote)}</span>` : ''}</div>`;
+  return `<div class="tip-hist is-${st}"><b>${tipKind(t) === 'error' ? TIP_ERR_LABEL[st] : TIP_STATUS[st].label}</b>${when ? ' · ' + when : ''}${art ? ` · artykuł: <a href="#/artykul/${encodeURIComponent(art.id)}">${Utils.esc(art.title)}</a>` : ''}${t.statusNote ? `<br><span>${Utils.esc(t.statusNote)}</span>` : ''}</div>`;
 }
+
+/** Rodzaj zgłoszenia: błąd w artykule (formularz „Zauważyłeś błąd?”) albo temat od czytelnika. Bez nowych pól w bazie – po tytule i linku. */
+const tipKind = t => /^Błąd w artykule:/.test(t.title || '') ? 'error' : 'topic';
+function tipArticle(t) {
+  if (tipKind(t) !== 'error') return null;
+  const m = String(t.link || t.message || '').match(/\/(?:a|artykul)\/([A-Za-z0-9_-]+)/);
+  const id = m ? decodeURIComponent(m[1]) : '';
+  return (id && state.articles.find(x => x.id === id)) || null;
+}
+const TIP_ERR_LABEL = { new: 'Nowy błąd', progress: 'Poprawiam', later: 'Odłożony', done: 'Naprawiony', rejected: 'Nie błąd' };
+let tipKindFilter = 'all', tipQuery = '';
 
 function renderTipList() {
   const el = $('#panel-tips');
   const all = state.tips || [];
-  const cnt = { open: 0, done: 0, rejected: 0, all: all.length };
-  all.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; else cnt[st]++; });
-  const chips = [['open', 'Do rozpatrzenia'], ['done', 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
+  const q = Utils.fold(tipQuery);
+  const byKind = all.filter(t => tipKindFilter === 'all' || tipKind(t) === tipKindFilter);
+  const cnt = { open: 0, done: 0, rejected: 0, all: byKind.length };
+  byKind.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; else cnt[st]++; });
+  const kc = k => all.filter(t => (k === 'all' || tipKind(t) === k) && TIP_OPEN.includes(tipStatus(t))).length;
+  const kinds = [['all', 'Wszystkie'], ['topic', 'Tematy'], ['error', 'Błędy w artykułach']]
+    .map(([k, l]) => `<button type="button" class="tip-kind${tipKindFilter === k ? ' is-active' : ''}" data-tipkind="${k}">${l}${kc(k) ? ` <i>${kc(k)}</i>` : ''}</button>`).join('');
+  const chips = [['open', 'Do rozpatrzenia'], ['done', tipKindFilter === 'error' ? 'Naprawione' : 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
     .map(([k, l]) => `<button type="button" class="tip-filter${tipFilter === k ? ' is-active' : ''}" data-tipfilter="${k}">${l} <i>${cnt[k]}</i></button>`).join('');
-  const list = all.filter(t => { const st = tipStatus(t); return tipFilter === 'all' || (tipFilter === 'open' ? TIP_OPEN.includes(st) : st === tipFilter); });
-  const empty = { open: 'Nic nie czeka na rozpatrzenie.', done: 'Żaden temat nie został jeszcze zrealizowany.', rejected: 'Brak odrzuconych tematów.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
-  el.innerHTML = `<div class="tip-filters">${chips}</div>` + (list.length
-    ? list.map(t => { const st = tipStatus(t); return `<div class="panel-item tip-item">
+  const list = byKind.filter(t => {
+    const st = tipStatus(t);
+    if (!(tipFilter === 'all' || (tipFilter === 'open' ? TIP_OPEN.includes(st) : st === tipFilter))) return false;
+    return !q || Utils.fold([t.title, t.message, t.email].join(' ')).includes(q);
+  });
+  const empty = q ? 'Nic nie pasuje do wyszukiwania.' : { open: 'Nic nie czeka na rozpatrzenie. 🎉', done: 'Nic jeszcze nie zostało zrealizowane.', rejected: 'Brak odrzuconych zgłoszeń.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
+  const item = t => {
+    const st = tipStatus(t), err = tipKind(t) === 'error', art = tipArticle(t);
+    const label = err ? TIP_ERR_LABEL[st] : TIP_STATUS[st].label;
+    const msg = err ? String(t.message || '').replace(/\n\nArtykuł:.*$/s, '') : t.message;
+    const title = err ? (art ? art.title : String(t.title).replace(/^Błąd w artykule:\s*/, '')) : t.title;
+    const open = TIP_OPEN.includes(st);
+    const quick = err && open ? `
+            ${art ? `<a class="btn btn-sm" href="#/artykul/${encodeURIComponent(art.id)}">Otwórz artykuł</a><a class="btn btn-sm" href="#/edytor/${encodeURIComponent(art.id)}">Popraw</a>` : ''}
+            <button type="button" class="btn btn-sm btn-primary" data-action="tip-quick" data-id="${Utils.esc(t.id)}" data-st="done">✓ Naprawione</button>
+            <button type="button" class="btn btn-sm" data-action="tip-quick" data-id="${Utils.esc(t.id)}" data-st="rejected">To nie błąd</button>` : '';
+    return `<div class="panel-item tip-item${err ? ' is-error' : ''}">
           <div class="panel-item-main">
-            <span class="tip-status ${TIP_STATUS[st].cls}">${TIP_STATUS[st].label}</span>
-            <strong>${Utils.esc(t.title)}</strong>
-            <span class="tip-msg">${Utils.esc(t.message)}</span>
-            <span class="muted">${Utils.formatDate(t.createdAt)}${t.email ? ' · ' + Utils.esc(t.email) : ''}</span>
+            <div class="tip-tags"><span class="tip-kind-tag ${err ? 'is-err' : 'is-topic'}">${err ? 'Błąd w artykule' : 'Temat'}</span><span class="tip-status ${TIP_STATUS[st].cls}">${label}</span></div>
+            <strong>${err && art ? `<a href="#/artykul/${encodeURIComponent(art.id)}">${Utils.esc(title)}</a>` : Utils.esc(title)}</strong>
+            <span class="tip-msg">${Utils.esc(msg)}</span>
+            <span class="muted">${Utils.formatDate(t.createdAt)}${t.email ? ' · ' + Utils.esc(t.email) : ' · bez adresu e-mail'}</span>
             ${tipHistory(t)}
           </div>
-          <div class="panel-item-actions">
-            <button type="button" class="btn btn-sm btn-primary" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status</button>
-            ${t.link ? `<a class="btn btn-sm" href="${Utils.esc(t.link)}" target="_blank" rel="noopener noreferrer">Źródło</a>` : ''}
-            ${t.email ? `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + t.title)}">Odpisz</a>` : ''}
+          <div class="panel-item-actions">${quick}
+            ${err && open ? '' : `<button type="button" class="btn btn-sm btn-primary" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status</button>`}
+            ${!err && t.link ? `<a class="btn btn-sm" href="${Utils.esc(t.link)}" target="_blank" rel="noopener noreferrer">Źródło</a>` : ''}
+            ${t.email ? `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + title)}">Odpisz</a>` : ''}
+            ${err && open ? `<button type="button" class="btn btn-sm" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status…</button>` : ''}
             <button type="button" class="btn btn-sm btn-danger" data-action="delete-tip" data-id="${Utils.esc(t.id)}">Usuń</button>
           </div>
-        </div>`; }).join('')
-    : `<p class="muted">${empty}</p>`);
+        </div>`;
+  };
+  const active = document.activeElement && document.activeElement.id === 'tip-search';
+  el.innerHTML = `<div class="tip-bar"><div class="tip-kinds">${kinds}</div><input type="search" id="tip-search" class="mod-q" placeholder="Szukaj w zgłoszeniach…" value="${Utils.esc(tipQuery)}" aria-label="Szukaj w zgłoszeniach"></div>
+    <div class="tip-filters">${chips}</div>` + (list.length ? list.map(item).join('') : `<p class="muted">${empty}</p>`);
+  if (active) { const s = $('#tip-search'); s.focus(); s.setSelectionRange(s.value.length, s.value.length); }
   updatePanelCounts();
+}
+
+/** Szybka zmiana statusu jednym kliknięciem (np. „Naprawione” przy zgłoszeniu błędu). */
+async function quickTipStatus(id, status) {
+  const t = (state.tips || []).find(x => x.id === id);
+  if (!t) return;
+  const art = tipArticle(t);
+  await applyTipPatch(t, { status, statusNote: t.statusNote || '', statusArticleId: status === 'done' && art ? art.id : '', statusAt: new Date().toISOString() });
+}
+
+async function applyTipPatch(t, patch) {
+  const id = t.id;
+  let local = false;
+  try {
+    await DataService.updateTip(id, patch);
+    const o = tipOverrides(); if (o[id]) { delete o[id]; try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); } catch { /* ignoruj */ } }
+  } catch (err) {
+    console.warn('Status zgłoszenia – zapis w bazie nieudany, zapisuję na tym urządzeniu:', err);
+    const o = tipOverrides(); o[id] = patch;
+    try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); local = true; } catch { toast('Nie udało się zapisać statusu.', 'error'); return; }
+  }
+  Object.assign(t, patch);
+  renderTipList();
+  toast(local ? 'Status zapisany tylko na tym urządzeniu (baza nie pozwala zmieniać zgłoszeń – zobacz instrukcję reguł).' : 'Status zapisany.');
 }
 
 async function renderTips() {
@@ -3189,18 +3265,7 @@ async function saveTipStatus(e) {
     statusAt: status === 'new' ? '' : new Date().toISOString()
   };
   closeModal('tip-status-modal');
-  let local = false;
-  try {
-    await DataService.updateTip(id, patch);
-    const o = tipOverrides(); if (o[id]) { delete o[id]; try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); } catch { /* ignoruj */ } }
-  } catch (err) {
-    console.warn('Status zgłoszenia – zapis w bazie nieudany, zapisuję na tym urządzeniu:', err);
-    const o = tipOverrides(); o[id] = patch;
-    try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); local = true; } catch { toast('Nie udało się zapisać statusu.', 'error'); return; }
-  }
-  Object.assign(t, patch);
-  renderTipList();
-  toast(local ? 'Status zapisany tylko na tym urządzeniu (baza nie pozwala zmieniać zgłoszeń – zobacz instrukcję reguł).' : 'Status zapisany.');
+  await applyTipPatch(t, patch);
 }
 
 async function deleteTip(id) {
@@ -5902,7 +5967,8 @@ function deleteFigure() {
    ========================================================= */
 const READER_ERR = {
   endpoint: 'Worker jest w starej wersji – wgraj najnowszy og-worker.js (Edit code → Deploy).', too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
-  name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'W nazwie dozwolone są litery, cyfry, spacja oraz _ . -',
+  name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'Nazwa: tylko małe litery a–z, cyfry oraz pojedyncza kropka lub podkreślnik w środku (bez spacji i polskich znaków).',
+  bad_login: 'Nieprawidłowa nazwa/e-mail lub hasło.', rename: 'Najpierw zmień nazwę użytkownika na zgodną z nowymi zasadami.', session_expired: 'Sesja wygasła – zaloguj się ponownie.',
   name_bad: 'Ta nazwa jest niedozwolona. Wybierz inną.', name_taken: 'Ta nazwa jest już zajęta.',
   name_cooldown: 'Nazwę użytkownika możesz zmieniać raz na 30 dni.', verify: 'Potwierdź adres e-mail (link w wiadomości od nas), żeby komentować.',
   banned: 'Twoje konto zostało zablokowane.', rate: 'Za dużo prób – spróbuj ponownie później.', dup: 'Taki komentarz już dodałeś.',
@@ -5934,6 +6000,7 @@ const Readers = {
         this.user = u; this.me = null;
         if (u) { await this.loadMe(); Push.link(); this.joinEditor(); }
         this.loading = false; this.render();
+        enforceRename();
       });
     } catch (e) { console.warn('Konta czytelników niedostępne:', e); this.loading = false; this.auth = null; }
   },
@@ -5942,12 +6009,12 @@ const Readers = {
     if (this.user) { try { headers.authorization = 'Bearer ' + await this.user.getIdToken(); } catch { /* ignoruj */ } }
     const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { ...headers, ...(opts.headers || {}) }, cache: 'no-store' });
     let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
-    if (!r.ok) { const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
+    if (!r.ok) { if (d.error === 'session_expired' && path !== '/me') { try { await this.auth.signOut(); toast('Sesja wygasła – zaloguj się ponownie.'); } catch { /* ignoruj */ } } const e = new Error(d.error || 'http'); e.error = d.error || 'http'; e.data = d; throw e; }
     return d;
   },
   async loadMe() {
     try { this.me = await this.api('/me'); }
-    catch (e) { this.me = null; if (e && e.error === 'session_revoked') { try { await this.auth.signOut(); toast('Zostałeś wylogowany ze wszystkich urządzeń. Zaloguj się ponownie.'); } catch { /* ignoruj */ } } }
+    catch (e) { this.me = null; if (e && e.error === 'session_expired') { try { await this.auth.signOut(); toast('Sesja wygasła – zaloguj się ponownie.'); } catch { /* ignoruj */ } } if (e && e.error === 'session_revoked') { try { await this.auth.signOut(); toast('Zostałeś wylogowany ze wszystkich urządzeń. Zaloguj się ponownie.'); } catch { /* ignoruj */ } } }
   },
   async google() {
     const prov = new firebase.auth.GoogleAuthProvider(); prov.setCustomParameters({ prompt: 'select_account' });
@@ -6001,6 +6068,7 @@ const Readers = {
   async resend() { await this.user.sendEmailVerification(); },
   async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); await this.joinEditor(); },
   async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
+  async saveBio(bio) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ bio }) }); this.render(); },
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
     renderReaderCard();
@@ -6098,7 +6166,7 @@ function cmtTextHtml(c) {
 function commentItemHtml(c, kids) {
   const admin = Auth.isAdmin();
   const own = c.mine && !admin ? `<button type="button" class="cmt-act" data-cmt="delete" data-id="${c.id}">Usuń</button>` : '';
-  const canEdit = c.mine && !Cmt.off && ['ok', 'pending'].includes(c.status) && Date.now() - c.at < CMT_EDIT_MS;
+  const canEdit = c.mine && !Cmt.off && ['ok', 'pending'].includes(c.status) && (isOwnerRole() || Date.now() - c.at < CMT_EDIT_MS);
   const edit = canEdit ? `<button type="button" class="cmt-act" data-cmt="edit" data-id="${c.id}">Edytuj</button>` : '';
   const rep = !c.mine && Readers.loggedIn() && !isStaffActor()
     ? (Cmt.reporting === c.id
@@ -6113,7 +6181,7 @@ function commentItemHtml(c, kids) {
     <div class="cmt-av avatar">${readerAvatar(c.name, c.av, c.u)}</div>
     <div class="cmt-body">
       <div class="cmt-head">${c.u ? `<a class="cmt-name" href="#/uzytkownik/${Utils.esc(c.u)}"><b>${Utils.esc(c.name)}</b></a>` : `<b>${Utils.esc(c.name)}</b>`}${roleBadge(c)}${c.to ? `<span class="cmt-to">↪ ${Utils.esc(c.to)}</span>` : ''}<time>${ago(c.at)}</time>${c.edited ? '<span class="cmt-edited">· edytowano</span>' : ''}</div>
-      ${Cmt.editing === c.id ? `<div class="cmt-edit"><textarea id="cmt-edit-text" rows="3" maxlength="600">${Utils.esc(c.text)}</textarea><div class="cmt-row"><button type="button" class="btn btn-primary btn-sm" data-cmt="edit-save" data-id="${c.id}">Zapisz</button><button type="button" class="btn btn-sm" data-cmt="edit-cancel" data-id="${c.id}">Anuluj</button><small>Poprawki możliwe do 5 minut od publikacji.</small></div></div>` : cmtTextHtml(c)}
+      ${Cmt.editing === c.id ? `<div class="cmt-edit"><textarea id="cmt-edit-text" rows="3" maxlength="${isOwnerRole() ? 20000 : 600}">${Utils.esc(c.text)}</textarea><div class="cmt-row"><button type="button" class="btn btn-primary btn-sm" data-cmt="edit-save" data-id="${c.id}">Zapisz</button><button type="button" class="btn btn-sm" data-cmt="edit-cancel" data-id="${c.id}">Anuluj</button><small>Poprawki możliwe do 5 minut od publikacji.</small></div></div>` : cmtTextHtml(c)}
       ${c.status === 'pending' ? '<small class="cmt-wait">Czeka na zatwierdzenie przez redakcję</small>' : ''}
       <div class="cmt-actions">${reply}${link}${edit}${own}${rep}${adm}</div>
       ${sub}
@@ -6134,8 +6202,8 @@ function drawComments() {
   else if (!Readers.loggedIn() && !isStaffActor()) form = '<button type="button" class="btn btn-primary cmt-login" data-cmt="login">Zaloguj się, żeby skomentować</button>';
   else if (!isStaffActor() && !Readers.hasName()) form = '<p class="cmt-note">Ustaw nazwę użytkownika na <a href="#/konto">stronie konta</a>, żeby komentować.</p>';
   else if (!isStaffActor() && !Readers.verified()) form = '<div class="cmt-note">Potwierdź adres e-mail (wysłaliśmy link), żeby komentować.<div class="cmt-row"><button type="button" class="btn btn-sm" data-cmt="resend">Wyślij link ponownie</button><button type="button" class="btn btn-sm" data-cmt="refresh">Już potwierdziłem</button></div></div>';
-  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="600" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.me.name)}…" aria-label="Komentarz"></textarea>
-      <div class="cmt-row"><small><span id="cmt-count">0</span>/600</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div>${Cmt.slow && !isStaffActor() && !canMod() ? `<small class="cmt-slow">Tryb wolniejszej dyskusji: odstęp ${Cmt.slow >= 60 ? Cmt.slow / 60 + ' min' : Cmt.slow + ' s'} między komentarzami.</small>` : ''}</form>`;
+  else form = `<form class="cmt-form" id="cmt-form">${Cmt.replyTo ? `<div class="cmt-replying">Odpowiadasz użytkownikowi <b>${Utils.esc(Cmt.replyTo.name)}</b><button type="button" class="cmt-act" data-cmt="cancel-reply">Anuluj</button></div>` : ''}<textarea id="cmt-text" rows="3" maxlength="${isOwnerRole() ? 20000 : 600}" placeholder="${Cmt.replyTo ? 'Napisz odpowiedź' : 'Napisz komentarz'} jako ${Utils.esc(isStaffActor() ? staffName() + ' (redakcja)' : Readers.me.name)}…" aria-label="Komentarz"></textarea>
+      <div class="cmt-row"><small><span id="cmt-count">0</span>${isOwnerRole() ? '' : '/600'}</small><button type="submit" class="btn btn-primary btn-sm" id="cmt-send">Opublikuj</button></div>${Cmt.slow && !isStaffActor() && !canMod() ? `<small class="cmt-slow">Tryb wolniejszej dyskusji: odstęp ${Cmt.slow >= 60 ? Cmt.slow / 60 + ' min' : Cmt.slow + ' s'} między komentarzami.</small>` : ''}</form>`;
   const keep = $('#cmt-text') ? $('#cmt-text').value : '';
   const closeBtn = canMod() && (Cmt.closed || !Cmt.off) ? `<button type="button" class="cmt-act cmt-close" data-cmt="close-toggle">${Cmt.closed ? 'Otwórz komentarze' : 'Zamknij komentarze'}</button>` : '';
   box.innerHTML = `<h2 class="cmt-title">Komentarze <span>${visible.length}</span>${closeBtn}</h2>
@@ -6150,7 +6218,7 @@ async function sendComment(e) {
   e.preventDefault();
   if (Cmt.sending) return;
   const text = $('#cmt-text').value.trim();
-  if (text.length < 2) return;
+  if (text.length < (isOwnerRole() ? 1 : 2)) return;
   Cmt.sending = true; const btn = $('#cmt-send'); btn.disabled = true;
   try {
     const d = await actorApi('/comments', { method: 'POST', body: JSON.stringify({ article: Cmt.article, text, replyTo: Cmt.replyTo ? Cmt.replyTo.id : undefined, staffName: staffName() }) });
@@ -6167,8 +6235,9 @@ function cmtCount() {
   const t = $('#cmt-text'), n = $('#cmt-count'); if (!t || !n) return;
   const len = t.value.length;
   n.textContent = len;
-  n.parentElement.classList.toggle('is-warn', len >= 540 && len < 600);
-  n.parentElement.classList.toggle('is-max', len >= 600);
+  const lim = isOwnerRole() ? Infinity : 600;
+  n.parentElement.classList.toggle('is-warn', len >= 540 && len < lim);
+  n.parentElement.classList.toggle('is-max', len >= lim);
 }
 
 async function commentAction(act, id, btn) {
@@ -6274,11 +6343,63 @@ function setReaderMode(m) {
   $('#reader-submit').textContent = reg ? 'Załóż konto' : rst ? 'Wyślij link' : nm ? 'Zapisz' : 'Zaloguj się';
   $('#reader-switch').innerHTML = rst ? '<a href="#" data-rmode="login">Wróć do logowania</a>' : login ? '<a href="#" data-rmode="reset">Nie pamiętam hasła</a>' : '';
   $('#reader-email-field').hidden = nm || (login && Auth.mode === 'local' && !Readers.enabled());
+  $('#reader-email-label').textContent = login ? 'E-mail lub nazwa użytkownika' : 'E-mail';
+  $('#reader-email').placeholder = login ? 'e-mail albo nazwa, np. jan.kowalski' : 'np. jan@poczta.pl';
   $('#reader-pass').autocomplete = reg ? 'new-password' : 'current-password';
   $('#reader-pass').placeholder = reg ? 'Min. 6 znaków' : 'Twoje hasło';
 }
+/** Nazwa użytkownika: małe litery a–z, cyfry, „.” i „_”; spacje zamieniamy na kropki, polskie znaki na ich odpowiedniki. */
+function fixUsername(s) {
+  return String(s || '').toLowerCase().replace(/ł/g, 'l').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, '.').replace(/[^a-z0-9._]/g, '').replace(/([._])[._]+/g, '$1').replace(/^[._]+/, '');
+}
+const usernameOk = (s, max = 20) => s.length >= 3 && s.length <= max && /^[a-z0-9]+(?:[._][a-z0-9]+)*$/.test(s);
+document.addEventListener('input', e => {
+  if (!['reader-name', 'acc-name', 'rn-name'].includes(e.target.id)) return;
+  if (typeof isOwnerRole === 'function' && isOwnerRole()) return;          // Właściciel może mieć dowolną nazwę
+  const t = e.target, pos = t.selectionStart, before = t.value, fixed = fixUsername(before);
+  if (fixed !== before) { t.value = fixed; try { t.setSelectionRange(Math.min(pos, fixed.length), Math.min(pos, fixed.length)); } catch { /* ignoruj */ } }
+});
+
+/* ---- obowiązkowa zmiana nazwy dla kont, które łamią nowe zasady ---- */
+function renameRequired() { return !!(typeof Readers !== 'undefined' && Readers.me && Readers.me.needsRename); }
+function enforceRename() {
+  const m = $('#rename-modal'); if (!m) return;
+  if (!renameRequired()) { if (!m.hidden) { m.hidden = true; if (!$$('.modal').some(x => !x.hidden)) document.body.classList.remove('modal-open'); } return; }
+  if (m.hidden) {
+    const inp = $('#rn-name'); inp.value = fixUsername(Readers.me.name);
+    $('#rn-error').hidden = true;
+    $('#rn-hint').textContent = 'Aktualna nazwa: „' + Readers.me.name + '”. Proponuję: ' + (inp.value || '—') + ' – możesz ją zmienić.';
+    openModal('rename-modal');
+  }
+}
+async function submitRename(e) {
+  e.preventDefault();
+  const err = $('#rn-error'), name = $('#rn-name').value.trim(); err.hidden = true;
+  if (!usernameOk(name, 20)) { err.textContent = READER_ERR.name_chars; err.hidden = false; return; }
+  const btn = $('#rn-submit'); btn.disabled = true;
+  try {
+    const d = await Readers.api('/me', { method: 'POST', body: JSON.stringify({ name }) });
+    Readers.me = d; const expired = !!d.expired;
+    if (!d.needsRename) $('#rename-modal').hidden = true;
+    if (!$$('.modal').some(x => !x.hidden)) document.body.classList.remove('modal-open');
+    if (expired) { try { await Readers.auth.signOut(); } catch { /* ignoruj */ } toast('Nazwa zmieniona. Sesja wygasła – zaloguj się ponownie (możesz użyć nowej nazwy).'); }
+    else toast('Nazwa zmieniona. Możesz się teraz logować także nazwą użytkownika.');
+    Readers.render();
+  } catch (ex) { err.textContent = readerErr(ex); err.hidden = false; }
+  finally { btn.disabled = false; }
+}
+setInterval(() => { if (renameRequired()) enforceRename(); }, 1500);          // okna nie da się zamknąć ani ukryć
+
 /** Jedno okno logowania: najpierw konto czytelnika (zwykłe i redaktorzy nadani z panelu), potem – jeśli nie pasuje – stare konto redakcji (projekt główny). */
-async function unifiedLogin(email, pw) {
+async function unifiedLogin(ident, pw) {
+  let email = ident;
+  if (ident && !ident.includes('@')) {          // logowanie nazwą użytkownika: Worker sprawdza hasło i zwraca adres konta
+    const r = await fetch(CONFIG.API_BASE + '/login-name', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ name: ident, password: pw }), cache: 'no-store' });
+    let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
+    if (!r.ok || !d.email) { const e = new Error(d.error || 'bad_login'); e.error = d.error || 'bad_login'; throw e; }
+    email = d.email;
+  }
   const credErr = c => /^(auth\/(invalid-credential|invalid-login-credentials|wrong-password|user-not-found|invalid-email|missing-email|too-many-requests)|app\/(wrong-password|not-editor))$/.test(c || '');
   const canEditor = Auth.mode === 'firebase' || Auth.mode === 'local';
   let first = null;
@@ -6318,7 +6439,7 @@ async function submitReader(e) {
 /* ---- publiczny profil użytkownika ---- */
 async function renderUserProfile(pub) {
   const el = $('#view-user');
-  el.innerHTML = '<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div><p class="muted">Ładowanie…</p>';
+  el.innerHTML = `<div class="article-top">${backBtn('#/', '← Powrót do strony głównej', 'btn')}</div><p class="muted">Ładowanie…</p>`;
   let d;
   try {
     const r = await fetch(CONFIG.API_BASE + '/profile/' + encodeURIComponent(pub), { cache: 'no-store' });
@@ -6332,11 +6453,13 @@ async function renderUserProfile(pub) {
     const t = c.text.length > 240 ? c.text.slice(0, 240).replace(/\s+\S*$/, '') + '…' : c.text;
     return `<li class="up-c"><a class="up-art" href="#/artykul/${encodeURIComponent(c.article)}?k=${c.id}">${Utils.esc(a ? a.title : 'Artykuł')}</a><p>${Utils.esc(t).replace(/\n/g, '<br>')}</p><time>${ago(c.at)}</time></li>`;
   }).join('');
-  el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
+  el.innerHTML = `<div class="article-top">${backBtn('#/', '← Powrót do strony głównej', 'btn')}</div>
     <section class="panel up-card">
       <div class="avatar up-av">${readerAvatar(d.name, d.av, d.pub)}</div>
       <div class="up-main"><h1 class="up-name">${Utils.esc(d.name)}</h1>
-        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div></div>
+        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div>
+        ${d.bio ? `<p class="up-bio">${Utils.esc(d.bio)}</p>` : ''}
+        ${d.staff || ['editor', 'owner', 'chief'].includes(d.role) ? `<a class="up-more" href="#/redaktor/${encodeURIComponent(d.name)}">Zobacz artykuły autora →</a>` : ''}</div>
     </section>
     ${d.banned ? '<p class="cmt-note">To konto zostało zablokowane.</p>' : `<h2 class="up-h">Komentarze</h2>${items ? `<ul class="up-list">${items}</ul>` : '<p class="muted">Ten użytkownik nie ma jeszcze komentarzy.</p>'}`}`;
 }
@@ -6381,9 +6504,11 @@ function renderAccount() {
         <div class="settings-avatar"><div class="avatar avatar-lg" id="acc-avatar">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
           <div class="settings-avatar-actions"><input type="file" id="acc-avatar-file" accept="image/*">${me.hasAvatar ? '<button type="button" class="btn btn-sm btn-danger" id="acc-avatar-remove">Usuń zdjęcie</button>' : ''}</div></div>
         <label class="field"><span class="field-label">Nazwa użytkownika</span>
-          <input type="text" id="acc-name" maxlength="${me.role === 'owner' ? 30 : 20}" value="${Utils.esc(me.name || '')}" placeholder="3–20 znaków" ${next ? 'disabled' : ''}>
-          <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Nazwę możesz zmienić raz na 30 dni.'}</small></label>
-        ${next ? '' : '<div class="st-actions"><button type="button" class="btn btn-primary" id="acc-save">Zapisz nazwę</button></div>'}
+          <input type="text" id="acc-name" maxlength="${me.role === 'owner' ? 100 : 20}" value="${Utils.esc(me.name || '')}" placeholder="np. jan.kowalski" autocapitalize="none" spellcheck="false" ${next ? 'disabled' : ''}>
+          <small class="hint">${next ? 'Następną zmianę nazwy możesz zrobić ' + next + '.' : 'Małe litery a–z, cyfry, „.” i „_” (bez spacji). Nazwa służy też do logowania; zmienisz ją raz na 30 dni.'}</small></label>
+        <label class="field"><span class="field-label">Krótka biografia <small class="hint" id="acc-bio-n">${Array.from(me.bio || '').length}/150</small></span>
+          <textarea id="acc-bio" rows="3" maxlength="150" placeholder="Kilka słów o sobie – zobaczą je inni na Twoim profilu publicznym.">${Utils.esc(me.bio || '')}</textarea></label>
+        <div class="st-actions"><button type="button" class="btn btn-primary" id="acc-save">Zapisz profil</button></div>
         <p class="form-error" id="acc-error" hidden></p>
       </section>
       <div id="acc-editor-slot"></div>
@@ -6438,6 +6563,7 @@ function renderReaderCard() {
   const me = Readers.me || {};
   $('#btn-rd-mod').hidden = !canMod();
   $('#btn-rd-users').hidden = !canManage();
+  { const pu = $('#ptab-users'); if (pu) { pu.hidden = !canManage(); if (!pu.hidden && currentRoute().name === 'panel' && !$('#panel-users').children.length && ($('#view-panel .ptab.is-active') || {}).dataset?.ptab === 'users') renderModUsersPanel($('#panel-users')); } }
   let hint = $('#rd-hint');
   if (!hint) { hint = document.createElement('div'); hint.id = 'rd-hint'; hint.className = 'rd-hint'; const pa = $('#profile-card .profile-actions'); if (pa) pa.parentNode.insertBefore(hint, pa); }
   const issue = rd && ['editor', 'owner'].includes(me.role) && !Auth.isAdmin() ? Readers.editorIssue : '';
@@ -6474,6 +6600,8 @@ function bindReaderEvents() {
   });
   $('#reader-error').className = 'form-error';
   $('#reader-form').addEventListener('submit', submitReader);
+  $('#rename-form').addEventListener('submit', submitRename);
+  $('#reader-eye').addEventListener('click', () => { const p = $('#reader-pass'), show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#reader-eye').textContent = show ? 'Ukryj' : 'Pokaż'; });
   $('#reader-modal').addEventListener('click', e => { const a = e.target.closest('[data-rmode]'); if (a) { e.preventDefault(); setReaderMode(a.dataset.rmode); $('#reader-error').hidden = true; } });
   document.addEventListener('click', async e => {
     const rt = e.target.closest('[data-rd-retry]'); if (rt) { rt.disabled = true; try { await Readers.refresh(); } catch { /* ignoruj */ } renderReaderCard(); return; }
@@ -6500,11 +6628,16 @@ function bindReaderEvents() {
     else if (e.target.id === 'acc-reset') { try { await Readers.reset(Readers.user.email); toast('Wysłaliśmy link do zmiany hasła.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
     else if (e.target.id === 'acc-save') {
       const er = $('#acc-error'); er.hidden = true;
-      try { await Readers.saveName($('#acc-name').value.trim()); toast('Zapisano nazwę użytkownika.'); } catch (ex) { er.textContent = readerErr(ex); er.hidden = false; }
+      try {
+        const nm = $('#acc-name'), bio = ($('#acc-bio').value || '').trim().replace(/\s+/g, ' ').slice(0, 150);
+        if (nm && !nm.disabled && nm.value.trim() !== ((Readers.me && Readers.me.name) || '')) await Readers.saveName(nm.value.trim());
+        if (bio !== ((Readers.me && Readers.me.bio) || '')) await Readers.saveBio(bio);
+        toast('Profil zapisany.');
+      } catch (ex) { er.textContent = readerErr(ex); er.hidden = false; }
     } else if (e.target.id === 'acc-avatar-remove') { try { await Readers.saveAvatar(null); toast('Zdjęcie usunięte.'); } catch (ex) { toast(readerErr(ex), 'error'); } }
   });
   document.addEventListener('submit', e => { if (e.target.id === 'cmt-form') sendComment(e); });
-  document.addEventListener('input', e => { if (e.target.id === 'cmt-text') cmtCount(); });
+  document.addEventListener('input', e => { if (e.target.id === 'cmt-text') cmtCount(); if (e.target.id === 'acc-bio') { const n = $('#acc-bio-n'); if (n) n.textContent = Array.from(e.target.value).length + '/150'; } });
   document.addEventListener('change', async e => {
     if (e.target.id !== 'acc-avatar-file' || !e.target.files[0]) return;
     try { await Readers.saveAvatar(await shrinkToJpeg(e.target.files[0])); toast('Zdjęcie zapisane.'); } catch (ex) { toast(readerErr(ex), 'error'); }
@@ -6517,6 +6650,7 @@ const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', 
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const CMT_EDIT_MS = 5 * 60 * 1000;
+const isOwnerRole = () => myRole() === 'owner';
 const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
 const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
 const roleBadge = c => c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
@@ -6921,21 +7055,36 @@ async function loadProfile() {
 let settingsAvatar = '';
 
 /** Autorzy występujący w artykułach, których nazwa różni się od aktualnej nazwy i nie jest znanym aliasem. */
-function otherAuthors() {
-  const me = state.profile.name, known = new Set(state.profile.aliases || []);
-  const m = new Map();
-  state.articles.forEach(a => {
-    const n = (a.author || '').trim();
-    if (!n || n === me || known.has(n)) return;
-    m.set(n, (m.get(n) || 0) + 1);
-  });
-  return [...m.entries()].sort((a, b) => b[1] - a[1]);
+/** Opublikowane artykuły podpisane cudzą nazwą (do ręcznego przypisania sobie). */
+function foreignArticles() {
+  const me = state.profile.name, known = new Set(state.profile.aliases || []), uid = Auth.uid();
+  return state.articles
+    .filter(a => !a.quick && a.title && !(uid && a.authorUid === uid) && !known.has((a.author || '').trim()) && (a.author || '').trim() !== me)
+    .sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)));
+}
+
+const myUsername = () => (typeof Readers !== 'undefined' && Readers.me && Readers.me.name) || '';
+/** Podpis pod artykułem: „Redaktor Imię Nazwisko” (albo Redaktor + nazwa użytkownika). */
+const bylineName = n => 'Redaktor ' + String(n || '').replace(/^Redaktor\s+/i, '');
+function fillAuthorNameFields() {
+  const cur = (state.profile.name || '').replace(/^Redaktor\s+/i, '').trim();
+  const user = myUsername();
+  let first = '', last = '';
+  if (cur && cur !== user && !/^[a-z0-9._]+$/.test(cur)) { const i = cur.indexOf(' '); first = i < 0 ? cur : cur.slice(0, i); last = i < 0 ? '' : cur.slice(i + 1).trim(); }
+  $('#st-first').value = first; $('#st-last').value = last;
+  syncAuthorName();
+}
+function syncAuthorName() {
+  const full = [$('#st-first').value, $('#st-last').value].map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');
+  const name = full || myUsername() || (state.profile.name || '').replace(/^Redaktor\s+/i, '');
+  $('#st-name').value = name;
+  const by = $('#st-byline'); if (by) by.innerHTML = name ? `Tak będzie wyglądał podpis: <b>${Utils.esc(bylineName(name))}</b>` : '';
 }
 
 function renderSettings() {
   if (currentRoute().name === 'settings') { stashProfileBlock(); fillHub(); }
   settingsAvatar = state.profile.avatar || '';
-  $('#st-name').value = state.profile.name || '';
+  fillAuthorNameFields();
   const bioEl = $('#st-bio'), bioN = () => { $('#st-bio-n').textContent = `${Array.from(bioEl.value).length}/150`; };
   bioEl.value = Authors.bio(state.profile.name || ''); bioEl.dataset.orig = bioEl.value; bioN();
   bioEl.oninput = bioN;
@@ -6951,10 +7100,11 @@ function renderSettings() {
   updateDevicePush();
   $('#st-error').hidden = true;
   $('#st-avatar-file').value = '';
-  const authors = otherAuthors();
-  $('#st-authors-card').hidden = !authors.length;
-  $('#st-authors').innerHTML = authors.map(([n, c], i) =>
-    `<label class="check-row"><input type="checkbox" name="st-author" value="${Utils.esc(n)}"><span><b>${Utils.esc(n)}</b> <em class="muted">· ${c} ${plural(c, 'artykuł', 'artykuły', 'artykułów')}</em></span></label>`).join('');
+  const list = foreignArticles();
+  $('#st-authors-card').hidden = !list.length;
+  $('#st-authors').innerHTML = list.map(x =>
+    `<label class="check-row st-art"><input type="checkbox" name="st-article" value="${Utils.esc(x.id)}"><span><b>${Utils.esc(x.title)}</b> <em class="muted">· ${Utils.esc((x.author || 'bez autora').trim() || 'bez autora')} · ${Utils.formatDate(x.createdAt)}</em></span></label>`).join('');
+  const flt = $('#st-art-filter'); if (flt) { flt.value = ''; flt.oninput = () => { const q = Utils.fold ? Utils.fold(flt.value) : flt.value.toLowerCase(); $$('#st-authors .st-art').forEach(r => { r.hidden = !!q && !(Utils.fold ? Utils.fold(r.textContent) : r.textContent.toLowerCase()).includes(q); }); }; }
   updateSettingsAvatar();
 }
 
@@ -6994,13 +7144,13 @@ function updateSettingsAvatar() {
 }
 
 /** Zmienia autora we wszystkich artykułach (i wersjach roboczych) należących do redaktora. */
-async function reassignAuthor(claim, nextName, avatar, showPhoto) {
+async function reassignAuthor(claim, nextName, avatar, showPhoto, ids = []) {
   const uid = Auth.uid();
-  const names = new Set(claim);
+  const names = new Set(claim), pick = new Set(ids);
   let all = [];
   try { all = await DataService.getAllArticles(); } catch { all = state.articles; }
   const photo = avatar && showPhoto ? await shrinkAvatar(avatar) : '';
-  const todo = all.filter(a => a && ((a.authorUid && a.authorUid === uid) || names.has((a.author || '').trim()))
+  const todo = all.filter(a => a && ((a.authorUid && a.authorUid === uid) || names.has((a.author || '').trim()) || pick.has(a.id))
     && ((a.author || '') !== nextName || (a.authorPhoto || '') !== photo || a.authorUid !== uid));
   let done = 0;
   for (const a of todo) {
@@ -7023,14 +7173,14 @@ async function saveSettings(e) {
   err.hidden = true;
   const prev = state.profile;
   const name = $('#st-name').value.trim().slice(0, 60);
-  const picked = $$('input[name="st-author"]:checked').map(i => i.value);
+  const pickedIds = $$('input[name="st-article"]:checked').map(i => i.value);
   const next = normProfile({
     name, avatar: settingsAvatar,
     defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
     quickPush: $('#st-quick-push').checked, quickSource: $('#st-quick-source').value.trim(), panelTab: $('#st-panel-tab').value,
-    aliases: [...new Set([...(prev.aliases || []), ...(prev.name && prev.name !== name ? [prev.name] : []), ...picked])].filter(n => n && n !== name)
+    aliases: [...new Set([...(prev.aliases || []), ...(prev.name && prev.name !== name ? [prev.name] : [])])].filter(n => n && n !== name)
   });
-  const claim = [...new Set([prev.name, ...(prev.aliases || []), ...picked])].filter(n => n && n !== name);
+  const claim = [...new Set([prev.name, ...(prev.aliases || [])])].filter(n => n && n !== name);
   const photoChanged = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto;
   const btn = $('#st-save'), btn2 = $('#st-save-profile');
   btn.disabled = true; if (btn2) btn2.disabled = true;
@@ -7048,9 +7198,9 @@ async function saveSettings(e) {
     writeLocalProfile(next);
     renderProfile();
     let n = 0;
-    if (name && (claim.length || photoChanged)) {
+    if (name && (claim.length || photoChanged || pickedIds.length)) {
       btn.textContent = 'Aktualizuję artykuły…';
-      n = await reassignAuthor(claim, name, next.avatar, next.showPhoto);
+      n = await reassignAuthor(claim, name, next.avatar, next.showPhoto, pickedIds);
     }
     toast(bioFailed ? 'Ustawienia zapisane, ale biografia nie – wgraj najnowszy kod Workera.' : n ? `Zapisano. Zaktualizowano ${n} ${plural(n, 'artykuł', 'artykuły', 'artykułów')}.` : 'Ustawienia zapisane.');
     renderSettings();
@@ -7108,6 +7258,7 @@ function handleAction(action, id, btn) {
   if (!Auth.isAdmin()) return;
   if (action === 'delete-tip') { deleteTip(id); return; }
   if (action === 'tip-status') { openTipStatus(id); return; }
+  if (action === 'tip-quick') { quickTipStatus(id, btn.dataset.st); return; }
   if (action === 'quick-new') { openQuickModal(); return; }
   if (action === 'quick-edit') { openQuickModal(id); return; }
   if (action === 'quick-delete') { deleteQuick(id); return; }
@@ -7240,8 +7391,10 @@ function bindEvents() {
   $('#view-panel').addEventListener('click', e => {
     const b = e.target.closest('[data-ptab]'); if (b) setPanelTab(b.dataset.ptab);
     const f = e.target.closest('[data-tipfilter]'); if (f) { tipFilter = f.dataset.tipfilter; renderTipList(); }
+    const kd = e.target.closest('[data-tipkind]'); if (kd) { tipKindFilter = kd.dataset.tipkind; renderTipList(); }
   });
   $('#tip-status-form').addEventListener('submit', saveTipStatus);
+  $('#view-panel').addEventListener('input', e => { if (e.target.id === 'tip-search') { tipQuery = e.target.value; renderTipList(); } });
   $('#tip-status-form').addEventListener('change', updateTipStatusForm);
   $('#st-device-push').addEventListener('change', async e => {
     const on = e.target.checked; e.target.disabled = true;
@@ -7255,7 +7408,7 @@ function bindEvents() {
 
   // Ustawienia konta
   $('#settings-form').addEventListener('submit', saveSettings);
-  $('#st-name').addEventListener('input', updateSettingsAvatar);
+  ['#st-first', '#st-last'].forEach(s => $(s).addEventListener('input', () => { syncAuthorName(); updateSettingsAvatar(); }));
   $('#st-avatar-file').addEventListener('change', async e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -7587,6 +7740,13 @@ function bindEvents() {
     const a = e.target.closest && e.target.closest('.article-top a[href="#/"]');
     if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
     if (history.length > 1 && LIST_ROUTES.test(ScrollMemory.prev || '') ) { e.preventDefault(); history.back(); }
+  });
+
+  // „← Wróć do artykułu” na profilu redaktora / wykonawcy / użytkownika: cofnięcie historii zachowuje miejsce w artykule
+  document.addEventListener('click', e => {
+    const a = e.target.closest && e.target.closest('[data-smartback]');
+    if (!a || e.ctrlKey || e.metaKey || e.shiftKey || e.button) return;
+    if (history.length > 1) { e.preventDefault(); history.back(); }
   });
 
   // Skrót: „/” ustawia kursor w wyszukiwarce
