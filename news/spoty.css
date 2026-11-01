@@ -320,3 +320,12 @@ html.is-mac-app .sp-label { letter-spacing: .06em; }
   .sp-slot-short { display: block !important; flex: none; }
   .sp-slot-short:has(.sp-house) { aspect-ratio: auto; height: 88px; }
 }
+
+/* telefon: spoty „Miejsce na reklamę” na górze – stała wysokość, etykieta nad tekstem (bez nakładania) */
+@media (max-width: 720px) {
+  .sp-slot.sp-slot:has(.sp-house.sp-img), .sp-slot-long.sp-slot:has(.sp-house) { aspect-ratio: auto !important; height: 78px !important; flex: none !important; }
+  .sp.sp-img.sp-top.sp-house, .sp.sp-img.sp-strip.sp-house, .sp-slot .sp-top.sp-house { height: 100% !important; aspect-ratio: auto !important; }
+  .sp-top.sp-house .sp-label, .sp-strip.sp-house .sp-label { top: 9px !important; left: 14px !important; right: auto !important; bottom: auto !important; }
+  .sp-top.sp-house .ah-box[data-f="long"], .sp-strip.sp-house .ah-box[data-f="long"] { padding: 34px 12px 10px 14px !important; align-items: flex-end !important; gap: 10px; }
+  .sp-top.sp-house .ah-box[data-f="long"] .ah-t, .sp-strip.sp-house .ah-box[data-f="long"] .ah-t { font-size: 14px !important; line-height: 1.18; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+}

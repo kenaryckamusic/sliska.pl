@@ -67,8 +67,8 @@ body { overscroll-behavior-y: none; }
   .modal-box, .rm-box { max-height: 92vh; }
 }
 @media (max-width: 860px) and (display-mode: standalone) {
-  .site-footer { display: none; }
-  body { padding-bottom: calc(60px + env(safe-area-inset-bottom)); }
+  body { padding-bottom: 0; }
+  .site-footer .footer-inner { padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
 }
 
 /* Tryb osadzony: narzędzie redakcji otwarte w oknie na stronie głównej dev (bez nagłówka, menu i stopki) */
@@ -146,3 +146,12 @@ html.is-embed body { padding-left: 0 !important; }
   html.is-app .m-tabbar.is-drag .m-tab.is-hover svg { transform: translateY(-2px) scale(1.22); }
   html.is-app .m-tab.is-hover { font-weight: 700; }
 }
+
+/* — poziome paski zakładek: mieszczą się w ekranie i da się je przesuwać palcem — */
+.sec-nav, .hub-nav, .ptabs { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; }
+.hub-nav { flex-wrap: nowrap; width: auto; }
+.hub-nav > *, .ptabs > * { flex: none; white-space: nowrap; }
+#view-account, #view-settings, #app, #layout, main { min-width: 0; }
+@media (max-width: 860px) { html, body { max-width: 100%; overflow-x: hidden; } .up-meta { justify-content: center; } .up-meta > .muted { flex-basis: 100%; text-align: center; } }
+/* zoom wyłączony (aplikacja i strona na dotyku) */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }

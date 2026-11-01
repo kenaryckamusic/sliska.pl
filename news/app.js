@@ -1604,7 +1604,7 @@ function authorHeadHtml(list) {
   const last = list.map(a => a.createdAt).sort().pop();
   const pills = [`<span class="au-pill"><b>${list.length}</b> ${plural(list.length, 'artykuł', 'artykuły', 'artykułów')}</span>`];
   if (reviews) pills.push(`<span class="au-pill"><b>${reviews}</b> ${plural(reviews, 'recenzja', 'recenzje', 'recenzji')}</span>`);
-  if (last) pills.push(`<span class="au-pill">ostatni tekst: <b>${Utils.esc(Utils.formatDate(last).replace(/ \d{1,2}:\d{2}$/, ''))}</b></span>`);
+  if (last) pills.push(`<span class="au-pill">ostatni tekst: <b>${Utils.esc(Utils.formatDate(last).replace(/( o)? \d{1,2}:\d{2}$/, ''))}</b></span>`);
   return `<header class="collection-head author-head">
     <div class="author-cover" aria-hidden="true"></div>
     <div class="author-topbar">${backBtn('#/redakcja', '← Redaktorzy', 'btn btn-sm author-back')}</div>
@@ -1881,7 +1881,7 @@ function renderHome() {
   const hero = showTop ? (list.find(a => a.featured) || list[0]) : null;
   const tiles = showTop ? list.filter(a => a !== hero).slice(0, 2) : [];
   const top = hero ? [hero] : [];
-  const rest = list.filter(a => !top.includes(a) && !(list.length > 12 && tiles.includes(a)));
+  const rest = list.filter(a => !top.includes(a) && !tiles.includes(a));
   const shown = rest.slice(0, state.visible);
 
   if (!list.length) {

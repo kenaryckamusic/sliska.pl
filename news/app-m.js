@@ -1,3 +1,14 @@
+/* Blokada przybliżania (szczypanie, podwójne dotknięcie) – w aplikacji i na stronie, na ekranach dotykowych */
+(function () {
+  try {
+    var touch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (!touch) return;
+    ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (n) { document.addEventListener(n, function (e) { e.preventDefault(); }, { passive: false }); });
+    document.addEventListener('touchmove', function (e) { if (e.touches && e.touches.length > 1) e.preventDefault(); }, { passive: false });
+    var last = 0;
+    document.addEventListener('touchend', function (e) { var n = Date.now(); if (n - last < 300 && e.target && !(e.target.closest && e.target.closest('input, textarea, select, [contenteditable]'))) e.preventDefault(); last = n; }, { passive: false });
+  } catch (e) { /* ignoruj */ }
+})();
 (function () {
   try {
     var st = navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
