@@ -1295,7 +1295,7 @@ const Push = {
   }
 };
 
-const isStaffViewer = () => { const st = Auth.isAdmin() || ['mod', 'editor', 'chief', 'owner'].includes(myRole()); try { document.body.classList.toggle('is-staff', st); } catch { /* ignoruj */ } return st; };
+const isStaffViewer = () => { const st = Auth.isAdmin() || ['editor', 'chief', 'owner'].includes(myRole()) || !!(Readers.me && Readers.me.crown); try { document.body.classList.toggle('is-staff', st); } catch { /* ignoruj */ } return st; };
 async function updatePushButton() {
   const b = $('#btn-push');
   if (!b) return;
@@ -4126,7 +4126,7 @@ function renderAccount() {
       <div class="acc-hero-body">
         <div class="avatar avatar-lg acc-hero-av">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
         <div class="acc-hero-main"><h2 class="acc-hero-name">${Utils.esc(me.name || 'Twoje konto')}</h2>
-          <div class="acc-chips"><span class="acc-chip">${Utils.esc(ROLE_LABEL[me.role] || (staff ? 'Redaktor' : 'Czytelnik'))}</span>${vChip}</div></div>
+          <div class="acc-chips"><span class="acc-chip">${Utils.esc(ROLE_LABEL[me.role] || (staff ? 'Redaktor' : 'Czytelnik'))}</span>${me.crown ? `<span class="acc-chip is-crown">${crownHtml()} Moderator</span>` : ''}${vChip}</div></div>
         <div class="acc-hero-actions">${pubLink}</div>
       </div>
     </section>
@@ -4171,9 +4171,9 @@ function renderAccount() {
 }
 
 /** Przełącznik „bez reklam na tym urządzeniu” – jedyna funkcja redakcji dostępna także na stronie publicznej (dla kont z rangą). */
-const STAFF_ROLES = ['mod', 'editor', 'chief', 'owner'];
+const STAFF_ROLES = ['editor', 'chief', 'owner'];
 function staffAdsHtml(me) {
-  if (!me || !STAFF_ROLES.includes(me.role)) return '';
+  if (!me || !(STAFF_ROLES.includes(me.role) || me.crown)) return '';
   let on = false; try { on = localStorage.getItem('sliska_ads_off') === '1'; } catch { /* ignoruj */ }
   return `<section class="panel st-card"><div class="st-head"><h2 class="st-h">Reklamy</h2><p class="st-sub">Tylko dla kont z rangą. Czytelnicy zawsze widzą reklamy.</p></div>
     <label class="st-switch"><span><b>Wyłącz reklamy na tym urządzeniu</b><small>Dotyczy tylko tej przeglądarki.</small></span><input type="checkbox" id="acc-ads-off" ${on ? 'checked' : ''}></label></section>`;
@@ -4314,7 +4314,8 @@ const CMT_EDIT_MS = 5 * 60 * 1000;
 const isOwnerRole = () => false;
 const canMod = () => false;
 const canManage = () => false;          // użytkownikami zarządza tylko Właściciel Portalu
-const roleBadge = c => !c.staff && c.role === 'mod' ? crownHtml() : c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
+const roleBadge = c => roleBase(c) + (!c.staff && (c.crown || c.role === 'mod') ? crownHtml() : '');
+const roleBase = c => !c.staff && c.role === 'mod' ? '' : c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 const MOD_REASON = { spam: 'spam', obraza: 'obraza', spoiler: 'spoiler', inne: 'inne' };
 function modReasons(csv) {
