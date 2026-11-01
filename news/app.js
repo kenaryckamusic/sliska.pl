@@ -1242,7 +1242,7 @@ const Votes = {
 
 /* ---------- Powiadomienia push o nowych artykułach ---------- */
 const Push = {
-  supported() { return location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; },
+  supported() { return !document.documentElement.classList.contains('is-mac-app') && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window; },
   isIos() { return /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); },
   standalone() { return window.navigator.standalone === true || (window.matchMedia && matchMedia('(display-mode: standalone)').matches); },
   key(b64) { const pad = '='.repeat((4 - b64.length % 4) % 4); const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(raw, c => c.charCodeAt(0)); },
@@ -3094,7 +3094,9 @@ async function submitTip(e) {
   const btn = $('#tip-send');
   btn.disabled = true;
   try {
-    await DataService.addTip({ id: Utils.uid('t_'), title, message, link, email, createdAt: new Date().toISOString() });
+    const tipId = Utils.uid('t_');
+    await DataService.addTip({ id: tipId, title, message, link, email, createdAt: new Date().toISOString() });
+    notifyTip(tipId, 'topic');
     try { localStorage.setItem(TIP_LOG_KEY, JSON.stringify([...log, Date.now()])); } catch { /* ignoruj */ }
     $('#view-tip').innerHTML = `
       <div class="nf">
@@ -3196,6 +3198,11 @@ function renderTipList() {
   updatePanelCounts();
 }
 
+/** Zgłoszenie trafiło do bazy – Worker wysyła push do redakcji (bez czekania na odpowiedź, błędy ignorujemy). */
+function notifyTip(id, kind) {
+  try { fetch(CONFIG.API_BASE + '/tips/notify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, kind }), keepalive: true }).catch(() => {}); } catch { /* ignoruj */ }
+}
+
 /** Szybka zmiana statusu jednym kliknięciem (np. „Naprawione” przy zgłoszeniu błędu). */
 async function quickTipStatus(id, status) {
   const t = (state.tips || []).find(x => x.id === id);
@@ -3209,7 +3216,7 @@ async function applyTipPatch(t, patch) {
   let local = false;
   try {
     let viaWorker = false;
-    try { const d = await adminApi('/news/api/tips/update', { method: 'POST', body: JSON.stringify({ id, patch }) }); if (d.statusAt) patch = { ...patch, statusAt: d.statusAt }; viaWorker = true; } catch (we) { console.warn('Status zgłoszenia przez Workera nie przeszedł, próbuję bezpośrednio:', we); }
+    try { const d = await adminApi('/tips/update', { method: 'POST', body: JSON.stringify({ id, patch }) }); if (d.statusAt) patch = { ...patch, statusAt: d.statusAt }; viaWorker = true; } catch (we) { console.warn('Status zgłoszenia przez Workera nie przeszedł, próbuję bezpośrednio:', we); }
     if (!viaWorker) await DataService.updateTip(id, patch);
     const o = tipOverrides(); if (o[id]) { delete o[id]; try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); } catch { /* ignoruj */ } }
   } catch (err) {
@@ -5183,14 +5190,16 @@ async function submitReport(e) {
   const btn = $('#report-send');
   btn.disabled = true;
   try {
+    const tipId = Utils.uid('t_');
     await DataService.addTip({
-      id: Utils.uid('t_'),
+      id: tipId,
       title: ('Błąd w artykule: ' + a.title).slice(0, 120),
       message: text.slice(0, 1700) + '\n\nArtykuł: ' + articleUrl(a),
       link: articleUrl(a).slice(0, 300),
       email,
       createdAt: new Date().toISOString()
     });
+    notifyTip(tipId, 'error');
     try { localStorage.setItem(TIP_LOG_KEY, JSON.stringify([...log, Date.now()])); } catch { /* ignoruj */ }
     closeModal('report-modal');
     toast('Dziękujemy! Zgłoszenie trafiło do redakcji.');
@@ -5785,7 +5794,7 @@ async function saveArticle(e) {
     await DataService.save(article);
     upsertLocalState(article);
     publishOg(article);
-    adminApi('/news/api/push/kick', { method: 'POST', body: '{}' }).catch(() => {});      // powiadomienie push od razu, bez czekania na Cron
+    adminApi('/push/kick', { method: 'POST', body: '{}' }).catch(() => {});      // powiadomienie push od razu, bez czekania na Cron
     try { localStorage.setItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid(), author); } catch { /* ignoruj */ }
 
     rememberTags(article.tags);
@@ -7316,7 +7325,7 @@ async function sendPushManual(id, btn) {
   if (!confirm(`Wysłać powiadomienie push o: ${t} do wszystkich subskrybentów?`)) return;
   if (btn) btn.disabled = true;
   try {
-    const d = await adminApi('/news/api/push/send', { method: 'POST', body: JSON.stringify({ id }) });
+    const d = await adminApi('/push/send', { method: 'POST', body: JSON.stringify({ id }) });
     toast(d.more ? 'Powiadomienie wysyłane – reszta urządzeń w ciągu minuty.' : `Powiadomienie wysłane (${d.sent || 0} urządzeń).`);
   } catch (err) {
     toast(err.message, 'error');
