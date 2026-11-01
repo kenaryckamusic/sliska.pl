@@ -2778,17 +2778,26 @@ h1, h2, h3, .panel-title, .st-h, .section-title, .hero-title, .card-title, .tile
 .acc-sw-x:hover { background: rgba(127, 127, 127, .15); }
 .acc-sw-row .avatar { width: 40px; height: 40px; flex: none; font-size: .85rem; }
 
-/* Aplikacja na Maca (okno Electron z paskiem tytułu zespolonym z nagłówkiem strony) */
-html.is-mac-app .site-header { -webkit-app-region: drag; user-select: none; -webkit-user-select: none; }
+/* Aplikacja na Maca: górny pasek strony jest paskiem tytułu okna – szukajka po lewej, logo (= Home) na środku, ikony po prawej */
+html.is-mac-app .site-header { -webkit-app-region: drag; user-select: none; -webkit-user-select: none; box-shadow: 0 1px 0 var(--border); }
 html.is-mac-app .site-header .logo,
-html.is-mac-app .site-header .main-nav a,
 html.is-mac-app .site-header .search,
 html.is-mac-app .site-header .auth { -webkit-app-region: no-drag; }
 html.is-mac-app body.modal-open .site-header { -webkit-app-region: no-drag; }
-html.is-mac-app .site-header .header-top { min-height: 52px; }
-@media (max-width: 1500px) {
-  html.is-mac-app:not(.is-app-fullscreen) .site-header .logo { margin-left: 66px; }       /* miejsce na czerwony/żółty/zielony przycisk okna */
+html.is-mac-app .site-header .main-nav { display: none; }                 /* nawigacja jest w pasku menu macOS */
+html.is-mac-app .site-header .header-top {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); grid-template-areas: "search logo auth";
+  align-items: center; gap: 16px; min-height: 56px; padding-top: 0; padding-bottom: 0; flex-wrap: nowrap;
 }
-@media (max-width: 1180px) {
-  html.is-mac-app:not(.is-app-fullscreen) .site-header .header-top { gap: 12px; }
+html.is-mac-app .site-header .logo { grid-area: logo; justify-self: center; margin: 0; }
+html.is-mac-app .site-header .logo svg { height: 26px; width: auto; }
+html.is-mac-app .site-header .auth { grid-area: auth; justify-self: end; display: flex; gap: 8px; }
+html.is-mac-app .site-header .search { grid-area: search; justify-self: start; width: 100%; max-width: 300px; margin: 0; }
+html.is-mac-app:not(.is-app-fullscreen) .site-header .search { margin-left: 70px; width: calc(100% - 70px); }   /* miejsce na przyciski okna */
+html.is-mac-app .site-header .search input {
+  height: 34px; padding: 0 14px 0 36px; font-size: .9rem; border-radius: 999px;
+  background: color-mix(in srgb, var(--soft) 80%, transparent); border: 1px solid transparent;
 }
+html.is-mac-app .site-header .search input:focus { background: var(--surface); border-color: var(--accent); box-shadow: 0 0 0 4px rgba(214, 0, 28, .12); }
+html.is-mac-app .site-header .search svg { left: 12px; width: 15px; height: 15px; }
+html.is-mac-app .site-header .auth .btn-icon { width: 34px; height: 34px; border-radius: 10px; }
