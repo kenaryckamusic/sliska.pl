@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Wyślij swoją reklamę – Śliska News</title>
+<meta name="description" content="Wyślij własną reklamę do Śliska News. Zgłoszenie trafia tylko do właściciela serwisu.">
+<meta name="theme-color" content="#d6001c">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem('sliska_theme');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="style.css?v=20261103ad"><link rel="stylesheet" href="ads.css?v=20261103ad"><link rel="stylesheet" href="reklama.css?v=20261103ad">
+</head><body class="ar-body">
+<i id="ads-gallery" hidden></i>
+<header class="ar-nav"><a class="ar-logo" href="./" aria-label="Śliska News – strona główna"><img class="lg-l" src="logo.svg" alt="Śliska News" height="34"><img class="lg-d" src="logo-biale.svg" alt="" height="34"></a>
+  <nav aria-label="Nawigacja"><a href="./">Home</a><a href="./#/ranking">Ranking</a><a href="./#/szybkie">Nowinki</a><a href="./#/redakcja">Redakcja</a><a href="./#/zapisane">Zapisane</a><a href="spot" class="is-on" aria-current="page">Reklama</a></nav></header>
+<main class="ar">
+  <section class="ar-hero">
+    <p class="ar-kicker">Dla reklamodawców</p>
+    <h1>Niech wielka Knaga smyra Twój ekran!</h1>
+    <p class="ar-lead">Wyślij swoją reklamę. Dostaje ją <b>wyłącznie właściciel serwisu</b> – nikt inny jej nie zobaczy. Reklamy u nas są <b>całkowicie darmowe</b>. Jeśli się spodoba, odpiszemy na podany e-mail i ustalimy szczegóły.</p>
+    <ol class="ar-steps"><li><b>Dodaj grafiki</b> w wymaganych wymiarach (źle przycięte poprawisz tu sam).</li><li><b>Zobacz podgląd</b>, jak reklama wygląda u czytelników.</li><li><b>Wyślij</b> – my odpiszemy.</li></ol>
+  </section>
+
+  <section class="ar-card" aria-labelledby="h-g">
+    <h2 id="h-g">1. Grafiki</h2>
+    <p class="ar-sub">Wystarczy jeden format, ale im więcej, tym więcej miejsc, w których reklama się pokaże. Pliki: JPG, PNG, WebP; do 20 MB. Dopasujemy je do wymaganego rozmiaru i skompresujemy tylko tyle, ile trzeba (maks. 500 KB każdy), żeby nie psuć jakości.</p>
+    <div class="ar-slots" id="slots"></div>
+  </section>
+
+  <section class="ar-card" aria-labelledby="h-p">
+    <div class="ar-head"><h2 id="h-p">2. Podgląd u czytelników</h2>
+      <div class="ar-seg" role="group" aria-label="Urządzenie"><button type="button" class="is-on" data-dev="desktop">Komputer</button><button type="button" data-dev="phone">Telefon</button></div></div>
+    <div class="ar-tabs" id="pv-tabs" role="tablist"></div>
+    <div class="pv pv-desktop" id="pv"></div>
+    <p class="ar-note" id="pv-note"></p>
+  </section>
+
+  <section class="ar-card" aria-labelledby="h-d">
+    <h2 id="h-d">3. Dane i wysyłka</h2>
+    <form id="f" novalidate>
+      <div class="ar-grid">
+        <label class="field"><span class="field-label">Imię i nazwisko *</span><input type="text" id="f-name" maxlength="80" autocomplete="name" required></label>
+        <label class="field"><span class="field-label">E-mail do odpowiedzi *</span><input type="email" id="f-email" maxlength="120" autocomplete="email" required></label>
+        <label class="field"><span class="field-label">Dokąd ma prowadzić reklama? *</span><input type="url" id="f-link" maxlength="300" placeholder="https://" required></label>
+      </div>
+      <label class="field"><span class="field-label">Uwagi <small class="hint" id="f-note-n">0/600</small></span><textarea id="f-note" rows="3" maxlength="600" placeholder="Np. na jaki czas i w jakich miejscach najchętniej (opcjonalnie)"></textarea></label>
+      <input type="text" id="f-hp" tabindex="-1" autocomplete="off" aria-hidden="true" class="ar-hp">
+      <label class="ar-check"><input type="checkbox" id="f-ok"><span>Mam prawa do tej grafiki i treści reklamy, nie jest ona nielegalna ani wprowadzająca w błąd. Rozumiem, że zgłoszenie nie gwarantuje publikacji, a właściciel może je odrzucić bez podania powodu. Zgadzam się, by moje dane (imię, e-mail) posłużyły wyłącznie do odpowiedzi na to zgłoszenie.</span></label>
+      <p class="form-error" id="f-err" role="alert" hidden></p>
+      <div class="ar-actions"><button type="submit" class="btn btn-primary" id="f-send" disabled>Wyślij reklamę</button><span class="ar-hint" id="f-hint"></span></div>
+    </form>
+    <div class="ar-done" id="done" hidden>
+      <h3>Poszło! 🎉</h3><p>Twoja reklama trafiła do właściciela serwisu. Jeśli będzie pasować, odpiszemy na <b id="done-mail"></b>.</p>
+      <button type="button" class="btn" id="again">Wyślij kolejną reklamę</button>
+    </div>
+  </section>
+  <p class="ar-foot">Zasady: bez treści nielegalnych, wprowadzających w błąd i nawołujących do nienawiści. Reklamy są oznaczane jako „Sponsorowane”.</p>
+</main>
+
+<div class="ar-modal" id="crop" hidden role="dialog" aria-modal="true" aria-labelledby="crop-t">
+  <div class="ar-modal-box">
+    <h3 id="crop-t">Przytnij grafikę</h3>
+    <p class="ar-sub" id="crop-info"></p>
+    <div class="ar-stage" id="stage"><canvas id="cv"></canvas></div>
+    <label class="ar-zoom"><span>Przybliżenie</span><input type="range" id="zoom" min="1" max="4" step="0.01" value="1"></label>
+    <p class="ar-warn" id="crop-warn" hidden></p>
+    <p class="ar-hint">Przeciągnij grafikę, by ustawić kadr. Kółkiem myszy lub suwakiem zmienisz przybliżenie.</p>
+    <div class="ar-actions"><button type="button" class="btn" id="crop-cancel">Anuluj</button><button type="button" class="btn" id="crop-reset">Dopasuj</button><button type="button" class="btn btn-primary" id="crop-ok">Zapisz kadr</button></div>
+  </div>
+</div>
+<script src="ads.js?v=20261103ah"></script>
+<script src="reklama.js?v=20261103ad"></script>
+</body></html>
