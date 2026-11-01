@@ -1552,6 +1552,9 @@ function collectionHeadHtml(list) {
 }
 
 /* ---------- Redaktorzy: profile, biografie, lista ---------- */
+/** Podpis „Redaktor Imię Nazwisko” i samo „Imię Nazwisko” to ta sama osoba (starsze artykuły mają w polu autora przedrostek). */
+const authorBase = n => String(n || '').replace(/^Redaktor\s+/i, '').trim();
+const authorKey = n => Utils.fold(authorBase(n));
 const Authors = {
   bios: new Map(), loaded: false,
   async load(force) {
@@ -1560,20 +1563,20 @@ const Authors = {
       const r = await fetch(CONFIG.API_BASE + '/authors', { cache: 'no-store' });
       if (!r.ok) return;
       const d = await r.json();
-      this.bios = new Map((d.authors || []).map(x => [Utils.fold(x.name), { name: x.name, bio: x.bio, av: x.av || 0 }]));
+      this.bios = new Map((d.authors || []).map(x => [authorKey(x.name), { name: x.name, bio: x.bio, av: x.av || 0 }]));
       this.loaded = true;
     } catch { /* bez biografii strona nadal działa */ }
   },
-  bio(name) { const b = this.bios.get(Utils.fold(name)); return b ? b.bio : ''; },
-  hasPhoto(name) { const b = this.bios.get(Utils.fold(name)); return !!(b && b.av); },
+  bio(name) { const b = this.bios.get(authorKey(name)); return b ? b.bio : ''; },
+  hasPhoto(name) { const b = this.bios.get(authorKey(name)); return !!(b && b.av); },
   /** Zdjęcie w pełnej jakości (z Workera), a gdy go brak – miniatura z artykułu. */
-  photo(name, fallback) { const b = this.bios.get(Utils.fold(name)); return b && b.av ? `${CONFIG.API_BASE}/author-avatar?n=${encodeURIComponent(b.name)}&v=${b.av}` : (fallback || ''); },
+  photo(name, fallback) { const b = this.bios.get(authorKey(name)); return b && b.av ? `${CONFIG.API_BASE}/author-avatar?n=${encodeURIComponent(b.name)}&v=${b.av}` : (fallback || ''); },
   /** Redaktorzy z opublikowanych artykułów (bez nowinek) + osoby, które mają tylko biografię. */
   list() {
     const m = new Map();
     publishedArticles().filter(a => !a.quick && a.author).forEach(a => {
-      const k = Utils.fold(a.author);
-      const e = m.get(k) || { name: a.author, photo: '', n: 0, last: '' };
+      const k = authorKey(a.author);
+      const e = m.get(k) || { name: authorBase(a.author), photo: '', n: 0, last: '' };
       e.n++;
       if (!e.photo && a.authorPhoto) e.photo = a.authorPhoto;
       if (a.createdAt > e.last) e.last = a.createdAt;
@@ -1583,8 +1586,8 @@ const Authors = {
     m.forEach(e => { e.photo = this.photo(e.name, e.photo); });
     return [...m.values()].sort((x, y) => y.n - x.n || x.name.localeCompare(y.name, 'pl'));
   },
-  find(name) { const k = Utils.fold(name); return this.list().find(e => Utils.fold(e.name) === k) || null; },
-  href(name) { return '#/redaktor/' + encodeURIComponent(name); }
+  find(name) { const k = authorKey(name); return this.list().find(e => authorKey(e.name) === k) || null; },
+  href(name) { return '#/redaktor/' + encodeURIComponent(authorBase(name)); }
 };
 
 function renderAuthors() {
@@ -1702,7 +1705,7 @@ function filteredArticles() {
     if (state.category !== ALL && !Utils.catsOf(a).includes(state.category)) return false;
     if (state.tag && !Utils.tagsOf(a).some(t => Utils.same(t, state.tag))) return false;
     if (state.artist && !articleMentions(a, state.artist)) return false;
-    if (state.author && !Utils.same(a.author, state.author)) return false;
+    if (state.author && authorKey(a.author) !== authorKey(state.author)) return false;
     if (state.onlyNew && !Visit.isNew(a)) return false;
     if (!q) return true;
     return SearchIndex.matches(a, q);
@@ -1866,7 +1869,7 @@ function renderSideList() {
 /** Zdjęcie profilowe autora (zapisane w artykule); gdy go brak – inicjały. */
 function authorAvatarHtml(a) {
   let photo = a.authorPhoto || '';
-  if (!photo && state.profile.avatar && state.profile.showPhoto !== false && a.author && a.author === state.profile.name) photo = state.profile.avatar;
+  if (!photo && state.profile.avatar && state.profile.showPhoto !== false && a.author && authorKey(a.author) === authorKey(state.profile.name)) photo = state.profile.avatar;
   return `<span class="avatar avatar-sm" aria-hidden="true">${avatarHtml({ name: a.author, avatar: photo })}</span>`;
 }
 
@@ -2749,7 +2752,7 @@ async function drawSlide(a, kind, theme, o = {}) {
     chip('AUTOR');
     const cx = W / 2, cy = 560, r = 150;
     let drew = false;
-    const photo = a.authorPhoto || (state.profile && state.profile.avatar && a.author === state.profile.name ? state.profile.avatar : '');
+    const photo = a.authorPhoto || (state.profile && state.profile.avatar && authorKey(a.author) === authorKey(state.profile.name) ? state.profile.avatar : '');
     if (photo) {
       try {
         const im = await loadImage(photo, !photo.startsWith('data:'));
@@ -3204,7 +3207,9 @@ async function applyTipPatch(t, patch) {
   const id = t.id;
   let local = false;
   try {
-    await DataService.updateTip(id, patch);
+    let viaWorker = false;
+    try { const d = await adminApi('/news/api/tips/update', { method: 'POST', body: JSON.stringify({ id, patch }) }); if (d.statusAt) patch = { ...patch, statusAt: d.statusAt }; viaWorker = true; } catch (we) { console.warn('Status zgłoszenia przez Workera nie przeszedł, próbuję bezpośrednio:', we); }
+    if (!viaWorker) await DataService.updateTip(id, patch);
     const o = tipOverrides(); if (o[id]) { delete o[id]; try { localStorage.setItem(TIP_OVR_KEY, JSON.stringify(o)); } catch { /* ignoruj */ } }
   } catch (err) {
     console.warn('Status zgłoszenia – zapis w bazie nieudany, zapisuję na tym urządzeniu:', err);
@@ -3221,7 +3226,7 @@ async function renderTips() {
   el.innerHTML = '<p class="muted">Ładowanie…</p>';
   try {
     const ovr = tipOverrides();
-    const list = (await DataService.getTips()).map(t => ovr[t.id] ? { ...t, ...ovr[t.id] } : t);
+    const list = (await DataService.getTips()).map(t => ovr[t.id] && !(t.statusAt && ovr[t.id].statusAt && String(t.statusAt) >= String(ovr[t.id].statusAt)) ? { ...t, ...ovr[t.id] } : t);   // lokalny zapis ustępuje nowszemu statusowi z bazy
     state.tips = list;
     if (currentRoute().name !== 'panel') return;
     renderTipList();
@@ -3545,7 +3550,7 @@ function updatePanelCounts() {
   const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
   const tipsOpen = (state.tips || []).filter(t => TIP_OPEN.includes(tipStatus(t))).length;
   set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', tipsOpen);
-  set('kpi-mine', me ? publishedArticles().filter(a => a.author === me).length : publishedArticles().length);
+  set('kpi-mine', me ? publishedArticles().filter(a => authorKey(a.author) === authorKey(me)).length : publishedArticles().length);
   const kl = $('#kpi-mine') && $('#kpi-mine').closest('a'); if (kl) kl.setAttribute('href', me ? '#/redaktor/' + encodeURIComponent(me) : '#/redakcja');
   const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: tipsOpen };
   $$('#view-panel .ptab').forEach(b => { const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
@@ -4840,7 +4845,7 @@ function searchSuggestions(q) {
   });
   pub.forEach(a => {
     if (a.quick || !a.author) return;
-    const k = 'r:' + Utils.fold(a.author);
+    const k = 'r:' + authorKey(a.author);
     const e = names.get(k) || { label: a.author, type: 'author', n: 0 };
     e.n++; names.set(k, e);
   });
@@ -5678,7 +5683,7 @@ async function saveArticle(e) {
     createdAt = new Date().toISOString();
   }
 
-  const ownProfile = author === state.profile.name && state.profile.avatar && state.profile.showPhoto !== false;
+  const ownProfile = authorKey(author) === authorKey(state.profile.name) && state.profile.avatar && state.profile.showPhoto !== false;
   const authorPhoto = ownProfile ? await shrinkAvatar(state.profile.avatar) : ((editor.existing && editor.existing.authorPhoto) || '');
 
   const article = {
@@ -5712,6 +5717,7 @@ async function saveArticle(e) {
     await DataService.save(article);
     upsertLocalState(article);
     publishOg(article);
+    adminApi('/news/api/push/kick', { method: 'POST', body: '{}' }).catch(() => {});      // powiadomienie push od razu, bez czekania na Cron
     try { localStorage.setItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid(), author); } catch { /* ignoruj */ }
 
     rememberTags(article.tags);
@@ -6036,7 +6042,7 @@ const Readers = {
   async register(email, pw, name) {
     const cred = await this.auth.createUserWithEmailAndPassword(email, pw);
     this.user = cred.user;
-    try { await cred.user.sendEmailVerification(); } catch { /* ignoruj */ }
+    await this.sendVerify();
     try { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); } catch (e) { e.accountCreated = true; throw e; }
     this.render();
   },
@@ -6064,8 +6070,21 @@ const Readers = {
     }
     finally { this._joining = false; try { renderReaderCard(); } catch { /* ignoruj */ } }
   },
-  async reset(email) { await this.auth.sendPasswordResetEmail(email); },
-  async resend() { await this.user.sendEmailVerification(); },
+  /** Własne maile z Workera; gdy Worker nie ma skonfigurowanej wysyłki (albo zawiedzie), idzie standardowy mail Firebase. */
+  async sendVerify(strict) {
+    try { await this.api('/mail/verify', { method: 'POST' }); return; }
+    catch (e) { if (e && e.error === 'rate') { if (strict) throw e; return; } }
+    try { await this.user.sendEmailVerification(); } catch { /* ignoruj */ }
+  },
+  async reset(email) {
+    try {
+      const r = await fetch(CONFIG.API_BASE + '/mail/reset', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ email }), cache: 'no-store' });
+      if (r.ok) return;
+      if (r.status === 429) { const e = new Error('rate'); e.error = 'rate'; throw e; }
+    } catch (e) { if (e && e.error === 'rate') throw e; }
+    await this.auth.sendPasswordResetEmail(email);
+  },
+  async resend() { await this.sendVerify(true); },
   async refresh() { if (!this.user) return; await this.user.reload(); await this.user.getIdToken(true); await this.loadMe(); this.render(); await this.joinEditor(); },
   async saveName(name) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ name }) }); this.render(); },
   async saveBio(bio) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ bio }) }); this.render(); },
@@ -7024,7 +7043,7 @@ function renderProfileStats() {
   const pub = publishedArticles();
   const sched = scheduledArticles().length;
   const me = (state.profile && state.profile.name) || '';
-  $('#ps-mine').textContent = me ? pub.filter(a => a.author === me).length : pub.length;
+  $('#ps-mine').textContent = me ? pub.filter(a => authorKey(a.author) === authorKey(me)).length : pub.length;
   $('#ps-sched').textContent = sched;
   const b = $('#pa-sched'); b.hidden = !sched; b.textContent = sched;
 }
