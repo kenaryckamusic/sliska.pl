@@ -2,6 +2,7 @@
 <html lang="pl">
 <head>
   <meta charset="utf-8">
+  <script>try{if(/SliskaMacApp/.test(navigator.userAgent))document.documentElement.classList.add('is-mac-app')}catch(e){}</script>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Śliska News – najświeższe wiadomości</title>
   <meta name="description" content="Śliska News – wiadomości z muzyki, kontrowersji i dram. Codziennie najświeższe informacje.">
@@ -13,7 +14,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta property="og:locale" content="pl_PL">
   <meta property="og:url" content="https://sliska.pl/news/">
-  <meta property="og:image" content="https://sliska.pl/news/og-image.png?v=5">
+  <meta property="og:image" content="https://sliska.pl/news/og-image.png?v=6">
   <link rel="canonical" href="https://sliska.pl/news/">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="alternate" type="application/rss+xml" title="Śliska News" href="https://sliska.pl/news/rss.xml">
@@ -41,7 +42,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261102t">
+  <link rel="stylesheet" href="style.css?v=20261102v">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
@@ -905,6 +906,6 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261102t"></script>
+  <script src="app.js?v=20261102v"></script>
 </body>
 </html>

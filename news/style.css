@@ -2765,3 +2765,30 @@ h1, h2, h3, .panel-title, .st-h, .section-title, .hero-title, .card-title, .tile
 @media (max-width: 520px) { .field-pair { grid-template-columns: 1fr; } }
 .st-byline { margin: -4px 0 0; padding: 9px 12px; border-radius: 10px; background: var(--soft); font-size: .9rem; }
 .st-byline:empty { display: none; }
+
+/* Przełącznik kont */
+.acc-sw-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.acc-sw-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface, transparent); }
+.acc-sw-row.is-on { border-color: var(--accent, #d6001c); box-shadow: 0 0 0 1px var(--accent, #d6001c) inset; }
+.acc-sw-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.acc-sw-main strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc-sw-main small { color: var(--muted, #6b6578); }
+.acc-sw-badge { font-size: .78rem; font-weight: 800; color: var(--accent, #d6001c); }
+.acc-sw-x { border: 0; background: none; color: var(--muted, #6b6578); font-size: 1.3rem; line-height: 1; cursor: pointer; padding: 4px 8px; border-radius: 8px; }
+.acc-sw-x:hover { background: rgba(127, 127, 127, .15); }
+.acc-sw-row .avatar { width: 40px; height: 40px; flex: none; font-size: .85rem; }
+
+/* Aplikacja na Maca (okno Electron z paskiem tytułu zespolonym z nagłówkiem strony) */
+html.is-mac-app .site-header { -webkit-app-region: drag; user-select: none; -webkit-user-select: none; }
+html.is-mac-app .site-header .logo,
+html.is-mac-app .site-header .main-nav a,
+html.is-mac-app .site-header .search,
+html.is-mac-app .site-header .auth { -webkit-app-region: no-drag; }
+html.is-mac-app body.modal-open .site-header { -webkit-app-region: no-drag; }
+html.is-mac-app .site-header .header-top { min-height: 52px; }
+@media (max-width: 1500px) {
+  html.is-mac-app:not(.is-app-fullscreen) .site-header .logo { margin-left: 66px; }       /* miejsce na czerwony/żółty/zielony przycisk okna */
+}
+@media (max-width: 1180px) {
+  html.is-mac-app:not(.is-app-fullscreen) .site-header .header-top { gap: 12px; }
+}

@@ -2103,6 +2103,7 @@ function roundRect(ctx, x, y, w, h, r) {
   ctx.closePath();
 }
 
+const PL_SAMPLE = 'ąćęłńóśźżĄĆĘŁŃÓŚŹŻ';   // żeby przeglądarka dociągnęła też polskie znaki czcionki przed rysowaniem grafiki
 /** Puste, delikatnie zaznaczone miejsce na naklejkę „Link” z Instagrama (Story). */
 function drawStickerZone(ctx, W, H, family) {
   const w = 640, h = 132, x = (W - w) / 2, y = H - 420;
@@ -2128,7 +2129,7 @@ function canvasBlob(canvas) {
 /** Tło ze zdjęcia artykułu (przycięte jak „cover”) + przyciemnienie; zwraca płótno do dalszego rysowania. */
 async function igBackdrop(a, W, H, overlay) {
   const family = getComputedStyle(document.body).fontFamily;
-  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
+  try { await Promise.all([document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 30px ${family}`, PL_SAMPLE)]); } catch {}
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -2276,7 +2277,7 @@ async function renderReviewImage(a) {
   const W = 1080, H = 1350, PAD = 72;
   const r = a.review || {};
   const family = getComputedStyle(document.body).fontFamily;
-  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
+  try { await Promise.all([document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 30px ${family}`, PL_SAMPLE)]); } catch {}
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -2413,7 +2414,7 @@ async function renderInstagramImage(a, opts = {}) {
   const topY = story ? 230 : PAD;        // w Story góra i dół zasłaniają interfejs Instagrama
   const footY = story ? H - 520 : H - 82, lo = story ? 42 : 56;   // lo = odległość linii nad stopką
   const family = getComputedStyle(document.body).fontFamily;
-  try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
+  try { await Promise.all([document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 30px ${family}`, PL_SAMPLE)]); } catch {}
 
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
@@ -2627,7 +2628,7 @@ async function drawSlide(a, kind, theme, o = {}) {
     ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
   } else {
     family = getComputedStyle(document.body).fontFamily;
-    try { await Promise.all([document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 30px ${family}`)]); } catch {}
+    try { await Promise.all([document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 30px ${family}`, PL_SAMPLE)]); } catch {}
     canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
     ctx = canvas.getContext('2d');
     if (red) {
@@ -4643,13 +4644,78 @@ function updateIgUi() {
 }
 
 
+/* ---------- Szybkie przełączanie kont (konta czytelników zapamiętane na tym urządzeniu) ---------- */
+const Accounts = {
+  KEY: 'sliska_accounts', MAX: 5, SESSION_MS: 24 * 3600e3,
+  list() { try { const l = JSON.parse(localStorage.getItem(this.KEY)); return Array.isArray(l) ? l : []; } catch { return []; } },
+  save(l) { try { localStorage.setItem(this.KEY, JSON.stringify(l.slice(0, this.MAX))); } catch { /* ignoruj */ } },
+  /** Zapamiętuje zalogowane konto (sesja Firebase, bez hasła), żeby dało się do niego wrócić jednym kliknięciem. */
+  async remember(user, me) {
+    if (!user || !me || !me.name || !user.toJSON) return;
+    let authTime = 0; try { authTime = Date.parse((await user.getIdTokenResult()).authTime) || 0; } catch { /* ignoruj */ }
+    const entry = { uid: user.uid, email: user.email || '', name: me.name, role: me.role || '', pub: me.pub || '', av: me.avatarAt || 0, authTime, user: user.toJSON() };
+    const l = this.list(), i = l.findIndex(a => a.uid === user.uid);
+    if (i >= 0) l[i] = entry; else l.push(entry);
+    this.save(l);
+  },
+  forget(uid) { this.save(this.list().filter(a => a.uid !== uid)); },
+  expired(a) { return !a.authTime || Date.now() - a.authTime > this.SESSION_MS - 600e3; },
+  idbPut(key, value) {
+    return new Promise((res, rej) => {
+      const rq = indexedDB.open('firebaseLocalStorageDb');
+      rq.onerror = () => rej(rq.error);
+      rq.onsuccess = () => {
+        try {
+          const db = rq.result, tx = db.transaction('firebaseLocalStorage', 'readwrite');
+          tx.objectStore('firebaseLocalStorage').put({ fbase_key: key, value });
+          tx.oncomplete = () => { db.close(); res(); };
+          tx.onerror = () => rej(tx.error);
+        } catch (e) { rej(e); }
+      };
+    });
+  },
+  async switchTo(uid) {
+    const a = this.list().find(x => x.uid === uid);
+    if (!a) return;
+    if (Readers.user && Readers.user.uid === uid) return;
+    if (this.expired(a)) { this.forget(uid); toast('Ta sesja wygasła – zaloguj się na to konto ponownie.'); openReaderModal('login'); $('#reader-email').value = a.email || a.name; return; }
+    try {
+      try { const cur = Auth.mode === 'firebase' && FirebaseProvider.auth && FirebaseProvider.auth.currentUser; if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); } catch { /* ignoruj */ }
+      try { await Push.unlink(); } catch { /* ignoruj */ }
+      await this.idbPut(`firebase:authUser:${CONFIG.READER_FIREBASE.apiKey}:readers`, a.user);
+      location.hash = '#/konto';
+      location.reload();
+    } catch (e) { console.warn('Przełączenie konta nie powiodło się:', e); toast('Nie udało się przełączyć konta. Zaloguj się ręcznie.', 'error'); }
+  },
+  html() {
+    const l = this.list();
+    if (!l.length || !Readers.user) return '';
+    const cur = Readers.user.uid;
+    const rows = l.map(a => {
+      const on = a.uid === cur, exp = this.expired(a);
+      return `<div class="acc-sw-row${on ? ' is-on' : ''}">
+        <span class="avatar" aria-hidden="true">${readerAvatar(a.name, a.av, a.pub)}</span>
+        <span class="acc-sw-main"><strong>${Utils.esc(a.name)}</strong><small>${Utils.esc(ROLE_LABEL[a.role] || 'Czytelnik')}${exp && !on ? ' · wymaga logowania' : ''}</small></span>
+        ${on ? '<span class="acc-sw-badge">Aktywne</span>' : `<button type="button" class="btn btn-sm" data-acc-switch="${Utils.esc(a.uid)}">Przełącz</button><button type="button" class="acc-sw-x" data-acc-forget="${Utils.esc(a.uid)}" aria-label="Usuń z listy" title="Usuń z listy">×</button>`}
+      </div>`;
+    }).join('');
+    return `<section class="panel st-card">
+      <div class="st-head"><h2 class="st-h">Przełącz konto</h2><p class="st-sub">Konta zalogowane na tym urządzeniu. Hasła nie są zapamiętywane, a sesja trwa 24 godziny od logowania.</p></div>
+      <div class="acc-sw-list">${rows}</div>
+      ${l.length < this.MAX ? '<div class="st-actions"><button type="button" class="btn btn-sm" id="acc-add">+ Dodaj kolejne konto</button></div>' : ''}
+    </section>`;
+  }
+};
+
 /* ---------- Instalacja jako aplikacja ---------- */
 let deferredInstall = null;
 function isStandalone() { return (window.matchMedia && matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true; }
 function isIos() { return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); }
+/** Safari na Macu (macOS Sonoma+) nie ma okna „Zainstaluj”, tylko File → Add to Dock. */
+function isMacSafari() { const ua = navigator.userAgent; return /Macintosh/.test(ua) && /Safari\//.test(ua) && !/Chrome|Chromium|Edg|OPR|Firefox/.test(ua) && !(navigator.maxTouchPoints > 1); }
 function updateInstallLink() {
   const l = $('#install-link');
-  if (l) l.hidden = isStandalone() || !(deferredInstall || isIos());
+  if (l) l.hidden = isStandalone() || !(deferredInstall || isIos() || isMacSafari());
 }
 window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredInstall = e; updateInstallLink(); });
 window.addEventListener('appinstalled', () => { deferredInstall = null; updateInstallLink(); toast('Aplikacja zainstalowana.'); });
@@ -4659,6 +4725,8 @@ async function installApp() {
     try { await deferredInstall.userChoice; } catch { /* ignoruj */ }
     deferredInstall = null;
     updateInstallLink();
+  } else if (isMacSafari()) {
+    toast('Na Macu w Safari: z paska menu wybierz File → Add to Dock… i kliknij Add. Aplikacja pojawi się w Docku i w Launchpadzie.');
   } else if (isIos()) {
     toast('Na iPhonie: dotknij Udostępnij (kwadrat ze strzałką), potem „Do ekranu początkowego”.');
   }
@@ -5029,7 +5097,7 @@ async function shareQuick(id) {
 async function renderQuickStory(a) {
   const W = 1080, H = 1920, PAD = 72, topY = 230, footY = H - 520;
   const family = getComputedStyle(document.body).fontFamily;
-  try { await Promise.all([document.fonts.load(`900 80px ${family}`), document.fonts.load(`800 80px ${family}`), document.fonts.load(`700 40px ${family}`)]); } catch {}
+  try { await Promise.all([document.fonts.load(`900 80px ${family}`, PL_SAMPLE), document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 40px ${family}`, PL_SAMPLE)]); } catch {}
   const canvas = document.createElement('canvas');
   canvas.width = W; canvas.height = H;
   const ctx = canvas.getContext('2d');
@@ -6004,7 +6072,7 @@ const Readers = {
       try { await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL); } catch { /* ignoruj */ }
       this.auth.onAuthStateChanged(async u => {
         this.user = u; this.me = null;
-        if (u) { await this.loadMe(); Push.link(); this.joinEditor(); }
+        if (u) { await this.loadMe(); Accounts.remember(u, this.me); Push.link(); this.joinEditor(); }
         this.loading = false; this.render();
         enforceRename();
       });
@@ -6031,6 +6099,7 @@ const Readers = {
   },
   /** „Wyloguj ze wszystkich urządzeń”: serwer unieważnia wcześniejsze sesje, potem wylogowujemy też to urządzenie. */
   async signOutEverywhere() {
+    if (this.user) Accounts.forget(this.user.uid);
     await this.api('/signout-all', { method: 'POST' });
     try { await Push.unlink(); } catch { /* ignoruj */ }
     try { const cur = Auth.mode === 'firebase' && FirebaseProvider.auth && FirebaseProvider.auth.currentUser; if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); } catch { /* ignoruj */ }
@@ -6048,6 +6117,7 @@ const Readers = {
   },
   async login(email, pw) { await this.auth.signInWithEmailAndPassword(email, pw); },
   async logout() {
+    if (this.user) Accounts.forget(this.user.uid);
     await Push.unlink();
     try { const cur = Auth.mode === 'firebase' && FirebaseProvider.auth && FirebaseProvider.auth.currentUser; if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); } catch { /* ignoruj */ }
     await this.auth.signOut();
@@ -6533,6 +6603,7 @@ function renderAccount() {
       <div id="acc-editor-slot"></div>
       </div>
       <div class="acc-col">
+      ${Accounts.html()}
             <section class="panel st-card">
         <div class="st-head"><h2 class="st-h">Logowanie i bezpieczeństwo</h2><p class="st-sub">Adres e-mail, hasło i aktywne sesje.</p></div>
         <div class="st-row"><span class="muted">Adres e-mail</span><strong>${Utils.esc(Readers.user.email || '')}</strong></div>
@@ -6623,6 +6694,9 @@ function bindReaderEvents() {
   $('#reader-eye').addEventListener('click', () => { const p = $('#reader-pass'), show = p.type === 'password'; p.type = show ? 'text' : 'password'; $('#reader-eye').textContent = show ? 'Ukryj' : 'Pokaż'; });
   $('#reader-modal').addEventListener('click', e => { const a = e.target.closest('[data-rmode]'); if (a) { e.preventDefault(); setReaderMode(a.dataset.rmode); $('#reader-error').hidden = true; } });
   document.addEventListener('click', async e => {
+    const sw = e.target.closest('[data-acc-switch]'); if (sw) { sw.disabled = true; Accounts.switchTo(sw.dataset.accSwitch); return; }
+    const fg = e.target.closest('[data-acc-forget]'); if (fg) { Accounts.forget(fg.dataset.accForget); renderAccount(); return; }
+    if (e.target.id === 'acc-add') { openReaderModal('login'); return; }
     const rt = e.target.closest('[data-rd-retry]'); if (rt) { rt.disabled = true; try { await Readers.refresh(); } catch { /* ignoruj */ } renderReaderCard(); return; }
     const c = e.target.closest('[data-cmt]'); if (c) { commentAction(c.dataset.cmt, Number(c.dataset.id) || 0, c); return; }
     if (e.target.closest('[data-rm-google]')) {
