@@ -6884,14 +6884,16 @@ document.addEventListener('click', async e => {
 
 /* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
 const Mod = { all: false };
-const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor' };
+const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor', mod: 'Moderator' };
+const CROWN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.6 10H4.6L3 8zm1.9 12h14.2v1.6H4.9V20z"/></svg>';
+const crownHtml = () => `<span class="crown" title="Moderator" role="img" aria-label="Moderator">${CROWN_SVG}</span>`;
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const CMT_EDIT_MS = 5 * 60 * 1000;
 const isOwnerRole = () => myRole() === 'owner';
-const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
+const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor' || myRole() === 'mod';
 const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
-const roleBadge = c => c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
+const roleBadge = c => !c.staff && c.role === 'mod' ? crownHtml() : c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 const MOD_REASON = { spam: 'spam', obraza: 'obraza', spoiler: 'spoiler', inne: 'inne' };
 function modReasons(csv) {
@@ -6945,7 +6947,7 @@ function userVerified(u) { return u.staff || u.role === 'owner' ? true : u.vfy =
 function modUserHtml(u) {
   const staff = !!u.staff;
   const isOwner = u.role === 'owner';
-  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor']];
+  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['mod', 'Moderator (korona)'], ['editor', 'Redaktor']];
   const sel = `<label class="mu-sel"><span>Rola</span><select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
   const vOpts = [['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']];
   const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
@@ -6955,7 +6957,7 @@ function modUserHtml(u) {
   const chip = `<span class="mu-chip ${ver ? 'is-ok' : 'is-warn'}" title="Źródło: ${how}">${ver ? 'Zweryfikowany' : 'Niezweryfikowany'}</span>`;
   const since = u.created ? new Date(u.created).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const av = `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
-  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
+  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}${!staff && !isOwner ? `<button type="button" data-mod-user="${u.role === 'mod' ? 'mod-off' : 'mod-on'}">${u.role === 'mod' ? 'Odbierz koronę moderatora' : 'Nadaj koronę moderatora'}</button>` : ''}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
   return `<div class="mu ${u.banned ? 'is-banned' : ''}" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}" data-ver="${ver ? 1 : 0}" data-banned="${u.banned ? 1 : 0}">
     <div class="mu-top">
       <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
@@ -6968,7 +6970,7 @@ function modUserHtml(u) {
 }
 
 const MU_FILTERS = [['', 'Wszyscy'], ['staff', 'Redakcja'], ['unver', 'Niezweryfikowani'], ['banned', 'Zablokowani']];
-function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner') : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
+function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner' || u.role === 'mod') : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
 async function loadModUsers(el) {
   const list = $('.mu-list', el); if (!list) return;
   const y = window.scrollY, f = el.dataset.f || '';
@@ -7017,6 +7019,7 @@ document.addEventListener('click', async e => {
     } else if (u) {
       const row = u.closest('.mu'), body = { uid: row.dataset.uid }, k = u.dataset.modUser;
       if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
+      else if (k === 'mod-on' || k === 'mod-off') body.role = k === 'mod-on' ? 'mod' : '';
       else if (k === 'cooldown') body.resetCooldown = true;
       else if (k === 'avatar-remove') { if (!confirm('Usunąć zdjęcie profilowe tego użytkownika?')) return; body.avatar = null; }
       else if (k === 'delete') { if (!confirm('Usunąć konto „' + row.dataset.name + '” razem z jego komentarzami? Nazwa zostanie zwolniona. Tego nie da się cofnąć.')) return; body.delete = true; }

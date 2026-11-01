@@ -2892,3 +2892,9 @@ html.is-mac-app .site-header { box-shadow: 0 1px 0 var(--border); }
 .rx-btn.is-on { border-color: var(--accent); background: rgba(214, 0, 28, .08); } .rx-btn.is-on b { color: var(--accent); }
 .rx-e { font-size: 1.15rem; line-height: 1; }
 @media (max-width: 480px) { .rx-l { display: none; } .rx-btn { padding: 8px 12px; } }
+
+/* Ranga Moderatora: mała żółta korona przy nazwie */
+.crown { display: inline-flex; align-items: center; margin-left: 5px; color: #f5b301; vertical-align: -2px; filter: drop-shadow(0 1px 0 rgba(0,0,0,.12)); }
+.crown svg { display: block; }
+.mu-chips .crown, .up-meta .crown { margin-left: 0; }
+.mu-chips .crown svg, .up-meta .crown svg { width: 18px; height: 18px; }
