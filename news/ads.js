@@ -121,7 +121,7 @@
 
   var OFF_KEY = 'sliska_ads_off';
   /** Redaktorzy i Właściciel mogą wyłączyć reklamy na swoim urządzeniu (Ustawienia). Czytelników to nie dotyczy. */
-  function off() { return document.body.classList.contains('is-admin') && ls(true, OFF_KEY) === '1'; }
+  function off() { return (document.body.classList.contains('is-admin') || document.body.classList.contains('is-staff')) && ls(true, OFF_KEY) === '1'; }
   function blocked() {
     var h = location.hash || '';
     return !CFG.enabled || off() || /^#\/(panel|edytor|szkic|ustawienia|konto)/.test(h) || document.body.classList.contains('modal-open');
