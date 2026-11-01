@@ -150,6 +150,8 @@ function modUserFilter() {}
 async function loadModUsers() {}
 function renderModUsersPanel() {}
 function renderModeration() {}
+let fmtDT = __no;
+async function openUserProfile() {}
 let modQTimer = __no;
 async function loadProfile() {}
 let settingsAvatar = __no;
@@ -157,6 +159,8 @@ function foreignArticles() {}
 let myUsername = __no;
 function fillAuthorNameFields() {}
 function syncAuthorName() {}
+let ASSIGN_PICKED = __no;
+function renderAssignList() {}
 function renderSettings() {}
 async function testPush() {}
 async function updateDevicePush() {}
@@ -818,7 +822,7 @@ const FirebaseProvider = {
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-app-compat.js`);
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore-compat.js`);
 
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    if (!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(cfg);
     this.db = firebase.firestore();
     this.auth = null;
 
@@ -1299,7 +1303,8 @@ const isStaffViewer = () => { const st = Auth.isAdmin() || ['editor', 'chief', '
 async function updatePushButton() {
   const b = $('#btn-push');
   if (!b) return;
-  const usable = !isStaffViewer() && (Push.supported() || (Push.isIos() && !Push.standalone()));   // redakcja i Właściciel nie potrzebują dzwonka
+  const staffViewer = isStaffViewer();   // redakcja i Właściciel nie potrzebują dzwonka
+  const usable = !staffViewer && (Push.supported() || (Push.isIos() && !Push.standalone()));
   b.hidden = !usable;
   if (!usable) return;
   const on = Push.supported() && Notification.permission === 'granted' && !!(await Push.sub());
@@ -1391,8 +1396,18 @@ async function initReactions(a) {
 function drawReactions() {
   const box = $('#reactions'); if (!box || box.dataset.article !== Reacts.article) return;
   box.hidden = false;
+  const top = $('#rx-top');
+  if (top) {
+    const best = REACTIONS.map(([k, e]) => [e, Reacts.counts[k] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    const fv = n => n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' tys.' : String(n);
+    const parts = [];
+    if (Reacts.views) parts.push(`<span class="rx-v"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>${fv(Reacts.views)}</span>`);
+    best.forEach(([e, n]) => parts.push(`<span>${e} ${fv(n)}</span>`));
+    top.innerHTML = parts.join('');
+    top.hidden = !parts.length;
+  }
   const fmt = n => n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' tys.' : String(n);
-  box.innerHTML = `<div class="rx-head"><b>Jak Ci się podobało?</b><span class="rx-views" title="Wyświetlenia artykułu">👁 ${fmt(Reacts.views)}</span></div>
+  box.innerHTML = `<div class="rx-head"><b>Jak Ci się podobało?</b><span class="rx-views" title="Wyświetlenia artykułu"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> ${fmt(Reacts.views)}</span></div>
     <div class="rx-row">${REACTIONS.map(([k, e, l]) => `<button type="button" class="rx-btn${Reacts.mine === k ? ' is-on' : ''}" data-rx="${k}" aria-pressed="${Reacts.mine === k}"><span class="rx-e" aria-hidden="true">${e}</span><span class="rx-l">${l}</span><b>${Reacts.counts[k] || 0}</b></button>`).join('')}</div>`;
 }
 async function reactTo(kind) {
@@ -1408,7 +1423,10 @@ async function reactTo(kind) {
     Reacts.counts = d.counts || Reacts.counts; Reacts.mine = d.mine || ''; drawReactions();
   } catch (ex) { Reacts.mine = prev.mine; Reacts.counts = prev.counts; drawReactions(); toast(ex.message || 'Nie udało się zapisać reakcji.', 'error'); }
 }
-document.addEventListener('click', e => { const b = e.target.closest('[data-rx]'); if (b) reactTo(b.dataset.rx); });
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-rx]'); if (b) reactTo(b.dataset.rx);
+  if (e.target.closest('[data-rx-go]')) { const r = $('#reactions'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+});
 
 async function initReaderVote(a) {
   const box = $('#reader-vote');
@@ -1799,6 +1817,20 @@ function cardHtml(a, opts = {}) {
   </article>`;
 }
 
+function mastheadHtml(list) {
+  const d = new Date();
+  const date = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const upd = list.length ? Utils.formatTime(list[0].createdAt) : '';
+  return `<div class="masthead"><span class="mh-date">${Utils.esc(date)}</span>${upd ? `<span class="mh-live"><i aria-hidden="true"></i>Ostatnia aktualizacja: ${Utils.esc(upd)}</span>` : ''}<span class="mh-sp"></span><a href="#/szybkie">Nowinki</a><a href="#/ranking">Ranking</a><a href="#/redakcja">Redakcja</a></div>`;
+}
+
+function latestPanelHtml(items) {
+  return `<aside class="latest-panel" aria-label="Najnowsze"><h2 class="lp-h"><i aria-hidden="true"></i>Najnowsze</h2><ol class="lp-list">${items.map(a => {
+    const id = encodeURIComponent(a.id);
+    return `<li class="lp-item" data-id="${Utils.esc(a.id)}"><time datetime="${Utils.esc(a.createdAt)}">${Utils.esc(Utils.formatTime(a.createdAt))}</time><div><span class="lp-cat">${Utils.esc(Utils.catsOf(a)[0] || '')}</span><a class="lp-t" href="#/artykul/${id}">${Utils.esc(a.title)}</a></div></li>`;
+  }).join('')}</ol></aside>`;
+}
+
 function heroHtml(a, useCover) {
   const id = encodeURIComponent(a.id);
   return `<section class="hero" data-id="${Utils.esc(a.id)}" aria-label="Temat dnia">
@@ -1830,7 +1862,8 @@ function renderHome() {
   const status = $('#home-status');
 
   if (state.loadError) {
-    status.innerHTML = '<div class="empty-state">Nie udało się wczytać wiadomości. Odśwież stronę za chwilę.</div>';
+    const devCode = /^dev\./.test(location.hostname) ? (state.loadErrCode || DataService.fallbackReason || '') : '';
+    status.innerHTML = '<div class="empty-state">Nie udało się wczytać wiadomości. Odśwież stronę za chwilę.' + (devCode ? '<br><small>[dev: ' + Utils.esc(devCode) + ']</small>' : '') + '</div>';
     $('#hero-slot').innerHTML = '';
     $('#resume-slot').innerHTML = '';
     $('#quick-slot').innerHTML = '';
@@ -1847,8 +1880,8 @@ function renderHome() {
   const showTop = state.category === ALL && !coll && !state.query.trim() && list.length > 0;
   const hero = showTop ? (list.find(a => a.featured) || list[0]) : null;
   const tiles = showTop ? list.filter(a => a !== hero).slice(0, 2) : [];
-  const top = hero ? [hero, ...tiles] : [];
-  const rest = list.filter(a => !top.includes(a));
+  const top = hero ? [hero] : [];
+  const rest = list.filter(a => !top.includes(a) && !(list.length > 12 && tiles.includes(a)));
   const shown = rest.slice(0, state.visible);
 
   if (!list.length) {
@@ -1876,7 +1909,7 @@ function renderHome() {
   }
 
   $('#hero-slot').innerHTML = hero
-    ? `<div class="home-top${tiles.length ? '' : ' single'}">${heroHtml(hero, false)}${tiles.length ? `<div class="home-tiles">${tiles.map(tileHtml).join('')}</div>` : ''}</div>`
+    ? mastheadHtml(list) + `<div class="home-top${tiles.length ? '' : ' single'}">${heroHtml(hero, false)}${tiles.length ? `<div class="home-tiles">${tiles.map(tileHtml).join('')}</div>` : ''}</div>`
     : coll ? collectionHeadHtml(list) : '';
   $('#resume-slot').innerHTML = (state.category === ALL && !coll && !state.query.trim() ? newBannerHtml() : '') + '';
   $('#quick-slot').innerHTML = showTop && !state.onlyNew ? quickStripHtml() : '';
@@ -1990,6 +2023,7 @@ function articleHtml(a, plain) {
           <span class="author-line">${authorAvatarHtml(a)}<a class="author-link" href="${Authors.href(a.author)}"><strong>${Utils.esc(bylineName(a.author))}</strong></a></span>
           <time datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)}</time>
           <span>${minutes} min czytania</span>
+          <button type="button" class="rx-top" id="rx-top" data-rx-go hidden aria-label="Reakcje czytelników – przejdź na dół, żeby zareagować"></button>
         </div>
       </header>
       ${heroFig}
@@ -3495,12 +3529,12 @@ function quickItemHtml(a, withAdmin) {
 
 function quickStripHtml() {
   const list = publishedQuick().slice(0, 3);
-  if (!list.length && !Auth.isAdmin()) return '';
-  return `<section class="quick-strip" aria-label="Nowinki z Poślizgiem">
+  const plus = `<button type="button" class="plus-card" data-action="plus-open" aria-label="Śliska+ – subskrypcja"><span class="plus-top"><b>Śliska+</b><i>NOWOŚĆ</i></span><span class="plus-tx">Bez reklam, wcześniejszy dostęp do newsów i odznaka przy komentarzach.</span><span class="plus-go">Dołącz →</span></button>`;
+  return `<div class="quick-row"><section class="quick-strip" aria-label="Nowinki z Poślizgiem">
     <div class="quick-head"><h2 class="section-title">Nowinki z Poślizgiem</h2>
       <span><button type="button" class="btn btn-sm admin-only" data-action="quick-new">+ Dodaj</button> <a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
     ${list.length ? `<ul class="quick-list">${list.map(a => quickItemHtml(a, false)).join('')}</ul>` : '<p class="muted">Nie ma jeszcze nowinek.</p>'}
-  </section>`;
+  </section>${plus}</div>`;
 }
 
 function renderQuick() {
@@ -3610,6 +3644,7 @@ async function shareImage(id, btn) {
    Konta czytelników i komentarze
    ========================================================= */
 const READER_ERR = {
+  weak: 'Hasło musi mieć od 6 do 128 znaków.', fb: 'Firebase odrzucił zmianę. Spróbuj ponownie.', no_sa: 'Brak konta serwisowego w Workerze (READER_SA) – nie da się ustawić hasła.', not_found: 'Nie znaleziono konta.',
   endpoint: 'Worker jest w starej wersji – wgraj najnowszy og-worker.js (Edit code → Deploy).', too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
   name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'Nazwa: tylko małe litery a–z, cyfry oraz pojedyncza kropka lub podkreślnik w środku (bez spacji i polskich znaków).',
   bad_login: 'Nieprawidłowa nazwa/e-mail lub hasło.', rename: 'Najpierw zmień nazwę użytkownika na zgodną z nowymi zasadami.', session_expired: 'Sesja wygasła – zaloguj się ponownie.',
@@ -3626,7 +3661,13 @@ const READER_ERR = {
   'auth/too-many-requests': 'Zbyt wiele prób. Spróbuj za kilka minut.', 'auth/network-request-failed': 'Brak połączenia z internetem.',
   'auth/missing-password': 'Wpisz hasło.', 'auth/operation-not-allowed': 'Logowanie e-mailem nie jest włączone w projekcie czytelników.'
 };
-const readerErr = e => READER_ERR[(e && (e.code || e.error || e.message))] || 'Coś poszło nie tak. Spróbuj ponownie.';
+const readerErr = e => {
+  const code = e && (e.code || e.error || e.message);
+  const known = READER_ERR[code];
+  if (known !== undefined) return known;
+  const dbg = document.documentElement.classList.contains('is-dev') && code ? ' [dev: ' + String(code).slice(0, 140) + ']' : '';
+  return 'Coś poszło nie tak. Spróbuj ponownie.' + dbg;
+};
 
 const Readers = {
   auth: null, user: null, me: null, loading: true,
@@ -3715,6 +3756,7 @@ const Readers = {
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
     renderReaderCard();
+    updatePushButton();
     const b = $('#btn-account');
     if (b) {
       b.classList.toggle('is-on', this.loggedIn());
@@ -4091,7 +4133,7 @@ async function renderUserProfile(pub) {
     <section class="panel up-card">
       <div class="avatar up-av">${readerAvatar(d.name, d.av, d.pub)}</div>
       <div class="up-main"><h1 class="up-name">${Utils.esc(d.name)}</h1>
-        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div>
+        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role, crown: d.crown }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div>
         ${d.bio ? `<p class="up-bio">${Utils.esc(d.bio)}</p>` : ''}
         ${d.staff || ['editor', 'owner', 'chief'].includes(d.role) ? `<a class="up-more" href="#/redaktor/${encodeURIComponent(d.name)}">Zobacz artykuły autora →</a>` : ''}</div>
     </section>
@@ -4209,7 +4251,6 @@ function goPanelTab(t) {
 
 /** Kafelek profilu po lewej także dla zalogowanego czytelnika (w tym samym miejscu co u redaktora, bez funkcji redakcyjnych). */
 function renderReaderCard() {
-  try { updatePushButton(); } catch { /* ignoruj */ }
   const rd = Readers.loggedIn(), only = rd && !Auth.isAdmin();
   document.body.classList.toggle('is-reader', rd);
   document.body.classList.toggle('is-reader-only', only);
@@ -4481,9 +4522,17 @@ function routeCore() {
 }
 
 /* ---------- Kategorie ---------- */
+const CAT_ICONS = {
+  'Wszystkie': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
+  'Muzyka': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
+  'Recenzje': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8 6.6 19.7l1.1-6.1L3.2 9.4l6.1-.8z"/></svg>',
+  'Kontrowersje': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4 .3 1.5 1 2 1.8 2.2C11 8.5 11 5.5 12 3z"/></svg>',
+  'Dramy': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M12 8v4M12 15.5v.01"/></svg>',
+  'Inne': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>'
+};
 function buildCategoryNav() {
   $('#category-nav').innerHTML = [ALL, ...CATEGORIES].map(c =>
-    `<button type="button" class="chip-btn" data-category="${Utils.esc(c)}">${Utils.esc(c)}</button>`).join('');
+    `<button type="button" class="chip-btn" data-category="${Utils.esc(c)}" title="${Utils.esc(c)}"><i class="cat-ico" aria-hidden="true">${CAT_ICONS[c] || CAT_ICONS.Inne}</i><span>${Utils.esc(c)}</span></button>`).join('');
   updateCategoryNav();
 }
 
@@ -4500,6 +4549,7 @@ function goHomeAndRender() {
 /* ---------- Auth UI ---------- */
 function applyAuthUI() {
   document.body.classList.toggle('is-admin', Auth.isAdmin());
+  updatePushButton();
   const rn = currentRoute().name;
   // Utrata uprawnień (np. wylogowanie) w widoku dla redakcji – wróć na stronę główną
   if (state.ready && (rn === 'editor' || rn === 'panel' || rn === 'settings') && !Auth.isAdmin()) {
@@ -4582,6 +4632,7 @@ function handleAction(action, id, btn) {
   if (action === 'share-image') { shareImage(id, document.activeElement && document.activeElement.dataset && document.activeElement.dataset.action === 'share-image' ? document.activeElement : null); return; }
   if (action === 'report-error') { openReportModal(id); return; }
   if (action === 'quick-share') { shareQuick(id); return; }
+  if (action === 'plus-open') { openModal('plus-modal'); return; }
   if (action === 'quick-story') { shareQuickStory(id, btn); return; }
   if (action === 'quick-more') { state.quickVisible = (state.quickVisible || 30) + 30; renderQuick(); return; }
   if (action === 'share') { shareArticle(id); return; }
@@ -5185,6 +5236,7 @@ async function main() {
   } catch (err) {
     console.error(err);
     state.loadError = true;
+    state.loadErrCode = (err && (err.code || err.message)) || 'błąd';
   }
   state.ready = true;
   if (Auth.isAdmin()) loadProfile();
@@ -5199,6 +5251,7 @@ async function main() {
       : 'Brak połączenia z bazą danych';
 
   renderBreaking();
+  initRail();
   initStickyVars();
   route();
 
@@ -5216,12 +5269,53 @@ async function main() {
 
 /** Wysokości przyklejonych pasków (nagłówek, tytuł edytora) → zmienne CSS, żeby pasek formatowania
  *  w edytorze zawsze zatrzymywał się dokładnie pod nimi i nie znikał podczas przewijania. */
+
+/* ---------- Pasek boczny (komputer): zwijanie do ikon, profil jako avatar z okienkiem ---------- */
+function initRail() {
+  const top = $('.site-header .header-top'), auth = $('.site-header .auth'), logo = $('#logo');
+  if (!top || !auth || !logo || $('#rail-toggle') || document.documentElement.classList.contains('is-mac-app')) return;
+  document.documentElement.classList.add('rail-on');
+  try { if (localStorage.getItem('sliska_rail') === 'c') document.body.classList.add('rail-c'); } catch { /* ignoruj */ }
+  logo.insertAdjacentHTML('beforeend', '<img class="logo-mini" src="favicon.svg" alt="" aria-hidden="true">');
+  $$('.main-nav .nav-link').forEach(a => { a.title = a.textContent.trim(); });
+  const t = document.createElement('button'); t.type = 'button'; t.id = 'rail-toggle'; t.className = 'rail-toggle';
+  t.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span>Zwiń menu</span>';
+  const label = () => { const c = document.body.classList.contains('rail-c'); t.title = c ? 'Rozwiń menu' : 'Zwiń menu'; t.setAttribute('aria-label', t.title); };
+  t.addEventListener('click', () => { const c = document.body.classList.toggle('rail-c'); try { localStorage.setItem('sliska_rail', c ? 'c' : 'e'); } catch { /* ignoruj */ } label(); });
+  top.appendChild(t); label();
+  /* kategorie i „Masz temat?” przenosimy na pasek (tylko szeroki ekran) */
+  const nav = $('.main-nav'), cats = $('#category-nav') && $('#category-nav').closest('.side-card'), tip = $('#side-left .tip-card'), aside = $('#side-left');
+  if (nav && cats && tip && aside) {
+    const sc = document.createElement('div'); sc.className = 'rail-scroll';
+    nav.parentNode.insertBefore(sc, nav); sc.appendChild(nav);
+    const mq = matchMedia('(min-width:1100px)');
+    const place = () => { if (mq.matches) { sc.append(cats, tip); } else { aside.append(cats, tip); } };
+    place(); (mq.addEventListener ? mq.addEventListener('change', place) : mq.addListener(place));
+  }
+  const pb = document.createElement('button'); pb.type = 'button'; pb.id = 'rail-profile'; pb.className = 'rail-profile avatar'; pb.title = 'Profil'; pb.setAttribute('aria-label', 'Profil i skróty');
+  auth.appendChild(pb);
+  const src = $('#profile-avatar'), sync = () => { pb.innerHTML = src.innerHTML; };
+  if (src) { new MutationObserver(sync).observe(src, { childList: true, subtree: true }); sync(); }
+  const closePop = () => document.body.classList.remove('pp-open');
+  pb.addEventListener('click', e => { e.stopPropagation(); document.body.classList.toggle('pp-open'); });
+  document.addEventListener('click', e => {
+    if (!document.body.classList.contains('pp-open')) return;
+    if (e.target.closest('#rail-profile')) return;
+    if (e.target.closest('#profile-card')) { if (e.target.closest('button, a')) setTimeout(closePop, 0); return; }
+    closePop();
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
+  window.addEventListener('hashchange', closePop);
+  const si = $('#search-input');
+  if (si) si.addEventListener('focus', () => { if (document.body.classList.contains('rail-c') && matchMedia('(min-width:1100px)').matches) { document.body.classList.remove('rail-c'); try { localStorage.setItem('sliska_rail', 'e'); } catch { /* ignoruj */ } label(); } });
+}
+
 function initStickyVars() {
   const root = document.documentElement;
   const header = $('.site-header');
   const head = $('.editor-head');
   const update = () => {
-    root.style.setProperty('--hdr-h', Math.round(header ? header.getBoundingClientRect().height : 64) + 'px');
+    root.style.setProperty('--hdr-h', (matchMedia('(min-width:1100px)').matches ? 0 : Math.round(header ? header.getBoundingClientRect().height : 64)) + 'px');
     root.style.setProperty('--edhead-h', Math.round(head ? head.getBoundingClientRect().height : 0) + 'px');
   };
   update();
