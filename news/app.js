@@ -6839,10 +6839,17 @@ function bindReaderEvents() {
 const AD_ST = { new: 'Nowe', done: 'Przyjęte', rejected: 'Odrzucone' };
 const AD_FMTS = [['long', 'Długi 1456×180'], ['box', 'Okienko 600×500'], ['card', 'Kafelek 900×1000']];
 async function adImgBlob(id, f) {
+  // Dwie ścieżki: „spot” (nie łapią jej blokery reklam) i dawna „ads” – działa ta, którą zna Worker.
   const h = await actorAuth();
-  const r = await fetch(CONFIG.API_BASE + '/admin/ads/img?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
-  if (!r.ok) throw new Error('img');
-  return URL.createObjectURL(await r.blob());
+  let last = 'img';
+  for (const p of ['/admin/spot/img', '/admin/ads/img']) {
+    try {
+      const r = await fetch(CONFIG.API_BASE + p + '?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
+      if (r.ok) return URL.createObjectURL(await r.blob());
+      last = 'HTTP ' + r.status;
+    } catch (e) { last = 'blokada połączenia (wyłącz blokadę reklam dla tej strony)'; }
+  }
+  throw new Error('Nie udało się pobrać grafiki: ' + last);
 }
 async function renderAdSubs(el) {
   if (!el) return;
