@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8">
+  <script>try{if(/SliskaMacApp/.test(navigator.userAgent))document.documentElement.classList.add('is-mac-app')}catch(e){}</script>
+  <script>try{var d=document.documentElement;if(!d.classList.contains('is-mac-app')&&matchMedia('(min-width:1100px)').matches)d.classList.add('rail-on')}catch(e){}</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <title>Śliska News – najświeższe wiadomości</title>
+  <meta name="description" content="Śliska News – wiadomości z muzyki, kontrowersji i dram. Codziennie najświeższe informacje.">
+  <meta name="theme-color" content="#d6001c">
+  <meta property="og:site_name" content="Śliska News">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Śliska News">
+  <meta property="og:description" content="Wiadomości z muzyki, kontrowersji i dram.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta property="og:locale" content="pl_PL">
+  <meta property="og:url" content="https://sliska.pl/news/">
+  <meta property="og:image" content="https://sliska.pl/news/og-image.png?v=6">
+  <link rel="canonical" href="https://sliska.pl/news/">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="alternate" type="application/rss+xml" title="Śliska News" href="https://sliska.pl/news/rss.xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Śliska News">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1290x2796.png" media="(device-width: 430px) and (device-height: 932px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1179x2556.png" media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1284x2778.png" media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1170x2532.png" media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1125x2436.png" media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-828x1792.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-750x1334.png" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1242x2688.png" media="(device-width: 414px) and (device-height: 896px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <link rel="apple-touch-startup-image" href="icons/splash/splash-1242x2208.png" media="(device-width: 414px) and (device-height: 736px) and (-webkit-device-pixel-ratio: 3) and (orientation: portrait)">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Śliska News","url":"https://sliska.pl/news/","inLanguage":"pl-PL"}</script>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="icon" href="favicon-48.png" type="image/png" sizes="48x48">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
+  <link rel="stylesheet" href="style.css?v=20261102c">
+  <link rel="stylesheet" href="app-m.css?v=20261102c">
+  <link rel="stylesheet" href="spoty.css?v=20261102c">
+  <script>
+    /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
+    try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
+  </script>
+</head>
+<body>
+  <script>try{if(document.documentElement.classList.contains('rail-on')&&localStorage.getItem('sliska_rail')==='c')document.body.classList.add('rail-c')}catch(e){}</script>
+  <a class="skip-link" id="skip-link" href="#app">Przejdź do treści</a>
+  <div class="read-progress" id="read-progress" hidden></div>
+
+  <!-- PASEK PILNE -->
+  <div id="breaking-bar" class="breaking" hidden>
+    <div class="container breaking-inner">
+      <span class="breaking-label">PILNE</span>
+      <div class="ticker" id="ticker" aria-live="off"><div class="ticker-track" id="ticker-track"></div></div>
+    </div>
+  </div>
+
+  <!-- NAGŁÓWEK -->
+  <header class="site-header">
+    <div class="container wide header-top">
+      <a class="logo" id="logo" href="#/" aria-label="Śliska News – strona główna"><svg viewBox="44 42 732 128" role="img" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg"><path class="logo-ink" d="M97.32,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43ZM85.58,79.27h19.13l22.17-22.29h-26.67l-14.64,22.29ZM161.98,58.14h-28.98v101.86h28.98V58.14ZM163.31,160h28.98v-72.19h-28.98v72.19ZM229.72,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43ZM265.4,160h28.98v-20.03l4.2-4.92,16.23,24.95h32.9l-27.82-40.47,26.96-31.72h-32.75l-19.42,23.52h-.29v-53.18h-28.98v101.86ZM364.84,161.3c9.78,0,16.96-2.8,22.03-11.42h.29v10.12h28.26v-48.26c0-16.41-12.61-25.57-36.23-25.57s-36.01,9.16-37.24,25.57h26.52c.51-4.24,3.84-6.56,9.56-6.56,5.29,0,8.7,2.05,8.7,5.2v.27c0,3.96-5.07,5.47-18.55,6.29-16.52,1.03-29.42,6.97-29.42,23.11,0,14.36,10.72,21.26,26.09,21.26ZM374.26,144.28c-4.93,0-8.41-2.19-8.41-5.88s3.62-6.15,9.56-7.11c5.36-.89,8.7-1.64,11.59-2.6v5.74c0,6.43-6.52,9.84-12.75,9.84ZM445.74,121.72c0-8.34,3.84-12.44,10.65-12.44s10.65,4.1,10.65,11.35v39.38h28.98v-45.53c0-17.36-8.77-28.3-25.8-28.3-12.03,0-19.78,5.4-24.85,13.67v-12.03h-28.62v72.19h28.98v-38.28ZM535.11,161.64c20.14,0,36.38-10.46,39.2-25.22h-25.65c-1.59,3.9-6.23,6.22-12.39,6.22-8.41,0-13.48-4.51-13.7-12.17h52.03v-7.31c0-21.67-16.59-36.98-40.07-36.98s-40.07,15.65-40.07,37.73,16.81,37.73,40.65,37.73ZM522.79,115.16c1.01-5.95,5.51-9.43,12.54-9.43s11.52,3.49,12.54,9.43h-25.07ZM589.7,160h29.85l7.9-25.16c1.38-4.51,2.68-9.3,3.99-14.15,1.3,4.85,2.61,9.64,3.99,14.15l7.9,25.16h29.85l23.48-72.19h-31.01l-4.49,19.69c-1.88,8.27-3.55,17.23-5.29,26.11-2.17-8.89-4.35-17.84-6.52-26.11l-5.29-19.69h-25.22l-5.29,19.69c-2.17,8.2-4.35,17.16-6.52,25.98-1.81-8.82-3.62-17.77-5.58-25.98l-4.78-19.69h-30.43l23.48,72.19ZM727.55,161.85c22.9,0,37.97-10.66,37.97-25.98,0-10.8-7.54-17.02-23.62-19.55l-16.38-2.6c-4.57-.75-7.1-2.39-7.1-4.65,0-2.67,3.12-4.65,8.7-4.65s9.85,3.21,10,7.38h26.38c-.43-15.65-14.42-25.43-37.53-25.43s-36.38,9.3-36.38,24.2c0,11.69,8.26,19.14,23.62,21.46l14.35,2.19c5.8.89,8.55,2.46,8.55,4.79,0,2.8-3.26,4.65-8.99,4.65-6.23,0-10.07-2.94-10.72-7.25h-28.55c1.52,15.24,16.96,25.43,39.71,25.43Z"/><path class="logo-star" transform="translate(181.5 82) scale(1.25) translate(-178.5 -84)" d="M180.88,53.81l2.09,11.29,11.22,2.49-10.1,5.49,1.1,11.43-8.33-7.91-10.53,4.58,4.94-10.37-7.61-8.61,11.39,1.5,5.83-9.9Z"/></svg></a>
+
+      <nav class="main-nav" aria-label="Główna nawigacja">
+        <a class="nav-link" id="nav-home" href="#/"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg><span>Home</span></a>
+        <a class="nav-link" id="nav-ranking" href="#/ranking"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20V11M12 20V4M19 20v-7"/></svg><span>Ranking</span></a>
+        <a class="nav-link" id="nav-quick" href="#/szybkie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Nowinki</span></a>
+        <a class="nav-link" id="nav-authors" href="#/redakcja"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.8.7 3 2.3 3 5.2"/></svg><span>Redakcja</span></a>
+        <a class="nav-link" id="nav-saved" href="#/zapisane"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Zapisane</span><b class="nav-badge" id="saved-count" hidden></b></a>
+        <a class="nav-link" id="nav-spot" href="spot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><span>Spot</span></a>
+      </nav>
+
+      <div class="search" id="search-box">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="search" id="search-input" placeholder="Szukaj w artykułach…" aria-label="Szukaj artykułów" autocomplete="off" aria-controls="search-suggest" aria-expanded="false">
+        <div class="search-suggest" id="search-suggest" role="listbox" hidden></div>
+      </div>
+
+      <div class="auth">
+        <button type="button" class="btn btn-icon push-toggle" id="btn-push" aria-label="Powiadomienia o nowych artykułach" title="Włącz powiadomienia o nowych artykułach" aria-pressed="false" hidden><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></button>
+        <button type="button" class="btn btn-icon theme-toggle" id="btn-theme" aria-label="Przełącz motyw jasny/ciemny" title="Przełącz motyw jasny/ciemny"><svg class="ico-moon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg><svg class="ico-sun" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg></button>
+        <button type="button" class="btn btn-icon" id="btn-account" aria-label="Zaloguj się" title="Zaloguj się lub załóż konto"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+      </div>
+    </div>
+  </header>
+  <div class="sp-slot-top container wide" id="sp-slot-top" hidden></div>
+
+  <!-- TREŚĆ (SPA) -->
+  <div class="container wide layout" id="layout" data-view="home">
+
+  <aside class="side-left" id="side-left">
+    <div class="profile-card" id="profile-card">
+      <div class="profile-banner" aria-hidden="true"></div>
+      <div class="profile-top">
+        <div class="avatar avatar-ring" id="profile-avatar"></div>
+        <div class="profile-info">
+          <strong id="profile-name">Redaktor</strong>
+          <span class="role-chip"><i></i><b id="profile-role">Redaktor</b></span>
+        </div>
+      </div>
+      <a class="profile-stats" href="#/panel" aria-label="Twoje statystyki">
+        <div><b id="ps-mine">0</b><span>Moje teksty</span></div>
+        <div><b id="ps-sched">0</b><span>Zaplanowane</span></div>
+      </a>
+      <div class="profile-actions">
+        <button type="button" class="btn btn-primary btn-block btn-ico-row" id="btn-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Napisz artykuł</span></button>
+        <button type="button" class="pa-row" data-action="quick-new"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></i><span>Nowinka</span></button>
+        <button type="button" class="pa-row" id="btn-panel"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></i><span>Panel</span><em id="pa-sched" hidden></em></button>
+        <button type="button" class="pa-row" id="btn-settings"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></i><span>Ustawienia</span></button>
+        <button type="button" class="pa-row rd-only" id="btn-rd-account"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i><span>Moje konto</span></button>
+        <button type="button" class="pa-row rd-only" id="btn-rd-mod" hidden><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>Komentarze</span></button>
+        <button type="button" class="pa-row rd-only" id="btn-rd-users" hidden><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></i><span>Użytkownicy</span></button>
+        <button type="button" class="pa-row pa-logout" id="btn-logout"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg></i><span>Wyloguj</span></button>
+      </div>
+    </div>
+    <div class="side-card">
+      <h2 class="side-title">Kategorie</h2>
+      <nav class="cat-list" id="category-nav" aria-label="Kategorie"></nav>
+    </div>
+    <a class="tip-card" href="#/zglos">
+      <strong>Masz temat?</strong>
+      <span>Podeślij nam newsa albo wskazówkę.</span>
+      <em>Zgłoś go →</em>
+    </a>
+  </aside>
+
+  <main class="app" id="app">
+
+    <!-- WIDOK: STRONA GŁÓWNA -->
+    <section id="view-home" aria-live="polite">
+      <div id="home-status" class="home-status">Ładowanie wiadomości…</div>
+      <div id="resume-slot"></div>
+      <div id="hero-slot"></div>
+      <div id="quick-slot"></div>
+      <h2 class="section-title" id="grid-title" hidden>Najnowsze wiadomości</h2>
+        <p class="grid-desc" id="grid-desc" hidden></p>
+      <div class="grid" id="news-grid"></div>
+      <div class="load-more" id="load-more" hidden>
+        <button type="button" class="btn" id="btn-load-more">Pokaż więcej</button>
+      </div>
+    </section>
+
+    <!-- WIDOK: ARTYKUŁ -->
+    <section id="view-article" hidden></section>
+
+    <!-- WIDOK: USTAWIENIA KONTA -->
+    <section id="view-settings" hidden>
+      <div class="article-top">
+        <a class="btn" href="#/">← Powrót do strony głównej</a>
+      </div>
+      <h1 class="panel-title">Ustawienia</h1>
+      <p class="panel-sub">Preferencje pracy w edytorze i powiadomień. Dane profilu zmienisz w „Moim koncie”.</p>
+      <nav class="hub-nav" data-hub="settings" aria-label="Przejdź do"></nav>
+      <form id="settings-form" class="settings-form" novalidate>
+
+        <div id="st-profile-block" class="st-profile-block">
+        <section class="panel st-card">
+          <div class="st-head"><h2 class="st-h">Profil redaktora</h2><p class="st-sub">Tak podpisujesz artykuły: zdjęcie, nazwa i krótka biografia na stronie redakcji.</p></div>
+          <div class="settings-avatar">
+            <div class="avatar avatar-lg" id="st-avatar"></div>
+            <div class="settings-avatar-actions">
+              <input type="file" id="st-avatar-file" accept="image/*">
+              <button type="button" class="btn btn-sm btn-danger" id="st-avatar-remove">Usuń zdjęcie</button>
+            </div>
+          </div>
+          <div class="field-pair">
+            <label class="field"><span class="field-label">Imię <small class="hint">(opcjonalnie)</small></span><input type="text" id="st-first" maxlength="30" placeholder="np. Sandra" autocomplete="off"></label>
+            <label class="field"><span class="field-label">Nazwisko <small class="hint">(opcjonalnie)</small></span><input type="text" id="st-last" maxlength="30" placeholder="np. Kret" autocomplete="off"></label>
+          </div>
+          <input type="hidden" id="st-name">
+          <p class="st-byline" id="st-byline" aria-live="polite"></p>
+          <small class="hint">Pod tym podpisem pojawiasz się przy artykułach. Bez imienia i nazwiska użyję Twojej nazwy użytkownika. Po zmianie zaktualizuję ją we wszystkich Twoich artykułach, także starszych.</small>
+          <label class="field">
+            <span class="field-label">Krótka biografia <small class="hint" id="st-bio-n">0/150</small></span>
+            <textarea id="st-bio" rows="3" maxlength="150" placeholder="Np. Piszę o polskim rapie, festiwalach i dramach, które nie mieszczą się w nagłówku."></textarea>
+            <small class="hint">Widoczna na Twoim profilu redaktora i na liście redakcji (do 150 znaków).</small>
+          </label>
+        </section>
+
+        <section class="panel st-card" id="st-authors-card" hidden>
+          <div class="st-head"><h2 class="st-h">Przypisz artykuły do siebie</h2><p class="st-sub">Zaznacz artykuły, które są Twoje – po zapisaniu podpiszę je Twoją nazwą i zdjęciem.</p></div>
+          <input type="search" id="st-art-filter" class="mod-q" placeholder="Szukaj artykułu lub autora…" aria-label="Szukaj artykułu">
+          <div id="st-authors" class="st-authors"></div>
+        </section>
+
+          <p class="form-error" id="st-error-profile" hidden></p>
+          <div class="st-actions st-actions-inline"><button type="submit" form="settings-form" class="btn btn-primary" id="st-save-profile">Zapisz profil redaktora</button></div>
+        </div>
+
+        <section class="panel st-card">
+          <div class="st-head"><h2 class="st-h"><i class="st-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></i>Pisanie artykułów</h2><p class="st-sub">Wartości startowe w edytorze.</p></div>
+          <label class="field">
+            <span class="field-label">Domyślna kategoria nowego artykułu</span>
+            <select id="st-cat"></select>
+          </label>
+          <label class="st-switch"><span><b>Moje zdjęcie przy artykułach</b><small>Pokazuj avatar obok nazwy autora.</small></span><input type="checkbox" id="st-photo"></label>
+        </section>
+
+        <section class="panel st-card">
+          <div class="st-head"><h2 class="st-h"><i class="st-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 3 14h9l-1 8 10-12h-9z"/></svg></i>Nowinki z Poślizgiem</h2><p class="st-sub">Domyślne ustawienia okna „Nowa nowinka”.</p></div>
+          <label class="st-switch"><span><b>Powiadomienie push</b><small>Zaznaczone domyślnie przy nowym newsie.</small></span><input type="checkbox" id="st-quick-push"></label>
+          <label class="field">
+            <span class="field-label">Domyślna nazwa źródła</span>
+            <input type="text" id="st-quick-source" maxlength="40" placeholder="Np. Instagram artysty (puste = adres strony)">
+          </label>
+        </section>
+
+        <section class="panel st-card">
+          <div class="st-head"><h2 class="st-h"><i class="st-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></i>Panel i powiadomienia</h2><p class="st-sub">Jak ma wyglądać Twój start pracy.</p></div>
+          <label class="field">
+            <span class="field-label">Zakładka panelu otwierana jako pierwsza</span>
+            <select id="st-panel-tab"><option value="drafts">Wersje robocze</option><option value="scheduled">Zaplanowane</option><option value="tips">Zgłoszone tematy</option></select>
+          </label>
+          <label class="st-switch"><span><b>Wyłącz reklamy na tym urządzeniu</b><small>Tylko dla redakcji i Właściciela. Czytelnicy zawsze widzą reklamy.</small></span><input type="checkbox" id="st-ads-off"></label>
+          <label class="st-switch st-push-row"><span><b>Powiadomienia na tym urządzeniu</b><small id="st-device-hint"></small></span><input type="checkbox" id="st-device-push"></label>
+          <div class="st-row st-push-row"><span class="muted">Nie dostajesz powiadomień?</span><button type="button" class="btn btn-sm" id="st-test-push">Wyślij test i sprawdź</button></div>
+          <p class="st-diag st-push-row" id="st-diag" hidden></p>
+        </section>
+
+        <p class="form-error" id="st-error" hidden></p>
+        <div class="st-actions"><button type="submit" class="btn btn-primary" id="st-save">Zapisz ustawienia</button></div>
+      </form>
+    </section>
+
+    <!-- WIDOK: RANKING OCEN -->
+    <section id="view-ranking" hidden></section>
+
+    <!-- WIDOK: ZAPISANE -->
+    <section id="view-saved" hidden></section>
+
+
+    <section id="view-quick" hidden></section>
+
+    <!-- WIDOK: KONTO CZYTELNIKA -->
+    <section id="view-account" hidden></section>
+    <section id="view-user" hidden></section>
+    <section id="view-authors" hidden></section>
+
+    <!-- WIDOK: ZGŁOŚ TEMAT -->
+    <section id="view-tip" hidden></section>
+
+    <!-- WIDOK: POLITYKA / REGULAMIN -->
+    <section id="view-legal" hidden></section>
+
+    <!-- WIDOK: 404 -->
+    <section id="view-notfound" hidden></section>
+
+    <!-- WIDOK: PANEL REDAKTORA -->
+    <section id="view-panel" hidden>
+      <div class="article-top">
+        <a class="btn" href="#/">← Powrót do strony głównej</a>
+        <button type="button" class="btn btn-primary" id="panel-new">+ Napisz artykuł</button>
+      </div>
+      <h1 class="panel-title">Panel redaktora</h1>
+      <p class="panel-sub" id="panel-hello"></p>
+      <nav class="hub-nav" data-hub="panel" aria-label="Przejdź do"></nav>
+
+      <div class="panel-kpis" id="panel-kpis">
+        <button type="button" class="kpi" data-ptab="drafts"><i class="kpi-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></i><b id="kpi-drafts">0</b><span>Robocze</span></button>
+        <button type="button" class="kpi" data-ptab="scheduled"><i class="kpi-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></i><b id="kpi-sched">0</b><span>Zaplanowane</span></button>
+        <button type="button" class="kpi" data-ptab="tips" hidden><i class="kpi-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.5 5.1 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.5-6.9A2 2 0 0 0 16.7 4H7.3a2 2 0 0 0-1.8 1.1z"/></svg></i><b id="kpi-tips">0</b><span>Zgłoszenia</span></button>
+        <a class="kpi" href="#/konto"><i class="kpi-ico"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></i><b id="kpi-mine">0</b><span>Moje teksty</span></a>
+      </div>
+
+      <div class="ptabs ptabs-grouped" role="tablist" aria-label="Sekcje panelu">
+        <div class="ptab-grp">
+          <span class="ptab-group" aria-hidden="true">Artykuły</span>
+          <button type="button" role="tab" class="ptab is-active" data-ptab="drafts">Wersje robocze</button>
+          <button type="button" role="tab" class="ptab" data-ptab="scheduled">Zaplanowane</button>
+        </div>
+        <div class="ptab-grp">
+          <span class="ptab-group" aria-hidden="true">Społeczność</span>
+          <button type="button" role="tab" class="ptab" data-ptab="comments">Komentarze</button>
+          <button type="button" role="tab" class="ptab" data-ptab="tips" hidden>Tematy i błędy</button>
+          <button type="button" role="tab" class="ptab" data-ptab="ads" hidden>Reklamy</button>
+          <button type="button" role="tab" class="ptab" data-ptab="users" id="ptab-users" hidden>Użytkownicy</button>
+        </div>
+        <div class="ptab-grp">
+          <button type="button" role="tab" class="ptab" data-ptab="tools">Narzędzia</button>
+        </div>
+      </div>
+
+      <div class="ptab-pane" data-pane="drafts"><div id="panel-drafts" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="scheduled" hidden><div id="panel-scheduled" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="tips" hidden><div id="panel-tips" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="comments" hidden><div id="panel-comments" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="ads" hidden><div id="panel-ads" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="users" hidden><div id="panel-users" class="panel-list"></div></div>
+      <div class="ptab-pane" data-pane="tools" hidden>
+        <div class="panel backup-box" id="backup-box" hidden>
+          <h2 class="section-title">Kopia zapasowa</h2>
+          <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i zgłoszone tematy do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
+          <div class="backup-actions">
+            <button type="button" class="btn btn-primary" id="backup-export">Pobierz kopię (JSON)</button>
+            <button type="button" class="btn" id="backup-import">Przywróć z pliku…</button>
+            <input type="file" id="backup-file" accept="application/json,.json" hidden>
+          </div>
+        </div>
+        <div class="panel og-box">
+          <h2 class="section-title">Podglądy linków</h2>
+          <p class="muted">Każdy artykuł dostaje własną grafikę podglądu (taką jak „Grafika na X”), widoczną po wklejeniu linku na Facebooku, Messengerze czy Threads. Nowe i edytowane artykuły zapisują ją automatycznie. Tutaj odświeżysz ją dla wszystkich istniejących.</p>
+          <button type="button" class="btn btn-primary" id="og-refresh">Wygeneruj podglądy dla wszystkich artykułów</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- WIDOK: EDYTOR -->
+    <section id="view-editor" hidden>
+      <form id="editor-form" class="editor" novalidate>
+        <div class="editor-head">
+          <div>
+            <h1 id="editor-heading">Nowy artykuł</h1>
+            <p class="save-status" id="save-status" aria-live="polite"></p>
+            <p class="editor-author" id="editor-author"></p>
+          </div>
+          <div class="editor-actions">
+            <button type="button" class="btn btn-ghost" id="btn-focus" title="Ukryj panel boczny i skup się na pisaniu">Tryb pisania</button>
+            <button type="button" class="btn" id="btn-preview">Podgląd</button>
+            <button type="button" class="btn" id="btn-save-draft" title="Ctrl+S">Zapisz roboczą</button>
+            <button type="button" class="btn" id="editor-cancel">Wyjdź</button>
+            <button type="submit" class="btn btn-primary" id="editor-save">Opublikuj</button>
+          </div>
+        </div>
+
+        <div class="editor-banner" id="editor-banner" hidden>
+          <span id="banner-text"></span>
+          <button type="button" class="btn btn-sm" id="banner-discard">Odrzuć</button>
+        </div>
+
+        <div class="editor-grid">
+          <div class="editor-col-main">
+            <div class="field">
+              <div class="field-head">
+                <label class="field-label" for="f-title">Tytuł artykułu *</label>
+                <span class="counter" id="c-title">0/200</span>
+              </div>
+              <input type="text" id="f-title" maxlength="200" placeholder="Wpisz tytuł…" autocomplete="off">
+            </div>
+
+            <div class="field">
+              <div class="field-head">
+                <label class="field-label" for="f-lead">Lead (zajawka) *</label>
+                <span class="counter" id="c-lead">0/400</span>
+              </div>
+              <textarea id="f-lead" rows="3" maxlength="400" placeholder="Krótka zajawka – widać ją na liście i pod tytułem"></textarea>
+            </div>
+
+            <div class="field">
+              <span class="field-label">Treść artykułu *</span>
+              <div id="editor-container">
+                <div id="quill"></div>
+              </div>
+              <div class="editor-stats" id="editor-stats"></div>
+              <div class="editor-size" id="editor-size" aria-live="polite"></div>
+              <details class="shortcuts"><summary>Skróty</summary><small class="hint">
+                Skróty: <kbd>##</kbd> + spacja = nagłówek, <kbd>###</kbd> + spacja = podnagłówek, <kbd>&gt;</kbd> + spacja = cytat
+                (Enter na pustej linii kończy cytat), <kbd>-</kbd> + spacja = lista, <kbd>1.</kbd> + spacja = lista numerowana,
+                <kbd>Ctrl</kbd>+<kbd>S</kbd> = zapis wersji roboczej. Zdjęcia możesz wkleić (Ctrl+V) lub przeciągnąć prosto do tekstu. Kliknij zdjęcie lub cytat w tekście, aby je edytować.
+              </small></details>
+            </div>
+          </div>
+
+          <aside class="editor-col-side">
+            <details class="panel fold checklist-panel" id="fold-ready" open>
+              <summary>Gotowość artykułu</summary>
+              <ul class="checklist" id="checklist"></ul>
+            </details>
+
+            <details class="panel fold" id="fold-publish" open>
+              <summary>Publikacja</summary>
+              <label class="check">
+                <input type="checkbox" id="f-schedule-on">
+                <span>Zaplanuj publikację na później</span>
+              </label>
+              <label class="field" id="schedule-field" hidden>
+                <span class="field-label">Data i godzina publikacji</span>
+                <input type="datetime-local" id="f-schedule-at">
+              </label>
+              <p class="hint" id="publish-hint"></p>
+            </details>
+
+            <details class="panel fold" id="fold-settings" open>
+              <summary>Ustawienia</summary>
+              <div class="field">
+                <span class="field-label">Kategorie *</span>
+                <div class="cat-picker" id="f-categories"></div>
+              </div>
+              <label class="field">
+                <span class="field-label">Tagi</span>
+                <input type="text" id="f-tags" list="tag-suggest" maxlength="240" placeholder="po przecinku, np. album, premiera" autocomplete="off">
+                <datalist id="tag-suggest"></datalist>
+              </label>
+              <details class="tag-fold" id="tag-fold"><summary>Podpowiedzi tagów</summary><div class="tag-chips" id="tag-chips"></div></details>
+              <label class="check">
+                <input type="checkbox" id="f-urgent">
+                <span>PILNE (pasek na górze)</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" id="f-featured">
+                <span>Temat dnia</span>
+              </label>
+              <label class="check">
+                <input type="checkbox" id="f-comments-off">
+                <span>Wyłącz komentarze pod tym artykułem</span>
+              </label>
+              <label class="field">
+                <span class="field-label">Status informacji</span>
+                <select id="f-status">
+                  <option value="">Bez statusu</option>
+                  <option value="potwierdzone">Potwierdzone</option>
+                  <option value="niepotwierdzone">Niepotwierdzone</option>
+                  <option value="plotka">Plotka</option>
+                </select>
+              </label>
+            </details>
+
+            <details class="panel fold" id="fold-image" open>
+              <summary>Zdjęcie główne</summary>
+              <label class="field">
+                <span class="field-label">Adres URL</span>
+                <input type="url" id="f-image-url" placeholder="https://…">
+              </label>
+              <label class="field dropzone" id="main-drop">
+                <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
+                <input type="file" id="f-image-file" accept="image/*">
+              </label>
+              <label class="field">
+                <span class="field-label">Podpis</span>
+                <input type="text" id="f-image-caption" maxlength="200" placeholder="Np. Artysta podczas koncertu">
+              </label>
+              <label class="field">
+                <span class="field-label">Źródło</span>
+                <input type="text" id="f-image-source" maxlength="80" placeholder="Np. Instagram / PAP / fot. Jan Kowalski">
+              </label>
+              <div class="image-preview" id="f-image-preview" hidden>
+                <div class="crop-frame" id="f-crop" title="Przeciągnij, żeby ustawić kadr"><img alt="Podgląd zdjęcia głównego" draggable="false"></div>
+                <p class="hint crop-hint">Zdjęcie zawsze wyświetla się w formacie 16:9. Przeciągnij je, żeby wybrać kadr.</p>
+                <label class="crop-zoom"><span>Przybliżenie</span><input type="range" id="f-crop-zoom" min="1" max="3" step="0.05" value="1" aria-label="Przybliżenie zdjęcia"></label>
+                <div class="crop-actions">
+                  <button type="button" class="btn btn-sm" id="f-crop-reset">Wyśrodkuj</button>
+                  <button type="button" class="btn btn-sm btn-danger" id="f-image-remove">Usuń zdjęcie</button>
+                </div>
+              </div>
+            </details>
+
+            <details class="panel fold" id="fold-review">
+              <summary>Recenzja</summary>
+              <label class="check">
+                <input type="checkbox" id="f-review-on">
+                <span>Dodaj ocenę</span>
+              </label>
+              <div id="review-fields" hidden>
+                <div class="panel-review-grid">
+                  <label class="field">
+                    <span class="field-label">Ocena (0–10) *</span>
+                    <input type="text" id="f-review-score" inputmode="decimal" placeholder="np. 6,4" maxlength="4">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Rodzaj</span>
+                    <select id="f-review-kind">
+                      <option value="Albumy">Albumy</option>
+                      <option value="Single">Single</option>
+                      <option value="Epki">Epki</option>
+                      <option value="Reedycje">Reedycje</option>
+                    </select>
+                  </label>
+                </div>
+                <label class="field">
+                  <span class="field-label">Tytuł ocenianego dzieła *</span>
+                  <input type="text" id="f-review-work" maxlength="120" placeholder="Np. marroW">
+                </label>
+                <div class="panel-review-grid">
+                  <label class="field">
+                    <span class="field-label">Wykonawca / twórca</span>
+                    <input type="text" id="f-review-artist" maxlength="120" placeholder="Np. brakence">
+                  </label>
+                  <label class="field">
+                    <span class="field-label">Rok</span>
+                    <input type="text" id="f-review-year" maxlength="4" inputmode="numeric" placeholder="2026">
+                  </label>
+                </div>
+                <div class="field">
+                  <span class="field-label">Okładka *</span>
+                  <label class="check">
+                    <input type="checkbox" id="f-review-cover-same">
+                    <span>Okładka taka jak zdj. główne</span>
+                  </label>
+                </div>
+                <div id="cover-fields">
+                  <label class="field">
+                    <span class="field-label">Adres URL okładki</span>
+                    <input type="url" id="f-review-cover-url" placeholder="https://…">
+                  </label>
+                  <label class="field dropzone" id="cover-drop">
+                    <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
+                    <input type="file" id="f-review-cover-file" accept="image/*">
+                  </label>
+                  <div class="image-preview" id="f-review-cover-preview" hidden>
+                    <img alt="Podgląd okładki">
+                    <button type="button" class="btn btn-sm btn-danger" id="f-review-cover-remove">Usuń okładkę</button>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="panel fold" id="fold-related">
+              <summary>Zobacz też</summary>
+              <div class="rel-chosen" id="rel-chosen"></div>
+              <input type="search" id="rel-search" placeholder="Szukaj artykułu po tytule…" autocomplete="off">
+              <div class="rel-results" id="rel-results"></div>
+              <p class="field-hint">Do 3 artykułów pod tekstem. Bez wyboru strona dobierze podobne sama.</p>
+            </details>
+          </aside>
+        </div>
+      </form>
+    </section>
+
+  </main>
+
+  <aside class="side-right" id="side-right">
+    <div id="side-comments"></div>
+    <div class="side-head">
+      <h2 class="side-title" id="side-title">Pozostałe artykuły</h2>
+      <a class="side-all" href="#/">Wszystkie</a>
+    </div>
+    <div class="side-list" id="side-list"></div>
+  </aside>
+
+  </div>
+
+  <footer class="site-footer">
+    <div class="container wide footer-inner">
+      <span>© <span id="year"></span> Śliska News. Wszelkie prawa zastrzeżone.</span>
+      <nav class="footer-links" aria-label="Informacje">
+        <a class="footer-ig" href="https://instagram.com/sliska.pl" target="_blank" rel="noopener noreferrer" aria-label="Śliska News na Instagramie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg><span>sliska.pl</span></a>
+        <a href="#" id="install-link" hidden>Zainstaluj aplikację</a>
+        <a href="#/o-nas">O nas i kontakt</a>
+        <a href="#/zglos">Zgłoś temat</a>
+        <a href="#/prywatnosc">Polityka prywatności</a>
+        <a href="#/regulamin">Regulamin</a>
+      </nav>
+      <span id="data-mode" class="data-mode admin-only"></span>
+    </div>
+  </footer>
+
+
+  <!-- MODAL: ŚLISKA+ -->
+  <div class="modal" id="plus-modal" hidden>
+    <div class="modal-box plus-box" role="dialog" aria-modal="true" aria-labelledby="plus-title">
+      <div class="plus-badge" aria-hidden="true">+</div>
+      <h2 id="plus-title">Śliska+ jest już pełna</h2>
+      <p class="plus-p">Limit użytkowników z subskrypcją został wykorzystany. Wszystkie miejsca są zajęte, a lista oczekujących… też.</p>
+      <p class="plus-p plus-s">Gdy zwolni się miejsce, damy znać na stronie.</p>
+      <button type="button" class="btn btn-primary" data-close="plus-modal">Rozumiem</button>
+    </div>
+  </div>
+
+  <!-- MODAL: LOGOWANIE -->
+  <div class="modal" id="quick-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="quick-title">
+      <h2 id="quick-title">Nowinka</h2>
+      <form id="quick-form" novalidate>
+        <label class="field">
+          <span class="field-label">Treść (jedno–dwa zdania)</span>
+          <textarea id="qk-text" rows="3" maxlength="260" placeholder="Np. Taco Hemingway ogłosił nową trasę koncertową na 2027 rok."></textarea>
+          <small class="hint"><span id="qk-count">0</span>/260</small>
+        </label>
+        <label class="field">
+          <span class="field-label">Link do źródła</span>
+          <input type="url" id="qk-link" maxlength="300" placeholder="https://…">
+        </label>
+        <label class="field">
+          <span class="field-label">Nazwa źródła</span>
+          <input type="text" id="qk-source" maxlength="40" placeholder="Np. Instagram artysty (puste = adres strony)">
+        </label>
+        <label class="field-check" id="qk-push-row"><input type="checkbox" id="qk-push" checked> Wyślij powiadomienie push</label>
+        <p class="form-error" id="qk-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="qk-delete" hidden>Usuń</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="quick-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="qk-submit">Opublikuj</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="push-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="push-ask-title" style="max-width:420px;text-align:center">
+      <div style="font-size:2.6rem;line-height:1">🔔</div>
+      <h2 id="push-ask-title">Nie przegap nowości</h2>
+      <p class="muted" id="push-ask-text">Włącz powiadomienia, a damy Ci znać o nowym artykule i nowince. Wyłączysz je w każdej chwili dzwonkiem na górze strony.</p>
+      <p class="muted" id="push-ask-ios" hidden>Na iPhonie: kliknij Udostępnij → „Do ekranu początkowego”, otwórz stronę z ikony i włącz dzwonek na górze strony.</p>
+      <div class="modal-actions" style="justify-content:center">
+        <button type="button" class="btn" data-close="push-modal">Nie teraz</button>
+        <button type="button" class="btn btn-primary" id="push-ask-yes">Włącz powiadomienia</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal" id="report-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="report-title">
+      <h2 id="report-title">Zauważyłeś błąd?</h2>
+      <p class="muted" id="report-article"></p>
+      <form id="report-form" novalidate>
+        <input type="text" class="hp-field" tabindex="-1" autocomplete="off" aria-hidden="true">
+        <label class="field">
+          <span class="field-label">Co jest nie tak?</span>
+          <textarea id="report-text" rows="5" maxlength="1500" placeholder="Np. w trzecim akapicie jest zła data premiery"></textarea>
+        </label>
+        <label class="field">
+          <span class="field-label">Twój e-mail (opcjonalnie)</span>
+          <input type="text" id="report-email" maxlength="120" inputmode="email" placeholder="jeśli chcesz odpowiedź">
+        </label>
+        <p class="form-error" id="report-error" hidden></p>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="report-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="report-send">Wyślij</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="reader-modal" hidden>
+    <div class="modal-box rm-box" role="dialog" aria-modal="true" aria-labelledby="reader-title">
+      <button type="button" class="rm-close" data-close="reader-modal" aria-label="Zamknij">×</button>
+      <div class="rm-tabs" id="reader-tabs" role="tablist">
+        <button type="button" role="tab" data-rmode="login" id="rm-tab-login">Zaloguj się</button>
+        <button type="button" role="tab" data-rmode="register" id="rm-tab-register">Załóż konto</button>
+      </div>
+      <h2 id="reader-title">Zaloguj się</h2>
+      <p class="rm-sub" id="reader-sub"></p>
+      <div class="rm-google-box" id="reader-google-box">
+        <button type="button" class="rm-google" data-rm-google><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.5-.2-2.2H12v4.3h6.5a5.6 5.6 0 0 1-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1A12 12 0 0 0 12 24z"/><path fill="#FBBC05" d="M5.3 14.3a7.2 7.2 0 0 1 0-4.6V6.6H1.3a12 12 0 0 0 0 10.8l4-3.1z"/><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4A12 12 0 0 0 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z"/></svg>Kontynuuj z Google</button>
+        <div class="rm-or"><span>lub e-mailem</span></div>
+      </div>
+      <form id="reader-form" novalidate>
+        <label class="rm-field" id="reader-name-field" hidden><span>Nazwa użytkownika</span><input type="text" id="reader-name" maxlength="20" placeholder="np. jan.kowalski (małe litery, bez spacji)" autocapitalize="none" spellcheck="false" autocomplete="nickname"><small>Widoczna przy komentarzach i ocenach. Zmienisz ją raz na 30 dni.</small></label>
+        <label class="rm-field" id="reader-email-field"><span id="reader-email-label">E-mail</span><input type="text" inputmode="email" id="reader-email" autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="np. jan@poczta.pl"></label>
+        <label class="rm-field" id="reader-pass-field"><span>Hasło</span><span class="rm-pass"><input type="password" id="reader-pass" autocomplete="current-password" placeholder="Twoje hasło"><button type="button" class="rm-eye" id="reader-eye" aria-label="Pokaż hasło" title="Pokaż / ukryj hasło">Pokaż</button></span></label>
+        <label class="field-check" id="reader-terms" hidden><input type="checkbox" id="reader-accept"><span>Akceptuję <a href="#/regulamin" data-close="reader-modal">regulamin</a> i <a href="#/prywatnosc" data-close="reader-modal">politykę prywatności</a></span></label>
+        <p class="form-error" id="reader-error" hidden></p>
+        <button type="submit" class="btn btn-primary rm-submit" id="reader-submit">Zaloguj się</button>
+        <p class="reader-switch" id="reader-switch"></p>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="rename-modal" hidden>
+    <div class="modal-box rm-box" role="alertdialog" aria-modal="true" aria-labelledby="rn-title" aria-describedby="rn-sub">
+      <h2 id="rn-title">Zmień nazwę użytkownika</h2>
+      <p class="rm-sub" id="rn-sub">Wprowadziliśmy nowe zasady: nazwa użytkownika służy też do logowania, więc może zawierać tylko małe litery a–z, cyfry oraz kropkę lub podkreślnik (bez spacji i polskich znaków). Wybierz nową nazwę, żeby korzystać z konta.</p>
+      <form id="rename-form" novalidate>
+        <label class="rm-field"><span>Nowa nazwa użytkownika</span><input type="text" id="rn-name" maxlength="20" autocapitalize="none" autocomplete="off" spellcheck="false" placeholder="np. jan.kowalski"></label>
+        <p class="hint" id="rn-hint"></p>
+        <p class="form-error" id="rn-error" hidden></p>
+        <button type="submit" class="btn btn-primary rm-submit" id="rn-submit">Zapisz nazwę</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="login-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="login-title">
+      <h2 id="login-title">Logowanie redaktora</h2>
+      <form id="login-form" novalidate>
+        <label class="field" id="login-email-field" hidden>
+          <span class="field-label">E-mail</span>
+          <input type="text" id="login-email" inputmode="email" autocomplete="username" spellcheck="false">
+        </label>
+        <label class="field">
+          <span class="field-label">Hasło</span>
+          <input type="password" id="login-password" autocomplete="current-password">
+        </label>
+        <p class="form-error" id="login-error" hidden>Nieprawidłowe hasło.</p>
+        <div class="modal-actions">
+          <button type="button" class="btn" data-close="login-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zaloguj</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ZDJĘCIE W TREŚCI (wstawianie / edycja) -->
+  <div class="modal" id="image-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="image-title">
+      <h2 id="image-title">Wstaw zdjęcie do tekstu</h2>
+      <form id="image-form" novalidate>
+        <label class="field">
+          <span class="field-label">Adres URL zdjęcia</span>
+          <input type="url" id="im-url" placeholder="https://…">
+        </label>
+        <label class="field dropzone" id="im-drop">
+          <span class="field-label">…lub plik (możesz go tu przeciągnąć)</span>
+          <input type="file" id="im-file" accept="image/*">
+        </label>
+        <div class="image-preview" id="im-preview" hidden>
+          <img alt="Podgląd zdjęcia">
+        </div>
+        <label class="field">
+          <span class="field-label">Podpis</span>
+          <input type="text" id="im-caption" maxlength="200" placeholder="Np. Koncert na Stadionie Narodowym">
+        </label>
+        <label class="field">
+          <span class="field-label">Źródło</span>
+          <input type="text" id="im-source" maxlength="80" placeholder="Np. PAP / Instagram / fot. Jan Kowalski">
+        </label>
+        <p class="form-error" id="im-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="im-delete" hidden>Usuń zdjęcie</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="image-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="im-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: CYTAT (wstawianie / edycja) -->
+  <div class="modal" id="embed-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="embed-title">
+      <h2 id="embed-title">Wstaw film lub odtwarzacz</h2>
+      <form id="embed-form" novalidate>
+        <label class="field">
+          <span class="field-label">Link do YouTube lub Spotify</span>
+          <input type="text" id="em-url" maxlength="300" inputmode="url" autocomplete="off" placeholder="https://www.youtube.com/watch?v=… albo https://open.spotify.com/track/…">
+        </label>
+        <p class="field-hint">Działają linki do filmów YouTube oraz do utworów, albumów, playlist, artystów i odcinków Spotify.</p>
+        <p class="form-error" id="em-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="em-delete" hidden>Usuń</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="embed-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="em-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="gallery-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="gallery-title">
+      <h2 id="gallery-title">Galeria zdjęć</h2>
+      <form id="gallery-form" novalidate>
+        <label class="field dropzone" id="gal-drop">
+          <span class="field-label">Dodaj zdjęcia (możesz je tu przeciągnąć)</span>
+          <input type="file" id="gal-file" accept="image/*" multiple>
+        </label>
+        <div class="gal-url-row">
+          <input type="url" id="gal-url" placeholder="…albo wklej adres URL zdjęcia">
+          <button type="button" class="btn" id="gal-add-url">Dodaj</button>
+        </div>
+        <div class="gal-items" id="gal-items"></div>
+        <label class="field">
+          <span class="field-label">Podpis</span>
+          <input type="text" id="gal-caption" maxlength="200" placeholder="Np. Zdjęcia z koncertu">
+        </label>
+        <p class="form-error" id="gal-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="gal-delete" hidden>Usuń galerię</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="gallery-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="gal-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="ig-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ig-title">
+      <h2 id="ig-title">Grafika na social media</h2>
+      <form id="ig-form" novalidate>
+        <div class="ig-formats" role="radiogroup" aria-label="Format">
+          <label class="ig-format"><input type="radio" name="ig-format" value="post" checked><span><strong>Post</strong><small>Instagram 4:5</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="story"><span><strong>Story</strong><small>9:16 + naklejka</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="quote"><span><strong>Cytat</strong><small>Story 9:16</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="carousel"><span><strong>Karuzela</strong><small>wybierz slajdy (ZIP)</small></span></label>
+          <label class="ig-format"><input type="radio" name="ig-format" value="x"><span><strong>X / Twitter</strong><small>16:9</small></span></label>
+          <label class="ig-format" id="ig-review-fmt"><input type="radio" name="ig-format" value="review"><span><strong>Recenzja</strong><small>okładka + ocena</small></span></label>
+        </div>
+        <div class="ig-photo-box" id="ig-photo-box" hidden>
+          <span class="field-label">Zdjęcie do grafik</span>
+          <div class="ig-photo-list" id="ig-photo-list"></div>
+        </div>
+        <div class="ig-bgmode" id="ig-bgphoto-wrap" hidden>
+          <label class="field-label" for="ig-bgmode">Tło slajdów tekstowych</label>
+          <select id="ig-bgmode" class="input">
+            <option value="none">Płaski kolor (domyślnie)</option>
+            <option value="pick">Zdjęcie tylko na wybranych slajdach</option>
+            <option value="all">Zdjęcie na wszystkich slajdach tekstowych</option>
+          </select>
+          <p class="hint" id="ig-grid-hint" hidden>Przy slajdach tekstowych pojawi się przycisk „Zdjęcie w tle” – kliknij te, które mają mieć zdjęcie.</p>
+        </div>
+        <div id="ig-carousel-box" hidden>
+          <p class="hint ig-hint">Kliknij slajdy, które chcesz mieć w karuzeli. Kolejność klikania = kolejność slajdów, numeracja i kolory (czerwony, ciemny, czerwony…) ustawią się same.</p>
+          <div class="ig-slide-grid" id="ig-slide-grid"></div>
+        </div>
+        <details class="ig-texts" id="ig-texts" hidden>
+          <summary id="ig-texts-title">Teksty slajdów</summary>
+          <div class="ig-quote" id="ig-summary-box" hidden>
+            <label class="field">
+              <span class="field-label">Tekst slajdu „W skrócie” (puste = zajawka artykułu)</span>
+              <textarea id="ig-summary" rows="3" maxlength="400" placeholder="Domyślnie zajawka artykułu"></textarea>
+            </label>
+          </div>
+          <div class="ig-quote" id="ig-quote-box">
+            <label class="field" id="ig-quote-pick-wrap">
+              <span class="field-label">Cytat z artykułu</span>
+              <select id="ig-quote-pick"></select>
+            </label>
+            <label class="field">
+              <span class="field-label" id="ig-quote-label">Treść cytatu</span>
+              <textarea id="ig-quote-text" rows="3" maxlength="400" placeholder="Wpisz lub wybierz cytat"></textarea>
+            </label>
+            <label class="field">
+              <span class="field-label">Autor cytatu</span>
+              <input type="text" id="ig-quote-author" maxlength="100" placeholder="Np. Jan Kowalski">
+            </label>
+          </div>
+        </details>
+        <p class="form-error" id="ig-error" hidden></p>
+        <div class="modal-actions">
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="ig-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="ig-submit">Pobierz i skopiuj opis</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal" id="quote-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="quote-title">
+      <h2 id="quote-title">Wstaw cytat</h2>
+      <form id="quote-form" novalidate>
+        <label class="field">
+          <span class="field-label">Treść cytatu</span>
+          <textarea id="qm-text" data-qp="0" rows="4" maxlength="800" placeholder="Wpisz cytat… (Enter = nowa linia w cytacie)"></textarea>
+        </label>
+        <div id="qm-extra"></div>
+        <div class="qm-add" id="qm-add"></div>
+        <label class="field">
+          <span class="field-label">Źródło</span>
+          <input type="text" id="qm-source" maxlength="150" placeholder="Np. wywiad dla Radia Zet, post na Instagramie">
+        </label>
+        <label class="field">
+          <span class="field-label">Autor cytatu</span>
+          <input type="text" id="qm-author" maxlength="100" placeholder="Np. Jan Kowalski">
+        </label>
+        <p class="form-error" id="qm-error" hidden></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-danger" id="qm-delete" hidden>Usuń cytat</button>
+          <span class="spacer"></span>
+          <button type="button" class="btn" data-close="quote-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary" id="qm-submit">Wstaw</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: PODGLĄD ARTYKUŁU -->
+  <div class="modal" id="preview-modal" hidden>
+    <div class="modal-box modal-box-wide" role="dialog" aria-modal="true" aria-label="Podgląd artykułu">
+      <div class="preview-bar">
+        <strong>Podgląd</strong>
+        <div class="pv-controls">
+          <div class="seg" role="group" aria-label="Widok podglądu">
+            <button type="button" class="seg-btn active" data-pv="desktop">Komputer</button>
+            <button type="button" class="seg-btn" data-pv="phone">Telefon</button>
+          </div>
+        </div>
+        <button type="button" class="btn btn-sm" data-close="preview-modal">Zamknij</button>
+      </div>
+      <div class="preview-body" id="preview-body"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: STATUS ZGŁOSZONEGO TEMATU -->
+  <div class="modal" id="tip-status-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="ts-heading">
+      <h2 id="ts-heading">Co z tym tematem?</h2>
+      <p class="muted" id="ts-title"></p>
+      <form id="tip-status-form">
+        <div class="ts-options">
+          <label class="ts-opt is-new"><input type="radio" name="ts-status" value="new"><span>Nowe</span></label>
+          <label class="ts-opt is-progress"><input type="radio" name="ts-status" value="progress"><span>W toku</span></label>
+          <label class="ts-opt is-done"><input type="radio" name="ts-status" value="done"><span>Zrealizowane</span></label>
+          <label class="ts-opt is-later"><input type="radio" name="ts-status" value="later"><span>Odłożone</span></label>
+          <label class="ts-opt is-rejected"><input type="radio" name="ts-status" value="rejected"><span>Odrzucone</span></label>
+        </div>
+        <label class="field" id="ts-article-wrap" hidden>
+          <span class="field-label">Artykuł, który powstał z tego tematu</span>
+          <select id="ts-article"></select>
+        </label>
+        <label class="field">
+          <span class="field-label">Notatka</span>
+          <textarea id="ts-note" rows="3" maxlength="400"></textarea>
+        </label>
+        <div class="modal-actions">
+          <button type="button" class="btn" data-close="tip-status-modal">Anuluj</button>
+          <button type="submit" class="btn btn-primary">Zapisz</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: USUWANIE ARTYKUŁU -->
+  <div class="modal" id="remove-modal" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="remove-title">
+      <h2 id="remove-title">Co zrobić z artykułem?</h2>
+      <p class="muted" id="remove-name"></p>
+      <div class="remove-choices">
+        <button type="button" class="remove-choice" id="remove-draft">
+          <strong>Schowaj do wersji roboczych</strong>
+          <span>Znika ze strony, ale zostaje w Panelu – możesz go poprawić i opublikować ponownie.</span>
+        </button>
+        <button type="button" class="remove-choice is-danger" id="remove-forever">
+          <strong>Usuń na zawsze</strong>
+          <span>Artykuł znika bezpowrotnie (chyba że masz kopię zapasową).</span>
+        </button>
+      </div>
+      <div class="modal-actions"><button type="button" class="btn" data-close="remove-modal">Anuluj</button></div>
+    </div>
+  </div>
+
+  <button type="button" class="to-top" id="to-top" aria-label="Przewiń na górę" hidden>↑</button>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="app.js?v=20261102c"></script>
+  <script src="spoty.js?v=20261102c" defer></script>
+  <script src="app-m.js?v=20261102c" defer></script>
+</body>
+</html>

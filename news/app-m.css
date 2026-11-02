@@ -1,0 +1,157 @@
+/* Śliska News DEV – wygląd „prawdziwej aplikacji” na telefonie (≤ 860 px). Tylko dev. */
+html { overscroll-behavior-y: none; -webkit-text-size-adjust: 100%; }
+body { overscroll-behavior-y: none; }
+.m-tabbar, .m-sheet, .m-sheet-bg, .m-search-btn { display: none; }
+
+@media (max-width: 860px) {
+  html { scroll-padding-top: 64px; }
+  body { -webkit-tap-highlight-color: transparent; padding-bottom: calc(66px + env(safe-area-inset-bottom)); background: var(--bg); }
+  input, select, textarea { font-size: 16px !important; }   /* iOS nie powiększa strony po dotknięciu pola */
+  a, button { touch-action: manipulation; }
+
+  /* — górny pasek aplikacji — */
+  .breaking { padding-top: env(safe-area-inset-top); }
+  .site-header { padding-top: env(safe-area-inset-top); background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 1px 0 var(--border); }
+  .breaking:not([hidden]) ~ .site-header { padding-top: 0; }
+  .header-top { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding-top: 8px; padding-bottom: 8px; min-height: 56px; }
+  .header-top .logo { margin-right: auto; }
+  .header-top .logo svg { height: 30px; width: auto; }
+  .main-nav { display: none !important; }
+  .auth { display: flex; gap: 6px; margin-left: 0; }
+  .auth #btn-account { display: none; }
+  .auth .btn-icon, .m-search-btn { width: 40px; height: 40px; border-radius: 50%; padding: 0; display: inline-grid; place-items: center; background: var(--soft); border: 0; color: var(--text); }
+  .m-search-btn svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .search { order: 5; flex-basis: 100%; max-width: none; margin: 0; display: none; padding-bottom: 6px; }
+  .site-header.m-search-open .search { display: block; }
+  .search input { height: 42px; border-radius: 14px; }
+
+  /* — treść — */
+  .container.wide { padding-left: 14px; padding-right: 14px; }
+  #layout { gap: 14px; padding-top: 10px; }
+  .side-left { display: none !important; }
+  .side-right { display: none; }
+  .hero { min-height: 330px; border-radius: 22px; }
+  .card { border-radius: 20px; }
+  .home-top { gap: 12px; margin-bottom: 18px; }
+  .section-title { font-size: 1.12rem; }
+  .site-footer { padding-bottom: 24px; margin-top: 24px; }
+  .to-top { bottom: calc(78px + env(safe-area-inset-bottom)) !important; right: 14px; }
+  #dev-dock { display: none !important; }   /* na telefonie te przyciski są w arkuszu „Więcej” */
+
+  /* — dolna nawigacja — */
+  .m-tabbar { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; z-index: 900; padding: 6px 6px calc(6px + env(safe-area-inset-bottom)); background: color-mix(in srgb, var(--surface) 92%, transparent); -webkit-backdrop-filter: saturate(180%) blur(18px); backdrop-filter: saturate(180%) blur(18px); border-top: 1px solid var(--border); }
+  .m-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; padding: 6px 0 4px; border: 0; background: none; color: var(--muted); font: 700 .66rem/1 var(--font); letter-spacing: .01em; text-decoration: none; cursor: pointer; position: relative; border-radius: 14px; }
+  .m-tab svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s; }
+  .m-tab.is-on { color: var(--accent); }
+  .m-tab.is-on svg { transform: translateY(-1px) scale(1.06); fill: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .m-tab:active { background: var(--soft); }
+  .m-tab .m-dot { position: absolute; top: 3px; left: calc(50% + 7px); min-width: 8px; height: 8px; border-radius: 99px; background: var(--accent); }
+
+  /* — arkusz „Więcej” — */
+  .m-sheet-bg { display: block; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,.45); opacity: 0; pointer-events: none; transition: opacity .2s; }
+  .m-sheet { display: block; position: fixed; left: 0; right: 0; bottom: 0; z-index: 1001; max-height: 82vh; overflow-y: auto; background: var(--surface); border-radius: 24px 24px 0 0; padding: 8px 16px calc(20px + env(safe-area-inset-bottom)); transform: translateY(105%); transition: transform .26s cubic-bezier(.2,.8,.2,1); box-shadow: 0 -10px 40px rgba(0,0,0,.25); overscroll-behavior: contain; }
+  body.m-sheet-open .m-sheet-bg { opacity: 1; pointer-events: auto; }
+  body.m-sheet-open .m-sheet { transform: none; }
+  body.m-sheet-open { overflow: hidden; }
+  .m-grip { width: 40px; height: 4px; border-radius: 4px; background: var(--border); margin: 4px auto 12px; }
+  .m-sheet h3 { margin: 14px 4px 8px; font: 800 .72rem var(--font); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .m-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+  .m-item { display: flex; align-items: center; gap: 10px; padding: 13px 14px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg); color: var(--text); font: 700 .92rem var(--font); text-decoration: none; text-align: left; cursor: pointer; }
+  .m-item:active { background: var(--soft); }
+  .m-item svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+  .m-item.is-main { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .m-item.is-danger { color: var(--accent); }
+  .m-item.is-wide { grid-column: 1 / -1; }
+
+  /* ekran logowania / modale jak arkusze */
+  .modal-box, .rm-box { max-height: 92vh; }
+}
+@media (max-width: 860px) and (display-mode: standalone) {
+  body { padding-bottom: 0; }
+  .site-footer .footer-inner { padding-bottom: calc(84px + env(safe-area-inset-bottom)) !important; }
+}
+
+/* Tryb osadzony: narzędzie redakcji otwarte w oknie na stronie głównej dev (bez nagłówka, menu i stopki) */
+html.is-embed .site-header, html.is-embed .breaking, html.is-embed .side-left, html.is-embed .side-right, html.is-embed .site-footer,
+html.is-embed .m-tabbar, html.is-embed .m-sheet, html.is-embed .m-sheet-bg, html.is-embed #dev-dock, html.is-embed .to-top, html.is-embed .sp-slot-top,
+html.is-embed .sp-box, html.is-embed .sp-popup, html.is-embed .sp-end { display: none !important; }
+html.is-embed body { padding-bottom: 0 !important; }
+html.is-embed #layout { grid-template-columns: minmax(0, 1fr) !important; padding-top: 10px; }
+
+/* ===== iOS 26 „Liquid Glass” – TYLKO iPhone w aplikacji z ekranu początkowego (html.ios-app); w przeglądarce i na Androidzie zostaje zwykły wygląd ===== */
+@media (max-width: 860px) {
+  html.ios-app .m-tabbar {
+    left: 12px; right: 12px; bottom: calc(10px + env(safe-area-inset-bottom)); padding: 6px; border: 0; border-radius: 30px;
+    background: color-mix(in srgb, var(--surface) 74%, transparent);
+    -webkit-backdrop-filter: blur(26px) saturate(200%) brightness(1.04); backdrop-filter: blur(26px) saturate(200%) brightness(1.04);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.75), inset 0 -1px 0 rgba(255,255,255,.18), inset 0 0 0 1px rgba(255,255,255,.28), 0 10px 32px rgba(10,10,30,.22), 0 2px 6px rgba(10,10,30,.12);
+  }
+  html.ios-app[data-theme="dark"] .m-tabbar { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 0 0 1px rgba(255,255,255,.1), 0 10px 32px rgba(0,0,0,.55); }
+  html.ios-app .m-tab { border-radius: 24px; padding: 7px 0 5px; }
+  html.ios-app .m-ind { background: color-mix(in srgb, var(--accent) 13%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 0 0 1px rgba(255,255,255,.28); }
+  html.ios-app body { padding-bottom: calc(92px + env(safe-area-inset-bottom)); }
+  html.ios-app .to-top { bottom: calc(96px + env(safe-area-inset-bottom)) !important; background: color-mix(in srgb, var(--surface) 60%, transparent); -webkit-backdrop-filter: blur(16px) saturate(180%); backdrop-filter: blur(16px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 6px 20px rgba(0,0,0,.2); }
+  html.ios-app .site-header { background: var(--surface); -webkit-backdrop-filter: none; backdrop-filter: none; box-shadow: 0 1px 0 var(--border); }
+  html.ios-app .auth .btn-icon, html.ios-app .m-search-btn { background: color-mix(in srgb, var(--surface) 55%, transparent); -webkit-backdrop-filter: blur(14px) saturate(180%); backdrop-filter: blur(14px) saturate(180%); box-shadow: inset 0 1px 0 rgba(255,255,255,.8), inset 0 0 0 1px rgba(255,255,255,.3), 0 2px 8px rgba(10,10,30,.12); }
+  html.ios-app .m-sheet { background: color-mix(in srgb, var(--surface) 78%, transparent); -webkit-backdrop-filter: blur(30px) saturate(190%); backdrop-filter: blur(30px) saturate(190%); border-radius: 32px 32px 0 0; box-shadow: inset 0 1px 0 rgba(255,255,255,.7), 0 -12px 44px rgba(0,0,0,.28); }
+  html.ios-app .m-item { background: color-mix(in srgb, var(--surface) 55%, transparent); box-shadow: inset 0 1px 0 rgba(255,255,255,.7), inset 0 0 0 1px rgba(255,255,255,.25); border-color: transparent; }
+  html.ios-app .m-item.is-main { background: var(--accent); }
+}
+
+/* ===== Przesuwany wskaźnik na dolnym pasku (aplikacja z ekranu początkowego, iOS i Android) ===== */
+.m-ind { display: none; }
+@media (max-width: 860px) {
+  html.is-app .m-tabbar, html.is-app .m-tab { -webkit-user-drag: none; }
+  html.is-app .m-tabbar { touch-action: none; user-select: none; -webkit-user-select: none; }
+  html.is-app .m-ind { display: block; position: absolute; top: 6px; bottom: 6px; left: 0; width: 0; border-radius: 24px; background: color-mix(in srgb, var(--accent) 12%, transparent); pointer-events: none; transform: translateX(0); transition: transform .34s cubic-bezier(.3,1.35,.5,1), width .3s cubic-bezier(.3,1.35,.5,1), scale .2s, background .2s; z-index: 0; }
+  html.is-app .m-tabbar.is-drag .m-ind { transition: none; scale: 1.14 1.1; background: color-mix(in srgb, var(--accent) 20%, transparent); }
+  html.is-app .m-tab { z-index: 1; }
+  html.is-app .m-tab.is-on { background: none !important; box-shadow: none !important; }
+  html.is-app .m-tab.is-hover { color: var(--accent); }
+  html.is-app .m-tabbar.is-drag .m-tab.is-on:not(.is-hover) { color: var(--muted); }
+}
+/* ===== Odświeżone: Moje konto / Ustawienia / Panel (czytelniejsze sekcje i nawigacja) ===== */
+#view-settings .panel-title, #view-account .panel-title, #view-panel .panel-title { font-size: clamp(1.7rem, 3.4vw, 2.3rem); letter-spacing: -.03em; margin-bottom: 4px; }
+.panel-sub { max-width: 64ch; }
+.hub-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 5px; border-radius: 999px; background: var(--soft); width: fit-content; max-width: 100%; margin: 14px 0 6px; }
+.hub-nav a, .hub-nav button { border-radius: 999px !important; font-weight: 700; }
+.sec-nav { position: sticky; top: 8px; z-index: 30; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding: 8px; margin: 12px 0 18px; border-radius: 18px; background: color-mix(in srgb, var(--surface) 80%, transparent); -webkit-backdrop-filter: blur(16px) saturate(170%); backdrop-filter: blur(16px) saturate(170%); box-shadow: 0 4px 18px rgba(0,0,0,.08), inset 0 0 0 1px var(--border); }
+.sec-nav::-webkit-scrollbar { display: none; }
+.sec-nav a { flex: none; padding: 8px 14px; border-radius: 999px; font: 700 .84rem var(--font); color: var(--muted); text-decoration: none; white-space: nowrap; }
+.sec-nav a:hover { color: var(--text); background: var(--soft); }
+.sec-nav a.is-on { color: var(--text); background: var(--soft); }
+.st-card { border: 0 !important; border-radius: 22px !important; box-shadow: 0 2px 14px rgba(20,16,40,.06); scroll-margin-top: 84px; padding: 22px 24px !important; }
+.st-card .st-head { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.st-card .st-h { display: flex; align-items: center; gap: 10px; font-size: 1.12rem; letter-spacing: -.01em; }
+.st-card .st-sub { margin-top: 4px; }
+.st-row { padding: 12px 0; border-bottom: 1px dashed var(--border); }
+.st-row:last-child { border-bottom: 0; }
+@media (max-width: 860px) { .sec-nav { top: calc(64px + env(safe-area-inset-top)); margin-left: -4px; margin-right: -4px; } .st-card { padding: 18px 16px !important; } }
+html.is-embed .article-top .btn:not(.btn-primary) { display: none; }
+html.is-embed .sec-nav { top: 4px; }
+html.is-embed body::before { display: none !important; }
+#view-settings .sec-nav { display: none !important; }
+html.is-embed body { padding-left: 0 !important; }
+
+/* Soczewka szkła pod palcem (iPhone, aplikacja) – powiększa się ponad pasek, rozciąga w ruchu, ikona pod nią rośnie */
+@media (max-width: 860px) {
+  html.ios-app .m-tabbar.is-drag { overflow: visible; }
+  html.ios-app .m-tabbar.is-drag .m-ind {
+    scale: 1.16 1.42; transition: scale .28s cubic-bezier(.3,1.6,.5,1), background .2s, box-shadow .2s;
+    background: rgba(255,255,255,.34); -webkit-backdrop-filter: blur(3px) brightness(1.12) saturate(1.9); backdrop-filter: blur(3px) brightness(1.12) saturate(1.9);
+    box-shadow: inset 0 1.5px 1px rgba(255,255,255,.95), inset 0 -1.5px 1px rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.4), 0 10px 26px rgba(10,10,30,.28), 0 2px 6px rgba(10,10,30,.16);
+  }
+  html.ios-app[data-theme="dark"] .m-tabbar.is-drag .m-ind { background: rgba(255,255,255,.14); box-shadow: inset 0 1.5px 1px rgba(255,255,255,.45), inset 0 0 0 1px rgba(255,255,255,.2), 0 10px 26px rgba(0,0,0,.55); }
+  html.is-app .m-tab svg { transition: transform .26s cubic-bezier(.3,1.6,.5,1); }
+  html.is-app .m-tabbar.is-drag .m-tab.is-hover svg { transform: translateY(-2px) scale(1.22); }
+  html.is-app .m-tab.is-hover { font-weight: 700; }
+}
+
+/* — poziome paski zakładek: mieszczą się w ekranie i da się je przesuwać palcem — */
+.sec-nav, .hub-nav, .ptabs { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; }
+.hub-nav { flex-wrap: nowrap; width: auto; }
+.hub-nav > *, .ptabs > * { flex: none; white-space: nowrap; }
+#view-account, #view-settings, #app, #layout, main { min-width: 0; }
+@media (max-width: 860px) { html, body { max-width: 100%; overflow-x: hidden; } .up-meta { justify-content: center; } .up-meta > .muted { flex-basis: 100%; text-align: center; } }
+/* zoom wyłączony (aplikacja i strona na dotyku) */
+html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
