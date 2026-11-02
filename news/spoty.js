@@ -7,36 +7,22 @@
   var DEFAULT_LINK = 'https://sliska.pl/news/';
   var CFG = { enabled: true, popupDelay: 8000, boxDelay: 35000, boxMax: 12, boxGap: 180000, avoid: 2, rotateMs: 10000, closeAfterMs: 3000, clickChance: 0.125, clickGap: 60000, clickMax: 4, inlineMax: 4, inlineChance: 0.6, houseChance: 0.4 };
 
-  /* ====== REKLAMY GRAFICZNE ======
-     Dodanie reklamy = wrzucenie 5 plików do folderu spoty/ + jedna pozycja na liście ADS poniżej.
-     3 formaty. Nazwy plików: <id>-long.jpg (728×90: góra strony, paski w artykule i na końcu list), <id>-box.jpg (300×250: okienko w rogu i popup), <id>-card.jpg (450×500: kafelek w siatce)
-     – rysuj w 2×. Cała grafika jest linkiem. Reklama pojawia się dopiero, gdy są wszystkie 3 pliki.
-     Pliki o dowolnych nazwach: podaj files: ['a.jpg', ...] – format dobierze się sam po wymiarach (proporcjach) obrazka. */
-  var ON_DEV = /^dev\./.test(location.hostname);   // na dev nie pokazujemy cudzych reklam – tylko spoty „Miejsce na reklamę” z odsyłaczem do formularza
-  var ADS = [
-    { id: 'tk-pozydziwka-ytmusic', group: 'tk-pozydziwka', files: ['tk-pozydziwka-ytmusic-card.jpg'], partial: true, link: 'https://music.youtube.com/playlist?list=OLAK5uy_k1n4VTUaG3hjh7yQhF_ljjTzi-JvddRqM', alt: 'Tamara Kenarycka – Pożydziwka (YouTube Music)' },
-    { id: 'tk-pozydziwka-spotify', group: 'tk-pozydziwka', files: ['tk-pozydziwka-spotify-card.jpg'], partial: true, link: 'https://open.spotify.com/album/7ChdgFtVCenTb0vnm4fSyH', alt: 'Tamara Kenarycka – Pożydziwka (Spotify)' },
-    { id: 'crackrecordings', files: ['crackrecordings-box.jpg', 'marika-dupodajka-long.jpg'], partial: true, link: 'https://crackrecordings.pl', alt: 'Crack Recordings' },
-    { id: 'genowefa-ans', files: ['genowefa-ans-long.jpg'], partial: true, link: 'https://mugo.lnk.to/AmericasNextSupermodel', alt: 'Genowefa – America\'s Next Supermodel' }
-  ];   // brak reklam graficznych – same spoty „Miejsce na reklamę” z odsyłaczem do formularza (grafiki dodajemy dopiero na polecenie właściciela)
-
-  var FORMATS = ['long', 'box', 'card'];
-  function byRatio(w, h) { var r = w / h; return r > 3 ? 'long' : r > 1.05 ? 'box' : 'card'; }
+  /* ====== REKLAMY GRAFICZNE – wyłącznie z bazy (Worker + D1) ======
+     W kodzie nie ma żadnych reklam. Właściciel lub Moderator dodaje je w narzędziu „Reklamy” na dev.sliska.pl:
+     format, zdjęcie, opcjonalny link, daty i priorytet. Jedna pozycja = jeden format (long / box / card). */
   var CREATIVES = [];
-  ADS.forEach(function (a) {
-    var c = { id: a.id, group: a.group || a.id, link: a.link, alt: a.alt || '', img: {} };
-    if (!a.files) {      // dodajemy dopiero, gdy wszystkie 3 pliki naprawdę się wczytają (brak plików = zostaje „Miejsce na reklamę”)
-      var okN = 0;
-      FORMATS.forEach(function (f) { var im = new Image(); im.onload = function () { c.img[f] = 'spoty/' + a.id + '-' + f + '.jpg'; if (++okN === FORMATS.length) CREATIVES.push(c); }; im.src = 'spoty/' + a.id + '-' + f + '.jpg'; });
-      return;
-    }
-    var added = false;
-    a.files.forEach(function (file) {
-      var im = new Image();
-      im.onload = function () { c.img[byRatio(im.naturalWidth, im.naturalHeight)] = 'spoty/' + file; if (!added && (a.partial || FORMATS.every(function (f) { return c.img[f]; }))) { added = true; CREATIVES.push(c); } };
-      im.src = 'spoty/' + file;
-    });
-  });
+  try {
+    fetch('/news/api/spot/list', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : { ads: [] }; }).then(function (d) {
+      (d.ads || []).forEach(function (a) {
+        if (!a || !a.id || !/^(long|box|card)$/.test(a.fmt)) return;
+        for (var i = 0, n = Math.min(3, Math.max(1, a.w || 1)); i < n; i++) {      // priorytet = ile razy reklama jest w losowaniu
+          var c = { id: 'db' + a.id, group: 'db' + a.id, link: a.link || '', alt: a.alt || '', img: {} };
+          c.img[a.fmt] = '/news/api/spot/pic?id=' + a.id + '&v=' + a.v;
+          CREATIVES.push(c);
+        }
+      });
+    }).catch(function () {});
+  } catch (e) {}
 
   /* ====== „REKLAMA TUTAJ" – zaproszenie dla reklamodawców ======
      Gdy nie ma żadnej reklamy graficznej (CREATIVES puste), wszędzie pokazuje się to. Gdy są – tylko od czasu do czasu (CFG.houseChance).
@@ -104,7 +90,7 @@
       ? '<img src="' + esc(src) + '" alt="' + esc(c.alt) + '" decoding="async" onerror="this.parentNode.remove()">'
       : '<img src="' + esc(src) + '" alt="' + esc(c.alt) + '" decoding="async" onerror="this.parentNode.remove()"' + (fmt === 'card' ? ' loading="lazy"' : '') + '>';
     var badge = '';
-    var hit = '<a class="sp-hit" href="' + esc(c.link) + '" target="_blank" rel="noopener sponsored" aria-label="' + esc(c.alt) + '"></a>';
+    var hit = !c.link ? '' : '<a class="sp-hit" href="' + esc(c.link) + '" target="_blank" rel="noopener sponsored" aria-label="' + esc(c.alt) + '"></a>';
     var x = STATIC[fmt] || fmt === 'card' ? '' : '<button type="button" class="sp-x" aria-label="Zamknij">×</button>';
     var lab = '<span class="sp-label">' + esc(LABEL) + '</span>';
     if (fmt === 'card') return '<article class="card sp-card sp-img-card" data-sp="' + c.id + '">' + pic + hit + badge + lab + '</article>';
