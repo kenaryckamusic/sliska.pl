@@ -3438,3 +3438,6 @@ html.rail-on.is-dev:not(.dev-logo-off) body.rail-c #logo::after { content: "DEV"
 .gal-url-row input[type="url"], .gal-url-row input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line, #d9dde3); border-radius: 12px; background: var(--card, #fff); color: var(--text, inherit); font: inherit; font-size: .95rem; }
 .gal-url-row input:focus { border-color: var(--accent, #d4001a); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #d4001a) 18%, transparent); }
 .gal-url-row input::placeholder { color: var(--muted, #8a93a0); }
+
+/* tylko dev: narzędzia redakcyjne są w hubie */
+.admin-actions, .admin-only[data-action="quick-new"] { display: none !important; }

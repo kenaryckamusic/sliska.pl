@@ -1517,6 +1517,7 @@ function currentRoute() {
 }
 
 function adminButtons(id) {
+  return ''; // narzędzia redakcyjne są tylko na dev.sliska.pl
   if (!Auth.isAdmin()) return '';
   const safe = Utils.esc(id);
   return `<span class="admin-actions">
@@ -5109,7 +5110,7 @@ function quickItemHtml(a, withAdmin) {
   const src = a.link
     ? `<span class="quick-from">Źródło:</span> <a class="quick-src" href="${Utils.esc(a.link)}" target="_blank" rel="noopener noreferrer">${Utils.esc(srcName || 'link')} →</a>`
     : (srcName ? `<span class="quick-from">Źródło:</span> <span class="quick-src quick-src-plain">${Utils.esc(srcName)}</span>` : '');
-  const admin = withAdmin && Auth.isAdmin()
+  const admin = false && withAdmin && Auth.isAdmin()
     ? `<span class="admin-actions"><button type="button" class="btn btn-sm" data-action="quick-edit" data-id="${Utils.esc(a.id)}">Edytuj</button>${canManage() ? `<button type="button" class="btn btn-sm btn-push-send" data-action="push-send" data-id="${Utils.esc(a.id)}" title="Wyślij powiadomienie push o tej nowince">🔔 Powiadom</button>` : ''}<button type="button" class="btn btn-sm btn-danger" data-action="quick-delete" data-id="${Utils.esc(a.id)}">Usuń</button></span>` : '';
   return `<li class="quick-item">
     <time class="quick-time" datetime="${Utils.esc(a.createdAt)}">${Utils.formatTime(a.createdAt)}</time>
@@ -5125,7 +5126,7 @@ function quickStripHtml() {
   const plus = `<button type="button" class="plus-card" data-action="plus-open" aria-label="Śliska+ – subskrypcja"><span class="plus-top"><b>Śliska+</b><i>NOWOŚĆ</i></span><span class="plus-tx">Bez reklam, wcześniejszy dostęp do newsów i odznaka przy komentarzach.</span><span class="plus-go">Dołącz →</span></button>`;
   return `<div class="quick-row"><section class="quick-strip" aria-label="Nowinki z Poślizgiem">
     <div class="quick-head"><h2 class="section-title">Nowinki z Poślizgiem</h2>
-      <span><button type="button" class="btn btn-sm admin-only" data-action="quick-new">+ Dodaj</button> <a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
+      <span><a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
     ${list.length ? `<ul class="quick-list">${list.map(a => quickItemHtml(a, false)).join('')}</ul>` : '<p class="muted">Nie ma jeszcze nowinek.</p>'}
   </section>${plus}</div>`;
 }
@@ -5142,7 +5143,7 @@ function renderQuick() {
   });
   el.innerHTML = `
     <div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a>
-      <div class="top-actions"><button type="button" class="btn btn-primary admin-only" data-action="quick-new">+ Dodaj nowinkę</button></div></div>
+      </div>
     <header class="rank-head">
       <span class="rank-eyebrow">Krótko i na temat</span>
       <h1 class="rank-title">Nowinki z Poślizgiem</h1>
@@ -6877,7 +6878,7 @@ function fillHub() {
   const items = [['panel', '#/panel', 'Panel', 'panel'], ['account', '#/konto', 'Moje konto', 'user'], ['settings', '#/ustawienia', 'Ustawienia', 'gear']];
   const ICONS = {"panel": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/></svg>", "user": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/></svg>", "gear": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z\"/></svg>"};
   $$('.hub-nav').forEach(n => {
-    n.hidden = !Auth.isAdmin();
+    n.hidden = true;
     n.innerHTML = Auth.isAdmin() ? items.map(([k, href, label, ic]) => `<a class="hub-tab${n.dataset.hub === k ? ' is-active' : ''}" href="${href}"${n.dataset.hub === k ? ' aria-current="page"' : ''}>${ICONS[ic]}<span>${label}</span></a>`).join('') : '';
   });
 }
@@ -6929,7 +6930,6 @@ function bindReaderEvents() {
   $('#btn-account').addEventListener('click', () => {
     const go = h => { if (location.hash === h) { route(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else location.hash = h; };   // ten sam adres = wcześniej „nic się nie działo”
     if (Readers.loggedIn()) go('#/konto');
-    else if (Auth.isAdmin()) go('#/panel');
     else openReaderModal('login');
   });
   $('#reader-error').className = 'form-error';
@@ -7355,9 +7355,8 @@ function routeCore() {
   void document.body.offsetHeight;
   document.title = `${CONFIG.SITE_NAME} – najświeższe wiadomości`;
 
-  if ((r.name === 'editor' || r.name === 'panel' || r.name === 'settings') && !Auth.isAdmin()) {
+  if (r.name === 'editor' || r.name === 'panel' || r.name === 'settings') {
     location.hash = '#/';
-    openReaderModal('login');
     return;
   }
 
@@ -7474,7 +7473,7 @@ function applyAuthUI() {
   updatePushButton();
   const rn = currentRoute().name;
   // Utrata uprawnień (np. wylogowanie) w widoku dla redakcji – wróć na stronę główną
-  if (state.ready && (rn === 'editor' || rn === 'panel' || rn === 'settings') && !Auth.isAdmin()) {
+  if (state.ready && (rn === 'editor' || rn === 'panel' || rn === 'settings')) {
     location.hash = '#/';
     return;
   }
@@ -7910,8 +7909,8 @@ function bindEvents() {
 
   // Przyciski nawigacji
   $('#btn-rd-account').addEventListener('click', () => { location.hash = '#/konto'; });
-  $('#btn-rd-mod').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('comments'); else location.hash = '#/konto/komentarze'; });
-  $('#btn-rd-users').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('users'); else location.hash = '#/konto/uzytkownicy'; });
+  $('#btn-rd-mod').addEventListener('click', () => { location.hash = '#/konto/komentarze'; });
+  $('#btn-rd-users').addEventListener('click', () => { location.hash = '#/konto/uzytkownicy'; });
   $('#btn-logout').addEventListener('click', async () => {
     if (!Auth.isAdmin() && Readers.loggedIn()) { await Readers.logout(); location.hash = '#/'; toast('Wylogowano.'); return; }
     await Auth.logout();
@@ -7920,8 +7919,6 @@ function bindEvents() {
     applyAuthUI();
     toast('Wylogowano.');
   });
-  $('#btn-new').addEventListener('click', () => { location.hash = '#/edytor'; });
-  $('#panel-new').addEventListener('click', () => { location.hash = '#/edytor'; });
   $('#btn-push').addEventListener('click', togglePush);
   updatePushButton();
   $('#push-ask-yes').addEventListener('click', pushAskYes);
@@ -7950,8 +7947,6 @@ function bindEvents() {
     finally { updateDevicePush(); updatePushButton(); }
   });
   $('#st-test-push').addEventListener('click', testPush);
-  $('#btn-panel').addEventListener('click', () => { location.hash = '#/panel'; });
-  $('#btn-settings').addEventListener('click', () => { location.hash = '#/ustawienia'; });
 
   // Ustawienia konta
   $('#settings-form').addEventListener('submit', saveSettings);
