@@ -7520,7 +7520,7 @@ function renderProfileStats() {
   const me = (state.profile && state.profile.name) || '';
   $('#ps-mine').textContent = me ? pub.filter(a => authorKey(a.author) === authorKey(me)).length : pub.length;
   $('#ps-sched').textContent = sched;
-  const b = $('#pa-sched'); b.hidden = !sched; b.textContent = sched;
+  const b = $('#pa-sched'); if (b) { b.hidden = !sched; b.textContent = sched; }
 }
 
 async function loadProfile() {

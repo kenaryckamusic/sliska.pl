@@ -151,7 +151,7 @@
     var staff = document.body.classList.contains('is-admin');
     var logged = document.body.classList.contains('is-reader') || staff;
     var h = '<div class="m-grip"></div>';
-    if (staff) {
+    if (false && staff) { /* narzędzia redakcji tylko na dev.sliska.pl/ */
       h += '<h3>Narzędzia redakcji</h3><div class="m-grid">' +
         item('pen', 'Napisz artykuł', 'data-m="#btn-new"', 'is-main') +
         item('flash', 'Nowinka', 'data-m="[data-action=quick-new]"') +
