@@ -6312,6 +6312,7 @@ const Readers = {
   },
   /** Czytelnik z rolą Redaktor/Właściciel dostaje od workera token logowania do projektu redakcji (prawo pisania artykułów). */
   async joinEditor() {
+    return;   // logowanie do projektu redakcji wyłączone – redakcja pracuje tylko na dev.sliska.pl
     try {
       if (Auth.mode !== 'firebase' || !FirebaseProvider.auth || this._joining) return;
       const cur = FirebaseProvider.auth.currentUser, role = this.me && this.me.role;
@@ -6794,10 +6795,10 @@ function renderAccount() {
   const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
   const rt = currentRoute().tab;
   const staff = Auth.isAdmin();
-  if (rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy' || rt === 'reklamy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : rt === 'reklamy' ? 'ads' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
-  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : rt === 'reklamy' && canManage() ? 'reklamy' : '';
+  if (false && rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy' || rt === 'reklamy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : rt === 'reklamy' ? 'ads' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
+  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : '';
   stashProfileBlock();
-  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a><a class="ptab ${tab === 'reklamy' ? 'is-active' : ''}" href="#/konto/reklamy">Reklamy</a>` : ''}</div>` : '';
+  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a></div>` : '';
   const pubLink = Readers.me && Readers.me.pub ? `<a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz profil publiczny</a>` : '';
   const vChip = Readers.verified() ? '<span class="acc-chip is-ok">E-mail potwierdzony</span>' : '<span class="acc-chip is-warn">E-mail niepotwierdzony</span>';
   el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
@@ -6896,15 +6897,14 @@ function renderReaderCard() {
   document.body.classList.toggle('is-reader-only', only);
   const me = Readers.me || {};
   $('#btn-rd-mod').hidden = !canMod();
-  $('#btn-rd-users').hidden = !canManage();
+  $('#btn-rd-users').hidden = true;   // zarządzanie użytkownikami tylko na dev.sliska.pl
   ensureOwnerPanes();
   { const pu = $('#ptab-users'); if (pu) { pu.hidden = !canManage(); if (!pu.hidden && currentRoute().name === 'panel' && !$('#panel-users').children.length && ($('#view-panel .ptab.is-active') || {}).dataset?.ptab === 'users') renderModUsersPanel($('#panel-users')); } }
   let hint = $('#rd-hint');
   if (!hint) { hint = document.createElement('div'); hint.id = 'rd-hint'; hint.className = 'rd-hint'; const pa = $('#profile-card .profile-actions'); if (pa) pa.parentNode.insertBefore(hint, pa); }
-  const issue = rd && ['editor', 'owner'].includes(me.role) && !Auth.isAdmin() ? Readers.editorIssue : '';
-  const HINT = { verify: 'Panel redaktora czeka na potwierdzenie adresu e-mail. Kliknij link z wiadomości, a potem „Sprawdź ponownie”.', forbidden: 'Konto nie ma teraz dostępu do panelu redaktora. Skontaktuj się z Właścicielem Portalu.', server: 'Nie udało się włączyć panelu redaktora (błąd po stronie serwera). Spróbuj ponownie albo napisz do Właściciela.', signin: 'Nie udało się zalogować do panelu redaktora. Spróbuj ponownie.' };
-  hint.hidden = !issue;
-  hint.innerHTML = issue ? `<span>${HINT[issue] || HINT.signin}</span><button type="button" class="btn btn-sm" data-rd-retry>Sprawdź ponownie</button>` : '';
+  const toPanel = rd && ['editor', 'owner'].includes(me.role);   // narzędzia redakcji są tylko na dev.sliska.pl
+  hint.hidden = !toPanel;
+  hint.innerHTML = toPanel ? '<a class="btn btn-sm btn-primary" href="https://dev.sliska.pl/" target="_blank" rel="noopener">Przejdź do panelu</a>' : '';
   if (only) {
     $('#profile-name').textContent = me.name || 'Twoje konto';
     $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);

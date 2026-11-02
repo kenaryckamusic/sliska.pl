@@ -1,6 +1,5 @@
 /* Śliska News DEV – wygląd „prawdziwej aplikacji” na telefonie (≤ 860 px). Tylko dev. */
 html { overscroll-behavior-y: none; -webkit-text-size-adjust: 100%; }
-body { overscroll-behavior-y: none; }
 .m-tabbar, .m-sheet, .m-sheet-bg, .m-search-btn { display: none; }
 
 @media (max-width: 860px) {
@@ -148,10 +147,11 @@ html.is-embed body { padding-left: 0 !important; }
 }
 
 /* — poziome paski zakładek: mieszczą się w ekranie i da się je przesuwać palcem — */
-.sec-nav, .hub-nav, .ptabs { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x; scrollbar-width: none; }
+.sec-nav, .hub-nav, .ptabs { min-width: 0; max-width: 100%; box-sizing: border-box; overflow-x: auto; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x pan-y; scrollbar-width: none; }
 .hub-nav { flex-wrap: nowrap; width: auto; }
 .hub-nav > *, .ptabs > * { flex: none; white-space: nowrap; }
 #view-account, #view-settings, #app, #layout, main { min-width: 0; }
-@media (max-width: 860px) { html, body { max-width: 100%; overflow-x: hidden; } .up-meta { justify-content: center; } .up-meta > .muted { flex-basis: 100%; text-align: center; } }
+@media (max-width: 860px) { html { max-width: 100%; overflow-x: clip; } body { max-width: 100%; } .up-meta { justify-content: center; } .up-meta > .muted { flex-basis: 100%; text-align: center; } }
 /* zoom wyłączony (aplikacja i strona na dotyku) */
-html { touch-action: pan-x pan-y; -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; }
+body { touch-action: manipulation; }

@@ -1,0 +1,55 @@
+/* Animacje (tylko dev): płynne, lekkie (transform/opacity), wyłączane przy „ogranicz ruch”. */
+:root { --mo-ease: cubic-bezier(.2, .8, .2, 1); --mo-spring: cubic-bezier(.3, 1.4, .5, 1); }
+
+/* wejście widoku po zmianie strony */
+@keyframes mo-view { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+html.mo-nav #app > section:not([hidden]) { animation: mo-view .34s var(--mo-ease) both; }
+
+/* pierwsze wczytanie: kolejne kafelki wjeżdżają jeden po drugim */
+@keyframes mo-rise { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
+html.mo-first .hero, html.mo-first .tile, html.mo-first .card, html.mo-first .quick-strip, html.mo-first .side-block { animation: mo-rise .5s var(--mo-ease) both; }
+html.mo-first .tile:nth-child(2), html.mo-first .card:nth-child(2) { animation-delay: .05s; }
+html.mo-first .tile:nth-child(3), html.mo-first .card:nth-child(3) { animation-delay: .1s; }
+html.mo-first .tile:nth-child(4), html.mo-first .card:nth-child(4) { animation-delay: .15s; }
+html.mo-first .tile:nth-child(5), html.mo-first .card:nth-child(5) { animation-delay: .2s; }
+html.mo-first .tile:nth-child(n+6), html.mo-first .card:nth-child(n+6) { animation-delay: .25s; }
+
+/* karty: delikatne uniesienie i przybliżenie zdjęcia */
+.tile, .card, .hero { transition: transform .28s var(--mo-ease), box-shadow .28s var(--mo-ease); }
+.tile-img, .hero-img, .card-img { transition: transform .6s var(--mo-ease); }
+@media (hover: hover) {
+  .tile:hover, .card:hover { transform: translateY(-3px); }
+  .tile:hover .tile-img, .hero:hover .hero-img, .card:hover .card-img { transform: scale(1.04); }
+}
+
+/* przyciski, chipy, linki nawigacji: wyraźna reakcja na dotyk */
+.btn, button, .chip, .nav-link, .m-tab, .ptab { transition: background-color .18s ease, color .18s ease, border-color .18s ease, box-shadow .2s ease, transform .16s var(--mo-ease), opacity .18s ease; }
+.btn:active, .chip:active, .ptab:active { transform: scale(.96); }
+.m-tab:active { transform: scale(.92); }
+
+/* okna modalne i wysuwane arkusze */
+@keyframes mo-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mo-pop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes mo-sheet { from { transform: translateY(100%); } to { transform: none; } }
+.modal:not([hidden]), .modal-backdrop { animation: mo-fade .2s ease both; }
+.modal:not([hidden]) > .modal-box, .modal:not([hidden]) .modal-box { animation: mo-pop .3s var(--mo-spring) both; }
+body.m-sheet-open .m-sheet { animation: mo-sheet .34s var(--mo-ease) both; }
+
+/* powiadomienia (toast) i menu profilu */
+@keyframes mo-toast { from { opacity: 0; transform: translate(-50%, 14px) scale(.96); } to { opacity: 1; transform: translate(-50%, 0); } }
+.toast { animation: mo-toast .32s var(--mo-spring) both; }
+.profile-card:not([hidden]), #profile-card:not([hidden]) { animation: mo-pop .26s var(--mo-ease) both; transform-origin: top left; }
+
+/* skeleton ładowania */
+@keyframes mo-shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+#home-status:not(:empty), .loading-line { background: linear-gradient(100deg, transparent 30%, rgba(127, 127, 127, .18) 50%, transparent 70%); background-size: 200% 100%; animation: mo-shimmer 1.4s linear infinite; border-radius: 10px; padding: 10px 14px; }
+
+/* płynna zmiana motywu jasny/ciemny */
+html.mo-theme, html.mo-theme * { transition: background-color .35s ease, color .35s ease, border-color .35s ease, fill .35s ease !important; }
+
+/* lekkie pojawianie się zdjęć po załadowaniu */
+img.tile-img, img.hero-img, .article-body img { animation: mo-fade .5s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; animation-delay: 0ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+}

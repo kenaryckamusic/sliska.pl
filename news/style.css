@@ -3441,3 +3441,21 @@ html.rail-on.is-dev:not(.dev-logo-off) body.rail-c #logo::after { content: "DEV"
 
 /* tylko dev: narzędzia redakcyjne są w hubie */
 .admin-actions, .admin-only[data-action="quick-new"] { display: none !important; }
+
+/* Telefon: wyśrodkowany autor i data (hotfix) */
+@media (max-width: 640px) {
+  .article-meta { justify-content: center; text-align: center; }
+  .article-meta > .author-line { justify-content: center; }
+  .article-meta > .rx-top { flex: 0 0 100%; justify-content: center; }
+  .article-meta > .rx-top::before { display: none !important; }
+  .article-meta > .rx-top[hidden] { display: none; }
+}
+
+/* hotfix 2026-11-02: autor i statystyki artykułu wyśrodkowane na telefonie */
+@media (max-width: 700px) {
+  .article-meta { justify-content: center; text-align: center; }
+  .article-meta > .author-line { justify-content: center; }
+  .article-meta > .rx-top { flex: 0 0 100%; justify-content: center; display: inline-flex; }
+  .article-meta > .rx-top[hidden] { display: none; }
+  .article-meta > .rx-top::before { content: none !important; display: none !important; }
+}
