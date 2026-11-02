@@ -3429,3 +3429,12 @@ html.rail-on.is-dev:not(.dev-logo-off) body.rail-c #logo::after { content: "DEV"
 
 /* DEV: plakietka przy logo tylko raz (na telefonie i w szerokim układzie bez zwiniętego menu nie dublujemy jej pseudo-elementem) */
 @media (max-width: 860px) { html.is-dev #logo::after { display: none !important; } }
+
+/* hotfix 2026-11-02: korona zawsze w jednej linii z nazwą i plakietką, pole URL w galerii */
+.cmt-head > .rb { display: inline-flex; align-items: center; gap: 4px; flex: none; white-space: nowrap; }
+.cmt-head > .rb .crown { margin-left: 0; }
+.cmt-head .cmt-name { min-width: 0; }
+.cmt-head .cmt-to { white-space: nowrap; }
+.gal-url-row input[type="url"], .gal-url-row input { box-sizing: border-box; width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--line, #d9dde3); border-radius: 12px; background: var(--card, #fff); color: var(--text, inherit); font: inherit; font-size: .95rem; }
+.gal-url-row input:focus { border-color: var(--accent, #d4001a); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent, #d4001a) 18%, transparent); }
+.gal-url-row input::placeholder { color: var(--muted, #8a93a0); }

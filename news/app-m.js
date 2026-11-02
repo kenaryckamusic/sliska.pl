@@ -180,13 +180,15 @@
 (function () {
   var io = null;
   function build() {
+    var view = document.querySelector('#view-settings:not([hidden]), #view-account:not([hidden])');
+    var cards = view ? [].slice.call(view.querySelectorAll('.st-card')).filter(function (c) { return c.querySelector('.st-h') && !c.hidden && c.offsetParent !== null; }) : [];
+    var sig = cards.map(function (c) { return c.querySelector('.st-h').textContent.trim(); }).join('|');
+    var cur = document.querySelector('.sec-nav');
+    if (cur && view && cards.length >= 3 && cur.dataset.sig === sig && view.contains(cur)) return; /* bez przebudowy – inaczej pasek traci przewinięcie */
     document.querySelectorAll('.sec-nav').forEach(function (n) { n.remove(); });
     if (io) { io.disconnect(); io = null; }
-    var view = document.querySelector('#view-settings:not([hidden]), #view-account:not([hidden])');
-    if (!view) return;
-    var cards = [].slice.call(view.querySelectorAll('.st-card')).filter(function (c) { return c.querySelector('.st-h') && !c.hidden && c.offsetParent !== null; });
-    if (cards.length < 3) return;
-    var nav = document.createElement('nav'); nav.className = 'sec-nav'; nav.setAttribute('aria-label', 'Na tej stronie');
+    if (!view || cards.length < 3) return;
+    var nav = document.createElement('nav'); nav.className = 'sec-nav'; nav.dataset.sig = sig; nav.setAttribute('aria-label', 'Na tej stronie');
     cards.forEach(function (c, i) {
       c.id = c.id || ('sec-' + i);
       var h = c.querySelector('.st-h').textContent.trim();

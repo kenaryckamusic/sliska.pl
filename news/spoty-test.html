@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex">
+<title>Podgląd reklam – Śliska News</title>
+<link rel="stylesheet" href="style.css"><link rel="stylesheet" href="spoty.css">
+</head><body>
+<main id="ads-gallery"><h1>Podgląd reklam</h1><p class="muted">6 plików (2 reklamy × 3 formaty). Reklamy edytujesz w <code>spoty.js</code> (lista <code>ADS</code>).</p>
+<h2>Popup (środek)</h2><div class="g-grid g-popup" id="g-popup"></div>
+<h2>Box (róg ekranu)</h2><div class="g-grid g-box" id="g-box"></div>
+<h2>Górny rząd – dwie reklamy obok siebie (bez X, zmieniają się co 10 s)</h2><div class="g-grid g-strip" id="g-top"></div>
+<h2>Kafelek w siatce artykułów</h2><div class="g-grid g-box" id="g-card"></div>
+<h2>W artykule, w Nowinkach i na końcu list</h2><div class="g-grid g-strip" id="g-strip"></div><h2>„Miejsce na reklamę” (gdy brak reklam i czasem między nimi)</h2><div class="g-grid g-box" id="g-house"></div></main>
+<script src="spoty.js"></script>
+<script>['popup','box','top','strip','card'].forEach(function(f){document.getElementById('g-'+f).innerHTML=SliskaSpot.creatives.map(function(c){return SliskaSpot.html(f,c)}).join('')});
+var H=SliskaSpot.house;document.getElementById('g-house').innerHTML=['popup','box','card'].map(function(f,i){return SliskaSpot.html(f,H[i])}).join('')+'<div style="width:100%"></div>'+['strip','strip'].map(function(f,i){return SliskaSpot.html(f,H[i+3])}).join('');
+document.querySelectorAll('.sp-x').forEach(function(b){b.hidden=true});document.querySelectorAll('.sp-cta').forEach(function(a){a.addEventListener('click',function(e){e.preventDefault()})});</script>
+</body></html>

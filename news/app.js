@@ -10,164 +10,6 @@
    ========================================================= */
 'use strict';
 
-/* ---- Atrapy usuniętych funkcji redakcyjnych (wersja publiczna) ---- */
-const __no = new Proxy(function () {}, { get: (t, k) => (k === Symbol.toPrimitive ? () => '' : typeof k === 'symbol' || k === 'then' ? undefined : __no), apply: () => undefined, construct: () => ({}) });
-const bylineName = n => 'Redaktor ' + String(n || '').replace(/^Redaktor\s+/i, '');
-let IG_SLIDES = __no;
-function keySentence() {}
-function fitText() {}
-async function slideTexture() {}
-async function drawSlide() {}
-async function makeZip() {}
-function captionFor() {}
-async function renderSocialSet() {}
-async function makeInstagramPost() {}
-async function exportBackup() {}
-async function importBackup() {}
-function editDraftId() {}
-function newPointerKey() {}
-let Buffers = __no;
-function clearPointer() {}
-let OWNER_TABS = __no;
-function applyOwnerTabs() {}
-function ensureOwnerPanes() {}
-function setPanelTab() {}
-function updatePanelCounts() {}
-async function renderPanel() {}
-async function deleteDraft() {}
-async function publishNow() {}
-function upsertLocalState() {}
-let removeTarget = __no;
-function openRemoveModal() {}
-async function unpublishToDraft() {}
-async function deleteArticle() {}
-function defaultAuthor() {}
-function emptyData() {}
-function normalizeData() {}
-function dataFromArticle() {}
-function contentHtml() {}
-function collectData() {}
-function isEmptyData() {}
-function renderCatPicker() {}
-function updateReviewUi() {}
-function setCover() {}
-let defaultPos = __no;
-function applyCrop() {}
-function setMainImage() {}
-function initCropper() {}
-function updateTagSuggest() {}
-let RECENT_TAGS_KEY = __no;
-function recentTags() {}
-function rememberTags() {}
-function tagStats() {}
-function suggestedTags() {}
-let moreTags = __no;
-function renderTagChips() {}
-let renderTagChipsSoon = __no;
-function toggleTag() {}
-function applyData() {}
-function updateCounters() {}
-function updateChecklist() {}
-async function insertImageFiles() {}
-function updateStats() {}
-let SIZE_LIMIT_KB = __no;
-function updateSizeMeter() {}
-let updateSizeMeterSoon = __no;
-function updatePublishUi() {}
-function setStatus() {}
-function captureContext() {}
-function writeBuffer() {}
-async function persistDraft() {}
-async function saveCloudDraft() {}
-function onFormChange() {}
-function leaveEditor() {}
-let GALLERY_MAX = __no;
-function openGalleryModal() {}
-function galleryError() {}
-function renderGalleryItems() {}
-async function addGalleryFiles() {}
-function addGalleryUrl() {}
-function submitGallery() {}
-function deleteGallery() {}
-function renderRelatedPicker() {}
-function articleQuotes() {}
-function articleImages() {}
-function buildIgPhotos() {}
-function openIgModal() {}
-function igFormat() {}
-let igThumbJob = __no;
-let igThumbCache = __no;
-let IG_TEXT_KINDS = __no;
-function igBgFor() {}
-function igBgMode() {}
-function igSlideTheme() {}
-function buildIgGrid() {}
-function refreshIgGrid() {}
-function updateIgUi() {}
-function cleanPastedHtml() {}
-function handleRichPaste() {}
-function openQuickModal() {}
-async function submitQuick() {}
-async function deleteQuick() {}
-async function shareQuick() {}
-async function renderQuickStory() {}
-async function shareQuickStory() {}
-async function ogJpegDataUrl() {}
-async function publishOg() {}
-async function refreshAllOg() {}
-function registerFigureBlot() {}
-function markdownLine() {}
-function initQuill() {}
-async function openEditor() {}
-async function discardRestored() {}
-async function saveArticle() {}
-function openPreview() {}
-function openImageModal() {}
-function setModalImage() {}
-function insertImageIntoEditor() {}
-let QM_MAX_MID = __no;
-let qmParts = __no;
-function qmRead() {}
-function qmRender() {}
-function qmAction() {}
-function openQuoteModal() {}
-function submitQuote() {}
-function openEmbedModal() {}
-function submitEmbed() {}
-function deleteEmbed() {}
-function deleteQuote() {}
-function deleteFigure() {}
-let AD_ST = __no;
-let AD_FMTS = __no;
-async function adImgBlob() {}
-async function renderAdSubs() {}
-async function renderModComments() {}
-function modApply() {}
-function userVerified() {}
-function modUserHtml() {}
-let MU_FILTERS = __no;
-function modUserFilter() {}
-async function loadModUsers() {}
-function renderModUsersPanel() {}
-function renderModeration() {}
-let fmtDT = __no;
-async function openUserProfile() {}
-let modQTimer = __no;
-async function loadProfile() {}
-let settingsAvatar = __no;
-function foreignArticles() {}
-let myUsername = __no;
-function fillAuthorNameFields() {}
-function syncAuthorName() {}
-let ASSIGN_PICKED = __no;
-function renderAssignList() {}
-function renderSettings() {}
-async function testPush() {}
-async function updateDevicePush() {}
-function updateSettingsAvatar() {}
-async function reassignAuthor() {}
-async function saveSettings() {}
-
 /* =========================================================
    1. KONFIGURACJA
    ========================================================= */
@@ -774,9 +616,18 @@ const LocalProvider = {
     return this._get(CONFIG.LOCAL_KEY);
   },
 
-  async save() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async save(article) {
+    const list = this._get(CONFIG.LOCAL_KEY);
+    const idx = list.findIndex(a => a.id === article.id);
+    if (idx >= 0) list[idx] = article; else list.push(article);
+    this._set(CONFIG.LOCAL_KEY, list);
+    this._emit();
+  },
 
-  async remove() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async remove(id) {
+    this._set(CONFIG.LOCAL_KEY, this._get(CONFIG.LOCAL_KEY).filter(a => a.id !== id));
+    this._emit();
+  },
 
   async getProfile() { return readLocalProfile(); },
   async saveProfile(p) { writeLocalProfile(p); },
@@ -788,17 +639,34 @@ const LocalProvider = {
     list.push(tip);
     this._set(CONFIG.LOCAL_TIPS_KEY, list);
   },
-  async getTips() { throw new Error('Niedostępne w wersji publicznej.'); },
-  async removeTip() { throw new Error('Niedostępne w wersji publicznej.'); },
-  async updateTip() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async getTips() {
+    return this._get(CONFIG.LOCAL_TIPS_KEY).sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  },
+  async removeTip(id) {
+    this._set(CONFIG.LOCAL_TIPS_KEY, this._get(CONFIG.LOCAL_TIPS_KEY).filter(t => t.id !== id));
+  },
+  async updateTip(id, patch) {
+    this._set(CONFIG.LOCAL_TIPS_KEY, this._get(CONFIG.LOCAL_TIPS_KEY).map(t => t.id === id ? { ...t, ...patch } : t));
+  },
 
-  async getDrafts() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async getDrafts() {
+    return this._get(CONFIG.LOCAL_DRAFTS_KEY).sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  },
 
-  async getDraft() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async getDraft(id) {
+    return this._get(CONFIG.LOCAL_DRAFTS_KEY).find(d => d.id === id) || null;
+  },
 
-  async saveDraft() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async saveDraft(draft) {
+    const list = this._get(CONFIG.LOCAL_DRAFTS_KEY);
+    const idx = list.findIndex(d => d.id === draft.id);
+    if (idx >= 0) list[idx] = draft; else list.push(draft);
+    this._set(CONFIG.LOCAL_DRAFTS_KEY, list);
+  },
 
-  async removeDraft() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async removeDraft(id) {
+    this._set(CONFIG.LOCAL_DRAFTS_KEY, this._get(CONFIG.LOCAL_DRAFTS_KEY).filter(d => d.id !== id));
+  },
 
   _emit() {
     const list = this._get(CONFIG.LOCAL_KEY);
@@ -820,12 +688,31 @@ const FirebaseProvider = {
     }
     const v = CONFIG.FIREBASE_SDK_VERSION;
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-app-compat.js`);
+    await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-auth-compat.js`);
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore-compat.js`);
 
     if (!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(cfg);
     this.db = firebase.firestore();
-    this.auth = null;
+    this.auth = firebase.auth();
 
+    // Zalogowany redaktor zostaje zalogowany, dopóki sam się nie wyloguje
+    try {
+      await this.auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    } catch (e) {
+      console.warn('Nie udało się ustawić trwałości sesji logowania:', e.code || e);
+    }
+
+    // Poczekaj, aż Firebase ustali, czy ktoś jest zalogowany (z limitem czasu)
+    await Promise.race([
+      new Promise(resolve => {
+        const off = this.auth.onAuthStateChanged(() => { off(); resolve(); });
+      }),
+      new Promise(resolve => setTimeout(resolve, 4000))
+    ]);
+    try {          // sesja redakcji wygasa po 24 godzinach od zalogowania
+      const u = this.auth.currentUser, t = u && u.metadata && Date.parse(u.metadata.lastSignInTime);
+      if (u && t && Date.now() - t > 24 * 3600e3) { await this.auth.signOut(); setTimeout(() => toast('Sesja wygasła – zaloguj się ponownie.'), 1500); }
+    } catch { /* ignoruj */ }
   },
 
   _wrap(err) {
@@ -883,11 +770,13 @@ const FirebaseProvider = {
   },
 
   // Wszystkie artykuły (także starsze niż limit na stronie) – do kopii zapasowej
-  async getAllArticles() {
-    if (!this.auth.currentUser) throw new Error('Zaloguj się, aby pobrać kopię zapasową.');
-    const snap = await this.col().get();
+  async getAllArticles(opts) {
+    if (!this.auth.currentUser && !(opts && opts.open)) throw new Error('Zaloguj się, aby pobrać kopię zapasową.');
+    const snap = (opts && opts.open) ? await this.col().orderBy('createdAt', 'desc').limit(1000).get() : await this.col().get();
     return snap.docs.map(d => d.data());
   },
+
+  async getArticleById(id) { const d = await this.col().doc(String(id)).get(); return d.exists ? d.data() : null; },
 
   async addTip(tip) {
     try {
@@ -924,7 +813,14 @@ const FirebaseProvider = {
     return null;
   },
 
-  async saveProfile() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async saveProfile(p) {
+    if (!this.auth.currentUser) throw new Error('Zaloguj się, aby zapisać ustawienia.');
+    try {
+      await this.db.collection('meta').doc('profile_' + this.auth.currentUser.uid).set(p);
+    } catch (err) {
+      throw this._wrap(err);
+    }
+  },
 
   async getDrafts() {
     if (!this.auth.currentUser) return [];
@@ -952,8 +848,14 @@ const FirebaseProvider = {
     }
   },
 
-  async saveOg() { throw new Error('Niedostępne w wersji publicznej.'); },
-  async removeOg() { throw new Error('Niedostępne w wersji publicznej.'); },
+  async saveOg(id, img) {
+    if (!this.auth.currentUser) return;
+    await this.db.collection(CONFIG.FIREBASE_OG_COLLECTION).doc(id).set({ img, updatedAt: new Date().toISOString() });
+  },
+  async removeOg(id) {
+    if (!this.auth.currentUser) return;
+    await this.db.collection(CONFIG.FIREBASE_OG_COLLECTION).doc(id).delete();
+  },
 
   async removeDraft(id) {
     if (!this.auth.currentUser) return;
@@ -1023,7 +925,8 @@ const DataService = {
   removeDraft(id) { return this.provider.removeDraft(id); },
   saveOg(id, img) { return this.provider.saveOg ? this.provider.saveOg(id, img) : Promise.resolve(); },
   removeOg(id) { return this.provider.removeOg ? this.provider.removeOg(id) : Promise.resolve(); },
-  getAllArticles() { return this.provider.getAllArticles(); },
+  getAllArticles(o) { return this.provider.getAllArticles(o); },
+  getArticleById(id) { return this.provider.getArticleById ? this.provider.getArticleById(id) : Promise.resolve(null); },
   addTip(t) { return this.provider.addTip(t); },
   getTips() { return this.provider.getTips(); },
   removeTip(id) { return this.provider.removeTip(id); },
@@ -1042,14 +945,87 @@ function authError(code) {
 }
 
 const Auth = {
-  mode: 'offline',
-  uid() { return ''; },
-  get useFirebase() { return false; },
-  isAdmin() { return false; },
-  async login() { throw authError('app/offline'); },
-  async logout() {},
-  onChange() {},
-  explain() { return 'Logowanie redakcji jest dostępne tylko w środowisku deweloperskim.'; }
+  mode: 'local',
+
+  /** Identyfikator zalogowanego redaktora – wersje robocze są przypisane do niego. */
+  uid() {
+    if (this.mode === 'firebase') {
+      const user = FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
+      return user ? user.uid : '';
+    }
+    return 'local';
+  },
+
+  get useFirebase() { return this.mode === 'firebase'; },
+
+  isAdmin() {
+    if (this.mode === 'firebase') {
+      const user = FirebaseProvider.auth && FirebaseProvider.auth.currentUser;
+      if (!user) return false;
+      return !CONFIG.ADMIN_UID || user.uid === CONFIG.ADMIN_UID;
+    }
+    if (this.mode === 'offline') return false;
+    try { return localStorage.getItem(CONFIG.SESSION_KEY) === '1'; } catch { return false; }
+  },
+
+  async login(email, password) {
+    if (this.mode === 'offline') throw authError('app/offline');
+    if (this.mode === 'firebase') {
+      await FirebaseProvider.auth.signInWithEmailAndPassword(email, password);
+      if (!this.isAdmin()) {
+        await FirebaseProvider.auth.signOut();
+        throw authError('app/not-editor');
+      }
+      return;
+    }
+    if (password !== CONFIG.ADMIN_PASSWORD) throw authError('app/wrong-password');
+    try { localStorage.setItem(CONFIG.SESSION_KEY, '1'); } catch { /* ignoruj */ }
+  },
+
+  async logout() {
+    if (this.mode === 'firebase') {
+      try { await FirebaseProvider.auth.signOut(); } catch (e) { console.warn(e); }
+      return;
+    }
+    try { localStorage.removeItem(CONFIG.SESSION_KEY); sessionStorage.removeItem(CONFIG.SESSION_KEY); } catch { /* ignoruj */ }
+  },
+
+  // Wywołuje funkcję przy każdej zmianie stanu logowania (tylko tryb Firebase)
+  onChange(cb) {
+    if (this.mode === 'firebase') FirebaseProvider.auth.onAuthStateChanged(cb);
+  },
+
+  explain(err) {
+    const code = (err && err.code) || '';
+    switch (code) {
+      case 'app/wrong-password':
+        return 'Nieprawidłowe hasło.';
+      case 'app/offline':
+        return 'Brak połączenia z bazą danych. Spróbuj ponownie za chwilę.';
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return 'Nieprawidłowy e-mail lub hasło.';
+      case 'auth/invalid-email':
+        return 'Nieprawidłowy adres e-mail.';
+      case 'auth/missing-password':
+        return 'Wpisz hasło.';
+      case 'auth/too-many-requests':
+        return 'Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut.';
+      case 'auth/operation-not-allowed':
+        return 'Logowanie e-mailem nie jest włączone w Firebase (Authentication → Sign-in method).';
+      case 'auth/operation-not-supported-in-this-environment':
+        return 'Logowanie wymaga adresu http(s). Uruchom stronę przez lokalny serwer lub hosting, a nie przez dwuklik na plik.';
+      case 'auth/network-request-failed':
+        return 'Brak połączenia z internetem.';
+      case 'auth/unauthorized-domain':
+        return 'Ta domena nie jest dodana w Firebase (Authentication → Settings → Authorized domains).';
+      case 'app/not-editor':
+        return 'To konto nie ma uprawnień redaktora.';
+      default:
+        return 'Nie udało się zalogować.' + (code ? ' (' + code + ')' : '');
+    }
+  }
 };
 
 /* =========================================================
@@ -1219,7 +1195,7 @@ async function actorAuth() {
   } catch { /* brak tokenu – działamy anonimowo */ }
   return {};
 }
-const isStaffActor = () => false;
+const isStaffActor = () => !(typeof Readers !== 'undefined' && Readers.user) && Auth.isAdmin() && !!(FirebaseProvider.auth && FirebaseProvider.auth.currentUser);
 const staffName = () => isStaffActor() ? ((state.profile && state.profile.name) || 'Redakcja') : undefined;
 async function actorApi(path, opts = {}) {
   const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...(await actorAuth()), ...(opts.headers || {}) }, cache: 'no-store' });
@@ -2678,7 +2654,406 @@ async function renderInstagramImage(a, opts = {}) {
 }
 
 
-/*@staff-removed*/
+/* ---------- Karuzela: katalog slajdów do wyboru ---------- */
+const IG_SLIDES = [
+  { k: 'cover',    name: 'Okładka',        desc: 'zdjęcie + tytuł',     file: 'okladka' },
+  { k: 'title',    name: 'Sam tytuł',      desc: 'wielka typografia',   file: 'tytul' },
+  { k: 'photo',    name: 'Zdjęcie',        desc: 'bez tekstu',          file: 'zdjecie' },
+  { k: 'photoquote', name: 'Cytat na zdjęciu', desc: 'zdjęcie + cytat',   file: 'cytat-zdjecie' },
+  { k: 'photolead', name: 'Zajawka na zdjęciu', desc: 'zdjęcie + skrót', file: 'zajawka-zdjecie' },
+  { k: 'lead',     name: 'W skrócie',      desc: 'zajawka artykułu',    file: 'w-skrocie' },
+  { k: 'sentence', name: 'Kluczowe zdanie', desc: 'z treści artykułu',  file: 'zdanie' },
+  { k: 'quote',    name: 'Cytat',          desc: 'z artykułu',          file: 'cytat' },
+  { k: 'score',    name: 'Ocena',          desc: 'recenzja z punktami', file: 'ocena', need: a => !!(a.review && a.review.score != null), why: 'to nie recenzja' },
+  { k: 'author',   name: 'Autor',          desc: 'kto napisał',         file: 'autor' },
+  { k: 'ask',      name: 'Pytanie',        desc: 'do komentarzy',       file: 'pytanie' },
+  { k: 'link',     name: 'Link',           desc: 'całość na stronie',   file: 'link' }
+];
+
+function keySentence(a) {
+  const plain = (state.plain && state.plain.get(a.id)) || Utils.stripHtml(a.content || '');
+  const sents = (plain.match(/[^.!?\n]+[.!?]/g) || []).map(s => s.replace(/\s+/g, ' ').trim());
+  const lead = String(a.lead || '').trim();
+  const pick = sents.find(s => s.length >= 55 && s.length <= 150 && !lead.startsWith(s.slice(0, 40)));
+  return pick || lead || a.title;
+}
+
+function fitText(ctx, family, text, maxW, maxH, start, min, weight = 800, k = 1.15) {
+  let size = start, lines = [];
+  for (; size >= min; size -= 2) {
+    ctx.font = `${weight} ${size}px ${family}`;
+    lines = String(text).split(/\n+/).flatMap(p => wrapLines(ctx, p, maxW));
+    if (lines.length * size * k <= maxH && lines.every(l => ctx.measureText(l).width <= maxW)) break;
+  }
+  return { size, lines, lh: Math.round(size * k) };
+}
+
+/** Faktura tła slajdów tekstowych: rozmyte zdjęcie artykułu (przesuwa się z numerem slajdu), gwiazda i ukośne linie. */
+async function slideTexture(ctx, a, W, H, red, o) {
+  const idx = Math.max(0, (o.idx || 1) - 1);
+  try {
+    const src = getImage(a);
+    const img = await loadImage(src, !src.startsWith('data:'));
+    const sw = 32, sh = Math.round(32 * H / W);
+    const sm = document.createElement('canvas'); sm.width = sw; sm.height = sh;
+    const sx = sm.getContext('2d');
+    const iw = img.naturalWidth || sw, ih = img.naturalHeight || sh;
+    const k = Math.max(sw / iw, sh / ih) * 1.7, dw = iw * k, dh = ih * k;
+    sx.drawImage(img, -(dw - sw) * ((idx * 0.29 + 0.1) % 1), -(dh - sh) * 0.35, dw, dh);
+    ctx.save();
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.globalAlpha = red ? 0.30 : 0.42; ctx.globalCompositeOperation = red ? 'soft-light' : 'screen';
+    ctx.drawImage(sm, 0, 0, W, H);
+    ctx.restore();
+  } catch { /* bez zdjęcia: tylko gradient */ }
+  // ukośne linie
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.055)'; ctx.lineWidth = 2;
+  for (let x = -H; x < W + H; x += 64) { ctx.beginPath(); ctx.moveTo(x, H); ctx.lineTo(x + H * 0.55, 0); ctx.stroke(); }
+  ctx.restore();
+  // duża gwiazda z logo – w innym rogu na każdym slajdzie
+  const spots = [[W * .92, H * .78, .18], [W * .08, H * .62, -.25], [W * .88, H * .52, .1], [W * .15, H * .84, -.1]];
+  const [sxp, syp, rot] = spots[idx % spots.length];
+  ctx.save();
+  ctx.translate(sxp, syp); ctx.rotate(rot); ctx.fillStyle = 'rgba(255,255,255,.075)';
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) { const r = i % 2 ? 190 : 470, ang = -Math.PI / 2 + i * Math.PI / 5; ctx.lineTo(Math.cos(ang) * r, Math.sin(ang) * r); }
+  ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+/** Rysuje jeden slajd karuzeli. theme: 'red' | 'dark'. Zwraca { canvas, photoOk }. */
+async function drawSlide(a, kind, theme, o = {}) {
+  const W = 1080, H = 1350, PAD = 72, red = theme === 'red';
+  const ac = red ? '#fff' : '#d6001c', on = red ? '#d6001c' : '#fff';
+  let canvas, ctx, family, photoOk = true;
+  if (kind === 'cover' || kind === 'photo' || kind === 'photoquote' || kind === 'photolead') {
+    const bd = await igBackdrop(a, W, H, null);
+    ({ canvas, ctx, family, photoOk } = bd);
+    const g = ctx.createLinearGradient(0, 0, 0, H);
+    // zdjęcie zawsze z neutralnym, ciemnym przyciemnieniem (bez czerwonej poświaty)
+    g.addColorStop(0, 'rgba(0,0,0,.55)'); g.addColorStop(.45, 'rgba(0,0,0,.18)'); g.addColorStop(1, 'rgba(0,0,0,.93)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+  } else {
+    family = getComputedStyle(document.body).fontFamily;
+    try { await Promise.all([document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 30px ${family}`, PL_SAMPLE)]); } catch {}
+    canvas = document.createElement('canvas'); canvas.width = W; canvas.height = H;
+    ctx = canvas.getContext('2d');
+    if (red) {
+      const g = ctx.createLinearGradient(0, 0, W, H); g.addColorStop(0, '#f2002a'); g.addColorStop(1, '#6d000e');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const r = ctx.createRadialGradient(W * .9, 0, 0, W * .9, 0, 760); r.addColorStop(0, 'rgba(255,60,80,.55)'); r.addColorStop(1, 'rgba(255,60,80,0)');
+      ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
+    } else {
+      const g = ctx.createLinearGradient(0, 0, W * .3, H); g.addColorStop(0, '#1b1030'); g.addColorStop(1, '#0b0b10');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const r = ctx.createRadialGradient(W, 0, 0, W, 0, 800); r.addColorStop(0, 'rgba(88,40,160,.7)'); r.addColorStop(1, 'rgba(88,40,160,0)');
+      ctx.fillStyle = r; ctx.fillRect(0, 0, W, H);
+    }
+    if (o.bgPhoto && a.image) {
+      try {
+        const im = await loadImage(a.image, !String(a.image).startsWith('data:'));
+        const iw = im.naturalWidth || W, ih = im.naturalHeight || H, k = Math.max(W / iw, H / ih);
+        ctx.drawImage(im, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+        ctx.fillStyle = red ? 'rgba(150,0,18,.66)' : 'rgba(8,8,12,.74)'; ctx.fillRect(0, 0, W, H);
+      } catch { /* zostaje płaski kolor */ }
+    }
+    // wielka obrysowa cyfra numeru slajdu jako faktura (zamiast gradientów)
+    if (o.idx) {
+      ctx.save();
+      ctx.font = `900 760px ${family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'alphabetic';
+      ctx.lineWidth = 4; ctx.strokeStyle = red ? 'rgba(255,255,255,.16)' : 'rgba(255,255,255,.10)';
+      ctx.strokeText(String(o.idx).padStart(2, '0'), W + 40, H - 120);
+      ctx.restore();
+    }
+  }
+  await drawLogoWhite(ctx, PAD, PAD, 330, family);
+
+  const chip = (text, y = 250) => drawKicker(ctx, text, PAD, y, { family, line: ac });
+  const bar = (y, h) => { ctx.fillStyle = ac; ctx.fillRect(PAD, y, 8, h); };
+  const top = 350, bottom = H - 150, maxW = W - PAD * 2;
+  const cat = (Utils.catsOf(a)[0] || 'News').toUpperCase();
+  const centerBlock = (lh, n) => top + Math.max(0, ((bottom - top) - lh * n) / 2);
+
+  if (kind === 'cover') {
+    const f = fitText(ctx, family, a.title, maxW, 560, 96, 52, 800, 1.1);
+    const tTop = bottom - f.lines.length * f.lh;
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD, tTop + i * f.lh));
+    chip(cat, tTop - 28 - 56);
+  } else if (kind === 'photoquote' || kind === 'photolead') {
+    const isQ = kind === 'photoquote';
+    chip(isQ ? 'CYTAT' : 'W SKRÓCIE');
+    const text = isQ ? ((o.quote && o.quote.text) || keySentence(a)) : ((o.summary || '').trim() || a.lead || a.title);
+    const f = fitText(ctx, family, isQ ? '„' + text.replace(/^„|”$/g, '') + '”' : text, maxW - 36, 640, isQ ? 70 : 60, 34, isQ ? 800 : 700, 1.22);
+    const hasAu = isQ && o.quote && o.quote.author;
+    const y0 = bottom - f.lines.length * f.lh - (hasAu ? 56 : 0);
+    bar(y0 - 4, f.lines.length * f.lh + 4 + (hasAu ? 50 : 0));
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `${isQ ? 800 : 700} ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD + 36, y0 + i * f.lh));
+    if (isQ && o.quote && o.quote.author) {
+      ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 34px ${family}`; ctx.fillText('— ' + o.quote.author, PAD + 36, y0 + f.lines.length * f.lh + 18);
+    }
+  } else if (kind === 'title') {
+    chip(cat);
+    const f = fitText(ctx, family, a.title, maxW, bottom - top - 120, 128, 56, 900, 1.06);
+    const y0 = centerBlock(f.lh, f.lines.length) - 30;
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD, y0 + i * f.lh));
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.font = `700 36px ${family}`;
+    ctx.fillText([a.author, Utils.formatDate(a.createdAt)].filter(Boolean).join('  ·  '), PAD, y0 + f.lines.length * f.lh + 40);
+  } else if (kind === 'photo') {
+    // samo zdjęcie
+  } else if (kind === 'lead' || kind === 'sentence') {
+    chip(kind === 'lead' ? 'W SKRÓCIE' : 'WARTO WIEDZIEĆ');
+    const text = kind === 'lead' ? ((o.summary || '').trim() || a.lead || a.title) : keySentence(a);
+    const f = fitText(ctx, family, text, maxW - 40, bottom - top, kind === 'lead' ? 62 : 78, 30, kind === 'lead' ? 700 : 800, 1.28);
+    const y0 = centerBlock(f.lh, f.lines.length);
+    bar(y0 - 4, f.lines.length * f.lh + 4);
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `${kind === 'lead' ? 700 : 800} ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD + 36, y0 + i * f.lh));
+  } else if (kind === 'quote') {
+    chip('CYTAT');
+    const text = (o.quote && o.quote.text) || keySentence(a), author = (o.quote && o.quote.author) || '';
+    const f = fitText(ctx, family, text, maxW - 20, bottom - top - 260, 72, 34, 800, 1.22);
+    const y0 = centerBlock(f.lh + 0, f.lines.length) + 40;
+    ctx.fillStyle = ac; ctx.font = `800 300px ${family}`; ctx.textBaseline = 'alphabetic'; ctx.fillText('“', PAD - 6, y0 - 10);
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD + 4, y0 + i * f.lh));
+    if (author) {
+      const ay = y0 + f.lines.length * f.lh + 36;
+      ctx.fillStyle = ac; ctx.fillRect(PAD + 4, ay + 22, 64, 6);
+      ctx.fillStyle = '#fff'; ctx.font = `700 42px ${family}`; ctx.fillText(author, PAD + 88, ay);
+    }
+  } else if (kind === 'score') {
+    chip('OCENA');
+    const r = a.review || {};
+    const cx = W / 2, cy = 640, R0 = 190;
+    ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 40; ctx.shadowOffsetY = 18;
+    ctx.fillStyle = red ? '#fff' : '#d6001c'; ctx.beginPath(); ctx.arc(cx, cy, R0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    ctx.fillStyle = red ? '#d6001c' : '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.font = `900 190px ${family}`; ctx.fillText(String(r.score).replace('.', ','), cx, cy + 8);
+    const f = fitText(ctx, family, r.work || a.title, maxW, 200, 72, 40, 800, 1.1);
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
+    f.lines.slice(0, 2).forEach((l, i) => ctx.fillText(l, cx, 905 + i * f.lh));
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 36px ${family}`;
+    ctx.fillText([r.artist, r.kind, r.year].filter(Boolean).join('  ·  '), cx, 905 + Math.min(2, f.lines.length) * f.lh + 18);
+    ctx.textAlign = 'left';
+  } else if (kind === 'tags') {
+    chip('O KIM MOWA');
+    const tags = Utils.tagsOf(a).slice(0, 10);
+    ctx.font = `800 52px ${family}`; ctx.textBaseline = 'middle';
+    const hgt = 100;
+    let rowsN = 1, xx = PAD;
+    tags.forEach(t => { const w = ctx.measureText('#' + t.replace(/\s+/g, '')).width + 60; if (xx + w > W - PAD) { xx = PAD; rowsN++; } xx += w + 20; });
+    const blockH = rowsN * hgt + (rowsN - 1) * 24;
+    let x = PAD, y = top + Math.max(0, Math.round(((bottom - top) - blockH) / 2));
+    tags.forEach(t => {
+      const label = '#' + t.replace(/\s+/g, '');
+      const w = ctx.measureText(label).width + 60;
+      if (x + w > W - PAD) { x = PAD; y += hgt + 24; }
+      ctx.fillStyle = 'rgba(255,255,255,.14)'; roundRect(ctx, x, y, w, hgt, hgt / 2); ctx.fill();
+      ctx.strokeStyle = ac; ctx.lineWidth = 3; roundRect(ctx, x, y, w, hgt, hgt / 2); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.fillText(label, x + 30, y + hgt / 2 + 2);
+      x += w + 20;
+    });
+  } else if (kind === 'author') {
+    chip('AUTOR');
+    const cx = W / 2, cy = 560, r = 150;
+    let drew = false;
+    const photo = a.authorPhoto || (state.profile && state.profile.avatar && authorKey(a.author) === authorKey(state.profile.name) ? state.profile.avatar : '');
+    if (photo) {
+      try {
+        const im = await loadImage(photo, !photo.startsWith('data:'));
+        ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+        const k = Math.max(2 * r / im.naturalWidth, 2 * r / im.naturalHeight);
+        ctx.drawImage(im, cx - im.naturalWidth * k / 2, cy - im.naturalHeight * k / 2, im.naturalWidth * k, im.naturalHeight * k);
+        ctx.restore(); drew = true;
+      } catch { /* inicjały */ }
+    }
+    if (!drew) {
+      ctx.fillStyle = ac; ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+      const ini = String(a.author || 'ŚN').split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+      ctx.fillStyle = on; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = `900 120px ${family}`; ctx.fillText(ini, cx, cy + 6);
+    }
+    ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+    const f = fitText(ctx, family, a.author || 'Redakcja', maxW, 130, 84, 44, 900, 1.1);
+    ctx.fillStyle = '#fff'; ctx.font = `900 ${f.size}px ${family}`; ctx.fillText(f.lines[0], cx, 770);
+    ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 38px ${family}`;
+    ctx.fillText('autor tekstu w Śliska News', cx, 880);
+    ctx.fillText(`${Utils.formatDate(a.createdAt)}  ·  ${Math.max(1, Math.round(((state.plain.get(a.id) || '').split(/\s+/).length) / 200))} min czytania`, cx, 940);
+    ctx.textAlign = 'left';
+  } else if (kind === 'ask') {
+    chip('DYSKUSJA');
+    const f = fitText(ctx, family, 'A Ty co o tym sądzisz?', maxW, 480, 120, 60, 900, 1.05);
+    const t0 = fitText(ctx, family, '„' + a.title + '”', maxW - 40, 220, 44, 30, 600, 1.25);
+    const askH = f.lines.length * f.lh + 50 + t0.lines.length * t0.lh + 70 + 96;
+    const y0 = top + Math.max(0, Math.round(((bottom - top) - askH) / 2));
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 ${f.size}px ${family}`;
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD, y0 + i * f.lh));
+    const sy = y0 + f.lines.length * f.lh + 50;
+    const t = fitText(ctx, family, '„' + a.title + '”', maxW - 40, 220, 44, 30, 600, 1.25);
+    bar(sy - 4, t.lines.length * t.lh + 4);
+    ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = `600 ${t.size}px ${family}`;
+    t.lines.forEach((l, i) => ctx.fillText(l, PAD + 36, sy + i * t.lh));
+    const py = Math.min(bottom - 96, sy + t.lines.length * t.lh + 70);
+    ctx.font = `800 40px ${family}`; const pt = 'Napisz w komentarzu ↓'; const pw = ctx.measureText(pt).width + 80;
+    ctx.fillStyle = ac; roundRect(ctx, PAD, py, pw, 96, 48); ctx.fill();
+    ctx.fillStyle = on; ctx.textBaseline = 'middle'; ctx.fillText(pt, PAD + 40, py + 50);
+  } else if (kind === 'app') {
+    chip('APLIKACJA');
+    try { const ic = await loadImage(APP_BASE + 'icons/icon-512.png'); ctx.save(); roundRect(ctx, PAD, top, 180, 180, 42); ctx.clip(); ctx.drawImage(ic, PAD, top, 180, 180); ctx.restore(); } catch {}
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 84px ${family}`;
+    ctx.fillText('Mamy aplikację!', PAD, top + 230);
+    ctx.font = `600 40px ${family}`; ctx.fillStyle = 'rgba(255,255,255,.9)';
+    wrapLines(ctx, 'Dodaj Śliska News do ekranu głównego telefonu – bez sklepu, w kilka sekund.', maxW).forEach((l, i) => ctx.fillText(l, PAD, top + 345 + i * 52));
+    [['iPhone', 'Udostępnij → Do ekranu początkowego'], ['Android', 'Menu ⋮ → Zainstaluj aplikację']].forEach(([t1, t2], i) => {
+      const y = top + 520 + i * 140;
+      ctx.fillStyle = 'rgba(255,255,255,.14)'; roundRect(ctx, PAD, y, maxW, 116, 28); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = `800 34px ${family}`; ctx.fillText(t1, PAD + 30, y + 16);
+      ctx.font = `600 32px ${family}`; ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fillText(t2, PAD + 30, y + 62);
+    });
+  } else if (kind === 'save') {
+    chip('ZAPISZ');
+    const bx = PAD, by = top + Math.max(0, Math.round(((bottom - top) - 700) / 2));
+    ctx.fillStyle = ac; ctx.beginPath();
+    ctx.moveTo(bx, by); ctx.lineTo(bx + 200, by); ctx.lineTo(bx + 200, by + 280); ctx.lineTo(bx + 100, by + 210); ctx.lineTo(bx, by + 280); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `900 100px ${family}`;
+    ctx.fillText('Zapisz', PAD, by + 330); ctx.fillText('ten post', PAD, by + 330 + 108);
+    ctx.font = `600 42px ${family}`; ctx.fillStyle = 'rgba(255,255,255,.9)';
+    wrapLines(ctx, 'Wróć do niego później albo wyślij znajomemu, który musi to zobaczyć.', maxW).forEach((l, i) => ctx.fillText(l, PAD, by + 330 + 250 + i * 56));
+  } else if (kind === 'link') {
+    chip('CAŁOŚĆ NA STRONIE');
+    const f = fitText(ctx, family, a.title, maxW, 460, 84, 44, 800, 1.1);
+    ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.font = `800 ${f.size}px ${family}`;
+    const lh0 = f.lines.length * f.lh + 60 + 96;
+    const ty = top + Math.max(0, Math.round(((bottom - top) - lh0) / 2));
+    f.lines.forEach((l, i) => ctx.fillText(l, PAD, ty + i * f.lh));
+    const y = ty + f.lines.length * f.lh + 60;
+    ctx.font = `800 44px ${family}`; if ('letterSpacing' in ctx) ctx.letterSpacing = '4px';
+    const pill = 'LINK W BIO', pw = ctx.measureText(pill).width + 90;
+    ctx.fillStyle = ac; roundRect(ctx, PAD, y, pw, 96, 48); ctx.fill();
+    ctx.fillStyle = on; ctx.textBaseline = 'middle'; ctx.fillText(pill, PAD + 45, y + 50);
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '0px';
+  }
+  // rama + licznik w prawym górnym rogu + zachęta do przesuwania
+  ctx.save();
+  ctx.strokeStyle = 'rgba(255,255,255,.2)'; ctx.lineWidth = 2;
+  roundRect(ctx, 26, 26, W - 52, H - 52, 36); ctx.stroke();
+  if (o.idx) {
+    ctx.fillStyle = '#fff'; ctx.font = `800 34px ${family}`; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+    if ('letterSpacing' in ctx) ctx.letterSpacing = '2px';
+    ctx.fillText(`${String(o.idx).padStart(2, '0')} / ${String(o.total).padStart(2, '0')}`, W - PAD, PAD + 29);
+  }
+  ctx.restore();
+  drawFooterStd(ctx, W, H, family, o.idx ? (o.idx < o.total ? 'Przesuń →' : 'Link w bio') : '');
+  return { canvas, photoOk };
+}
+
+/** Prosty ZIP bez kompresji (obrazy PNG i tak są skompresowane). */
+async function makeZip(files) {
+  const enc = new TextEncoder();
+  const table = [];
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; table[n] = c >>> 0; }
+  const crc32 = data => { let c = 0xFFFFFFFF; for (let i = 0; i < data.length; i++) c = table[(c ^ data[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; };
+  const parts = [], central = [];
+  let offset = 0;
+  const d = new Date();
+  const dosTime = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosDate = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  for (const f of files) {
+    const data = new Uint8Array(await f.blob.arrayBuffer());
+    const name = enc.encode(f.name);
+    const crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true); lh.setUint16(8, 0, true);
+    lh.setUint16(10, dosTime, true); lh.setUint16(12, dosDate, true); lh.setUint32(14, crc, true);
+    lh.setUint32(18, data.length, true); lh.setUint32(22, data.length, true); lh.setUint16(26, name.length, true); lh.setUint16(28, 0, true);
+    parts.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true); ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true);
+    ch.setUint16(12, dosTime, true); ch.setUint16(14, dosDate, true); ch.setUint32(16, crc, true);
+    ch.setUint32(20, data.length, true); ch.setUint32(24, data.length, true); ch.setUint16(28, name.length, true);
+    ch.setUint32(42, offset, true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((s, p) => s + p.length, 0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0, 0x06054b50, true); end.setUint16(8, files.length, true); end.setUint16(10, files.length, true);
+  end.setUint32(12, cdSize, true); end.setUint32(16, offset, true);
+  return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: 'application/zip' });
+}
+
+/** Opis do wklejenia – dla X krótszy, z linkiem do artykułu. */
+function captionFor(a, format) {
+  if (format !== 'x') return instagramCaption(a);
+  const tags = Utils.tagsOf(a).slice(0, 2).map(t => '#' + t.replace(/[^\p{L}\p{N}]+/gu, '')).filter(t => t.length > 1);
+  return `${a.title}\n\n${articleUrl(a)}${tags.length ? '\n\n' + tags.join(' ') : ''}`;
+}
+
+/** Tworzy grafiki dla wybranego formatu (karuzela = kilka plików). */
+async function renderSocialSet(a, opts) {
+  const slug = Utils.slugify(a.title).slice(0, 50) || a.id;
+  const one = async (format, suffix, extra = {}) => {
+    const r = await renderInstagramImage(a, { ...opts, ...extra, format });
+    return { blob: r.blob, photoOk: r.photoOk, name: `sliska-news-${slug}${suffix}.png` };
+  };
+  if (opts.format !== 'carousel') {
+    const suffix = { story: '-story', quote: '-cytat', x: '-x', review: '-recenzja' }[opts.format] || '';
+    const r = await one(opts.format, suffix);
+    return { files: [r], photoOk: r.photoOk, zipName: '' };
+  }
+  const kinds = (opts.slides && opts.slides.length) ? opts.slides : ['cover', 'lead', 'link'];
+  const slides = [];
+  for (let i = 0; i < kinds.length; i++) {
+    const def = IG_SLIDES.find(s => s.k === kinds[i]);
+    const r = await drawSlide(a, kinds[i], i % 2 === 0 ? 'red' : 'dark', { idx: i + 1, total: kinds.length, quote: opts.quote, summary: opts.summary, bgPhoto: igBgFor(kinds[i], opts.bgMode, opts.bgKinds) });
+    const blob = await canvasBlob(r.canvas);
+    slides.push({ blob, photoOk: r.photoOk, name: `sliska-news-${slug}-${String(i + 1).padStart(2, '0')}-${def ? def.file : kinds[i]}.png` });
+  }
+  return { files: slides, photoOk: slides.every(s => s.photoOk), zipName: `sliska-news-${slug}-karuzela.zip` };
+}
+
+async function makeInstagramPost(id, btn, opts = {}) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  // opis kopiujemy od razu (w momencie kliknięcia), zanim przeglądarka zdąży wycofać zgodę na schowek
+  let copied = false;
+  const caption = captionFor(a, opts.format);
+  const copyPromise = (navigator.clipboard && navigator.clipboard.writeText)
+    ? navigator.clipboard.writeText(caption).then(() => { copied = true; }, () => {})
+    : Promise.resolve();
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
+  try {
+    const set = await renderSocialSet(opts.photo ? { ...a, image: opts.photo, _origImage: a.image } : a, opts);
+    await copyPromise;
+    const files = set.files.map(f => new File([f.blob], f.name, { type: 'image/png' }));
+    let shared = false;
+    if (window.matchMedia && matchMedia('(pointer: coarse)').matches && navigator.canShare && navigator.canShare({ files })) {
+      try { await navigator.share({ files }); shared = true; } catch (e) { if (e && e.name === 'AbortError') shared = true; }
+    }
+    if (!shared) {
+      const blob = files.length > 1 ? await makeZip(set.files) : set.files[0].blob;
+      const name = files.length > 1 ? set.zipName : set.files[0].name;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = name;
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+    closeModal('ig-modal');
+    toast((shared ? 'Grafika gotowa' : files.length > 1 ? 'Karuzela pobrana (ZIP)' : 'Grafika pobrana') + (copied ? ', opis skopiowany do schowka.' : '. Nie udało się skopiować opisu – skopiuj go ręcznie.')
+      + (set.photoOk ? '' : ' Zdjęcia z innej strony nie dało się wczytać, użyto tła zastępczego.'));
+    if (!copied) prompt('Opis posta (skopiuj):', caption);
+  } catch (e) {
+    toast('Nie udało się utworzyć grafiki: ' + (e && e.message ? e.message : 'błąd'));
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
 async function shareArticle(id) {
   const a = state.articles.find(x => x.id === id);
   if (!a) return;
@@ -2884,19 +3259,19 @@ function renderTipList() {
   const all = state.tips || [];
   const q = Utils.fold(tipQuery);
   const byKind = all.filter(t => tipKindFilter === 'all' || tipKind(t) === tipKindFilter);
-  const cnt = { open: 0, done: 0, rejected: 0, all: byKind.length };
-  byKind.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; else cnt[st]++; });
+  const cnt = { open: 0, progress: 0, later: 0, done: 0, rejected: 0, all: byKind.length };
+  byKind.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; if (st !== 'new') cnt[st]++; });
   const kc = k => all.filter(t => (k === 'all' || tipKind(t) === k) && TIP_OPEN.includes(tipStatus(t))).length;
   const kinds = [['all', 'Wszystkie'], ['topic', 'Tematy'], ['error', 'Błędy w artykułach']]
     .map(([k, l]) => `<button type="button" class="tip-kind${tipKindFilter === k ? ' is-active' : ''}" data-tipkind="${k}">${l}${kc(k) ? ` <i>${kc(k)}</i>` : ''}</button>`).join('');
-  const chips = [['open', 'Do rozpatrzenia'], ['done', tipKindFilter === 'error' ? 'Naprawione' : 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
+  const chips = [['open', 'Do rozpatrzenia'], ['progress', tipKindFilter === 'error' ? 'Poprawiam' : 'W toku'], ['later', 'Odłożone'], ['done', tipKindFilter === 'error' ? 'Naprawione' : 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
     .map(([k, l]) => `<button type="button" class="tip-filter${tipFilter === k ? ' is-active' : ''}" data-tipfilter="${k}">${l} <i>${cnt[k]}</i></button>`).join('');
   const list = byKind.filter(t => {
     const st = tipStatus(t);
     if (!(tipFilter === 'all' || (tipFilter === 'open' ? TIP_OPEN.includes(st) : st === tipFilter))) return false;
     return !q || Utils.fold([t.title, t.message, t.email].join(' ')).includes(q);
   });
-  const empty = q ? 'Nic nie pasuje do wyszukiwania.' : { open: 'Nic nie czeka na rozpatrzenie. 🎉', done: 'Nic jeszcze nie zostało zrealizowane.', rejected: 'Brak odrzuconych zgłoszeń.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
+  const empty = q ? 'Nic nie pasuje do wyszukiwania.' : { open: 'Nic nie czeka na rozpatrzenie. 🎉', progress: 'Nic nie jest teraz w toku.', later: 'Brak odłożonych zgłoszeń.', done: 'Nic jeszcze nie zostało zrealizowane.', rejected: 'Brak odrzuconych zgłoszeń.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
   const item = t => {
     const st = tipStatus(t), err = tipKind(t) === 'error', art = tipArticle(t);
     const label = err ? TIP_ERR_LABEL[st] : TIP_STATUS[st].label;
@@ -2918,7 +3293,7 @@ function renderTipList() {
           <div class="panel-item-actions">${quick}
             ${err && open ? '' : `<button type="button" class="btn btn-sm btn-primary" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status</button>`}
             ${!err && t.link ? `<a class="btn btn-sm" href="${Utils.esc(t.link)}" target="_blank" rel="noopener noreferrer">Źródło</a>` : ''}
-            ${t.email ? `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + title)}">Odpisz</a>` : ''}
+            ${t.email ? (isOwnerRole() ? `<button type="button" class="btn btn-sm" data-action="tip-mail" data-to="${Utils.esc(t.email)}" data-subj="${Utils.esc('Re: ' + title)}">✉ Napisz e-mail</button>` : `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + title)}">Odpisz</a>`) : ''}
             ${err && open ? `<button type="button" class="btn btn-sm" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status…</button>` : ''}
             <button type="button" class="btn btn-sm btn-danger" data-action="delete-tip" data-id="${Utils.esc(t.id)}">Usuń</button>
           </div>
@@ -3165,7 +3540,915 @@ function downloadFile(name, text, mime) {
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
 
-/*@staff-removed*/
+/* ---------- Kopia zapasowa ---------- */
+async function exportBackup() {
+  if (!canManage()) { toast('Kopię zapasową może pobrać tylko Właściciel Portalu.', 'error'); return; }
+  const btn = $('#backup-export');
+  btn.disabled = true;
+  try {
+    const [articles, cloudDrafts, profile, tips] = await Promise.all([
+      DataService.getAllArticles(),
+      DataService.getDrafts().catch(() => []),
+      DataService.getProfile().catch(() => null),
+      DataService.getTips().catch(() => [])
+    ]);
+    // do kopii trafiają też robocze kopie z tej przeglądarki, których nie ma jeszcze w bazie
+    const cloudIds = new Set(cloudDrafts.map(d => d.id));
+    const localDrafts = Object.entries(Buffers.all())
+      .filter(([id, b]) => !cloudIds.has(id) && b && b.data)
+      .map(([id, b]) => ({ id, articleId: b.articleId || null, savedAt: b.savedAt, ...b.data }));
+    const drafts = [...cloudDrafts, ...localDrafts];
+    const data = { app: 'sliska-news', version: 1, exportedAt: new Date().toISOString(), articles, drafts, profile, tips };
+    downloadFile('sliska-kopia-' + new Date().toISOString().slice(0, 10) + '.json', JSON.stringify(data), 'application/json');
+    toast(`Kopia zapisana: ${articles.length} art., ${drafts.length} rob.`);
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się przygotować kopii.', 'error');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function importBackup(file) {
+  if (!file) return;
+  if (!canManage()) { toast('Kopię zapasową może przywrócić tylko Właściciel Portalu.', 'error'); return; }
+  let data;
+  try {
+    data = JSON.parse(await file.text());
+  } catch {
+    toast('To nie jest poprawny plik kopii zapasowej.', 'error');
+    return;
+  }
+  const valid = data && data.app === 'sliska-news' && Array.isArray(data.articles)
+    ? data.articles.filter(a => a && /^[\w-]{1,100}$/.test(String(a.id)) && typeof a.title === 'string' && a.createdAt).slice(0, 500)
+    : null;
+  if (!valid) { toast('To nie jest plik kopii zapasowej Śliska News.', 'error'); return; }
+  const draftsIn = Array.isArray(data.drafts)
+    ? data.drafts.filter(d => d && /^[\w-]{1,100}$/.test(String(d.id))).slice(0, 200)
+    : [];
+  if (!confirm(`Przywrócić z kopii: ${valid.length} artykułów i ${draftsIn.length} wersji roboczych?\nElementy o tych samych identyfikatorach zostaną nadpisane.`)) return;
+  let done = 0;
+  let failed = 0;
+  for (const a of valid) {
+    try { await DataService.save(a); done++; } catch (err) { console.warn(err); failed++; }
+  }
+  let draftsDone = 0;
+  for (const d of draftsIn) {
+    try { await DataService.saveDraft(d); draftsDone++; } catch (err) { console.warn(err); failed++; }
+  }
+  toast(`Przywrócono: ${done} artykułów, ${draftsDone} roboczych${failed ? `, błędy: ${failed}` : ''}.`, failed ? 'error' : 'info');
+}
+
+/* ---------- Panel redakcji: wersje robocze i zaplanowane ---------- */
+/** Id wersji roboczej edytowanego artykułu – osobne dla każdego redaktora. */
+function editDraftId(articleId) { return `edit_${Auth.uid() || 'anon'}_${articleId}`; }
+/** Wskaźnik „ostatni nowy artykuł w trakcie pisania” – osobny dla każdego redaktora. */
+function newPointerKey() { return `${CONFIG.NEW_POINTER_KEY}_${Auth.uid() || 'anon'}`; }
+
+/** Kopie robocze w tej przeglądarce: każdy wpis ma właściciela, cudzych nie widać (wpisy sprzed tej zmiany są widoczne dla wszystkich). */
+const Buffers = {
+  _raw() {
+    try { return JSON.parse(localStorage.getItem(CONFIG.BUFFER_KEY)) || {}; } catch { return {}; }
+  },
+  _mine(e) { return !!e && (!e.ownerUid || e.ownerUid === Auth.uid()); },
+  _all() {
+    const raw = this._raw();
+    const out = {};
+    for (const k of Object.keys(raw)) if (this._mine(raw[k])) out[k] = raw[k];
+    return out;
+  },
+  get(id) { return this._all()[id] || null; },
+  set(id, entry) {
+    const all = this._raw();
+    entry = { ...entry, ownerUid: Auth.uid() };
+    all[id] = entry;
+    try {
+      localStorage.setItem(CONFIG.BUFFER_KEY, JSON.stringify(all));
+      return true;
+    } catch {
+      // Za duże (zdjęcia) – spróbuj bez zdjęcia głównego w formie Base64
+      try {
+        const slim = JSON.parse(JSON.stringify(entry));
+        if (slim.data && String(slim.data.image).startsWith('data:')) slim.data.image = '';
+        all[id] = slim;
+        localStorage.setItem(CONFIG.BUFFER_KEY, JSON.stringify(all));
+        return true;
+      } catch { return false; }
+    }
+  },
+  remove(id) {
+    const all = this._raw();
+    if (id in all && this._mine(all[id])) {
+      delete all[id];
+      try { localStorage.setItem(CONFIG.BUFFER_KEY, JSON.stringify(all)); } catch { /* ignoruj */ }
+    }
+  },
+  all() { return this._all(); }
+};
+
+function clearPointer(draftId) {
+  try {
+    if (localStorage.getItem(newPointerKey()) === draftId) localStorage.removeItem(newPointerKey());
+  } catch { /* ignoruj */ }
+}
+
+const OWNER_TABS = ['tips', 'ads', 'users'];       // widzi tylko Właściciel Portalu: zgłoszenia tematów i błędów, reklamy od użytkowników, użytkownicy
+function applyOwnerTabs() {
+  const own = canManage();
+  OWNER_TABS.forEach(k => $$(`#view-panel [data-ptab="${k}"]`).forEach(b => { b.hidden = !own; }));
+  const bb = $('#backup-box'); if (bb) bb.hidden = !own;       // kopię zapasową (pobranie i przywrócenie JSON) ma tylko Właściciel
+}
+/** Dopiero gdy znamy rolę, doładowujemy dane tylko-dla-Właściciela (zgłoszenia tematów, liczba nowych reklam). */
+function ensureOwnerPanes() {
+  applyOwnerTabs();
+  if (currentRoute().name !== 'panel' || !canManage() || state.ownerLoaded) return;
+  state.ownerLoaded = true;
+  renderTips().then(updatePanelCounts);
+  adminApi('/admin/spot').then(d => { const n = (d.ads || []).filter(a => a.status === 'new').length; const b = $('#view-panel [data-ptab="ads"]'); if (b) b.dataset.count = n ? n : ''; }).catch(() => {});
+}
+function setPanelTab(t) {
+  holdHeight(2500);
+  applyOwnerTabs();
+  if (OWNER_TABS.includes(t) && !canManage() && !Readers.loading) t = 'drafts';
+  $$('#view-panel .ptab').forEach(b => { const on = b.dataset.ptab === t; b.classList.toggle('is-active', on); b.setAttribute('aria-selected', on); });
+  $$('#view-panel .ptab-pane').forEach(p => { p.hidden = p.dataset.pane !== t; });
+  try { sessionStorage.setItem('sliska_ptab', t); } catch { /* ignoruj */ }
+  if (t === 'comments') renderModeration(false);
+  if (t === 'users') renderModUsersPanel($('#panel-users'));
+  if (t === 'ads') renderAdSubs($('#panel-ads'));
+}
+
+function updatePanelCounts() {
+  const n = id => { const el = $('#' + id); return el ? el.querySelectorAll('.panel-item').length : 0; };
+  const me = (state.profile && state.profile.name) || '';
+  const set = (id, v) => { const el = $('#' + id); if (el) el.textContent = v; };
+  const tipsOpen = (state.tips || []).filter(t => TIP_OPEN.includes(tipStatus(t))).length;
+  set('kpi-drafts', n('panel-drafts')); set('kpi-sched', n('panel-scheduled')); set('kpi-tips', canManage() ? tipsOpen : 0);
+  set('kpi-mine', me ? publishedArticles().filter(a => authorKey(a.author) === authorKey(me)).length : publishedArticles().length);
+  const kl = $('#kpi-mine') && $('#kpi-mine').closest('a'); if (kl) kl.setAttribute('href', me ? '#/redaktor/' + encodeURIComponent(me) : '#/redakcja');
+  const tabs = { drafts: n('panel-drafts'), scheduled: n('panel-scheduled'), tips: canManage() ? tipsOpen : 0 };
+  $$('#view-panel .ptab').forEach(b => { if (!(b.dataset.ptab in tabs)) return; const c = tabs[b.dataset.ptab]; b.dataset.count = c ? c : ''; });
+}
+
+async function renderPanel() {
+  const h = new Date().getHours();
+  const hi = h < 5 ? 'Dobranoc' : h < 12 ? 'Dzień dobry' : h < 18 ? 'Cześć' : 'Dobry wieczór';
+  const first = (state.profile.name || '').split(/\s+/)[0];
+  $('#panel-hello').textContent = `${hi}${first ? ', ' + first : ''}. Oto Twoje materiały i narzędzia redakcji.`;
+  fillHub();
+  let t = state.profile.panelTab || 'drafts'; try { t = sessionStorage.getItem('sliska_ptab') || t; } catch { /* ignoruj */ }
+  state.ownerLoaded = false;
+  setPanelTab(t);
+  ensureOwnerPanes();
+  const dEl = $('#panel-drafts');
+  const sEl = $('#panel-scheduled');
+
+  const scheduled = scheduledArticles();
+  sEl.innerHTML = scheduled.length
+    ? scheduled.map(a => `<div class="panel-item">
+        <div class="panel-item-main">
+          <strong>${Utils.esc(a.title)}</strong>
+          <span class="muted">${Utils.esc(Utils.catsOf(a).join(', '))} · publikacja: ${Utils.formatDate(a.createdAt)}</span>
+        </div>
+        <div class="panel-item-actions">
+          <a class="btn btn-sm" href="#/artykul/${encodeURIComponent(a.id)}">Zobacz</a>
+          <a class="btn btn-sm" href="#/edytor/${encodeURIComponent(a.id)}">Edytuj</a>
+          <button type="button" class="btn btn-sm btn-primary" data-action="publish-now" data-id="${Utils.esc(a.id)}">Opublikuj teraz</button>
+          <button type="button" class="btn btn-sm btn-danger" data-action="delete" data-id="${Utils.esc(a.id)}">Usuń</button>
+        </div>
+      </div>`).join('')
+    : '<p class="muted">Brak zaplanowanych publikacji. W edytorze zaznacz „Zaplanuj publikację na później”.</p>';
+  updatePanelCounts();
+
+  dEl.innerHTML = '<p class="muted">Ładowanie…</p>';
+  let drafts = [];
+  try {
+    drafts = await DataService.getDrafts();
+  } catch (err) {
+    console.warn(err);
+    dEl.innerHTML = '<p class="form-error">Nie udało się wczytać wersji roboczych z bazy. Sprawdź reguły Firestore dla kolekcji „drafts”.</p>';
+    return;
+  }
+  if (currentRoute().name !== 'panel') return;
+
+  // Kopie z tej przeglądarki, których nie ma jeszcze w bazie (np. po nagłym zamknięciu karty)
+  const cloudIds = new Set(drafts.map(d => d.id));
+  const localOnly = Object.entries(Buffers.all())
+    .filter(([id, b]) => !cloudIds.has(id) && b && b.data)
+    .map(([id, b]) => ({ id, articleId: b.articleId || null, savedAt: b.savedAt, local: true, ...b.data }));
+
+  const items = [...localOnly, ...drafts].sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+
+  dEl.innerHTML = items.length
+    ? items.map(d => `<div class="panel-item">
+        <div class="panel-item-main">
+          <strong>${Utils.esc(d.title || '(bez tytułu)')}</strong>
+          <span class="muted">${Utils.esc(Utils.catsOf(d).join(', '))} · zapisano ${Utils.formatDate(d.savedAt)}${d.articleId ? ' · zmiany w opublikowanym artykule' : ''}${d.local ? ' · kopia z tej przeglądarki' : ''}</span>
+        </div>
+        <div class="panel-item-actions">
+          <a class="btn btn-sm btn-primary" href="#/szkic/${encodeURIComponent(d.id)}">Kontynuuj</a>
+          <button type="button" class="btn btn-sm btn-danger" data-action="delete-draft" data-id="${Utils.esc(d.id)}">Usuń</button>
+        </div>
+      </div>`).join('')
+    : '<p class="muted">Brak wersji roboczych. Wszystko, co zaczniesz pisać, zapisuje się tu automatycznie.</p>';
+  updatePanelCounts();
+}
+
+async function deleteDraft(id) {
+  if (!confirm('Usunąć tę wersję roboczą? Tej operacji nie można cofnąć.')) return;
+  try {
+    await DataService.removeDraft(id);
+    Buffers.remove(id);
+    clearPointer(id);
+    toast('Wersja robocza usunięta.');
+    renderPanel();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się usunąć wersji roboczej.', 'error');
+  }
+}
+
+async function publishNow(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  if (!confirm(`Opublikować teraz artykuł:\n„${a.title}”?`)) return;
+  const nowIso = new Date().toISOString();
+  const updated = { ...a, createdAt: nowIso, updatedAt: nowIso };
+  try {
+    await DataService.save(updated);
+    upsertLocalState(updated);
+    toast('Artykuł opublikowany.');
+    refreshViews();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się opublikować artykułu.', 'error');
+  }
+}
+
+function upsertLocalState(article) {
+  const idx = state.articles.findIndex(a => a.id === article.id);
+  const next = [...state.articles];
+  if (idx >= 0) next[idx] = article; else next.push(article);
+  setArticles(next);
+}
+
+let removeTarget = null;
+
+function openRemoveModal(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  removeTarget = id;
+  $('#remove-name').textContent = `„${a.title}”`;
+  openModal('remove-modal');
+}
+
+/** Zdejmuje artykuł ze strony i zapisuje go jako nową wersję roboczą. */
+async function unpublishToDraft(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  try {
+    const draft = { id: Utils.uid('d_'), articleId: null, ...dataFromArticle(a), savedAt: new Date().toISOString() };
+    await DataService.saveDraft(draft);
+    await DataService.remove(id);
+    setArticles(state.articles.filter(x => x.id !== id));
+    DataService.removeDraft(editDraftId(id)).catch(() => {});
+    Buffers.remove(editDraftId(id));
+    toast('Artykuł schowany do wersji roboczych.');
+    if (currentRoute().name === 'article') location.hash = '#/panel';
+    else refreshViews();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się przenieść artykułu do roboczych.', 'error');
+  }
+}
+
+async function deleteArticle(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  try {
+    await DataService.remove(id);
+    DataService.removeOg(id).catch(() => {});
+    setArticles(state.articles.filter(x => x.id !== id));
+    DataService.removeDraft(editDraftId(id)).catch(() => {});
+    Buffers.remove(editDraftId(id));
+    toast('Artykuł został usunięty.');
+    if (currentRoute().name === 'article') location.hash = '#/';
+    else refreshViews();
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się usunąć artykułu.', 'error');
+  }
+}
+
+/* ---------- Edytor: dane formularza ---------- */
+function defaultAuthor() {
+  let last = '';
+  try { last = localStorage.getItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid()) || ''; } catch { /* ignoruj */ }
+  return state.profile.name || last;
+}
+
+function emptyData() {
+  return {
+    title: '', lead: '', categories: state.profile.defaultCategory ? [state.profile.defaultCategory] : [], author: defaultAuthor(),
+    image: '', imagePos: null, imageCaption: '', imageSource: '', urgent: false, featured: false, commentsOff: false, status: '', related: [], content: '',
+    tags: '',
+    reviewOn: false, reviewScore: '', reviewKind: 'Albumy', reviewCoverSame: false, reviewCover: '', reviewWork: '', reviewArtist: '', reviewYear: '',
+    scheduleOn: false, scheduleAt: ''
+  };
+}
+
+function normalizeData(obj) {
+  const base = emptyData();
+  const o = obj || {};
+  return {
+    title: o.title ?? base.title,
+    lead: o.lead ?? base.lead,
+    categories: Utils.catsOf(o),
+    tags: Array.isArray(o.tags) ? o.tags.join(', ') : (typeof o.tags === 'string' ? o.tags : ''),
+    author: o.author ?? base.author,
+    image: o.image || '',
+    imagePos: o.imagePos && typeof o.imagePos === 'object' ? { x: Number(o.imagePos.x) || 50, y: Number(o.imagePos.y) || 50, z: Number(o.imagePos.z) || 1 } : null,
+    imageCaption: o.imageCaption || '',
+    imageSource: o.imageSource || '',
+    reviewOn: !!o.reviewOn,
+    reviewScore: o.reviewScore || '',
+    reviewKind: o.reviewKind || 'Albumy',
+    reviewCoverSame: !!o.reviewCoverSame,
+    reviewCover: o.reviewCover || '',
+    reviewWork: o.reviewWork || '',
+    reviewArtist: o.reviewArtist || '',
+    reviewYear: o.reviewYear || '',
+    urgent: !!o.urgent,
+    featured: !!o.featured,
+    commentsOff: !!o.commentsOff,
+    status: Utils.STATUSES[o.status] ? o.status : '',
+    related: Array.isArray(o.related) ? o.related.filter(x => typeof x === 'string').slice(0, 3) : [],
+    content: o.content || '',
+    scheduleOn: !!o.scheduleOn,
+    scheduleAt: o.scheduleAt || ''
+  };
+}
+
+function dataFromArticle(a) {
+  const future = !isPublished(a);
+  const r = a.review;
+  return normalizeData({
+    ...a,
+    reviewOn: !!(r && r.score !== null && r.score !== undefined),
+    reviewScore: r && r.score !== null && r.score !== undefined ? Utils.formatScore(r.score) : '',
+    reviewKind: r ? r.kind || 'Albumy' : 'Albumy',
+    // starsze recenzje (bez osobnej okładki) używały zdjęcia głównego
+    reviewCoverSame: r ? !!(r.coverSame || !r.cover) : false,
+    reviewCover: r ? r.cover || '' : '',
+    reviewWork: r ? r.work || '' : '',
+    reviewArtist: r ? r.artist || '' : '',
+    reviewYear: r ? r.year || '' : '',
+    scheduleOn: future,
+    scheduleAt: future ? Utils.toLocalInput(a.createdAt) : ''
+  });
+}
+
+function contentHtml() {
+  if (!editor.quill || editor.quill.getLength() <= 1) return '';
+  return Sanitizer.clean(editor.quill.root.innerHTML);
+}
+
+function collectData() {
+  return {
+    title: $('#f-title').value,
+    lead: $('#f-lead').value,
+    categories: $$('#f-categories input:checked').map(i => i.value),
+    tags: $('#f-tags').value,
+    author: editor.author || state.profile.name || 'Redaktor',
+    image: editor.image,
+    imagePos: editor.image ? { ...editor.pos } : null,
+    imageCaption: $('#f-image-caption').value,
+    imageSource: $('#f-image-source').value,
+    reviewOn: $('#f-review-on').checked,
+    reviewScore: $('#f-review-score').value,
+    reviewKind: $('#f-review-kind').value,
+    reviewCoverSame: $('#f-review-cover-same').checked,
+    reviewCover: editor.cover,
+    reviewWork: $('#f-review-work').value,
+    reviewArtist: $('#f-review-artist').value,
+    reviewYear: $('#f-review-year').value,
+    urgent: $('#f-urgent').checked,
+    featured: $('#f-featured').checked,
+    commentsOff: $('#f-comments-off').checked,
+    status: $('#f-status').value,
+    related: editor.related.slice(),
+    content: contentHtml(),
+    scheduleOn: $('#f-schedule-on').checked,
+    scheduleAt: $('#f-schedule-at').value
+  };
+}
+
+function isEmptyData(d) {
+  return !d.title.trim() && !d.lead.trim() && !d.content && !d.image && !d.reviewOn;
+}
+
+function renderCatPicker(selected = []) {
+  const cats = [...CATEGORIES, ...selected.filter(c => !CATEGORIES.includes(c))];
+  $('#f-categories').innerHTML = cats.map(c =>
+    `<label class="cat-option"><input type="checkbox" value="${Utils.esc(c)}"${selected.includes(c) ? ' checked' : ''}><span>${Utils.esc(c)}</span></label>`).join('');
+}
+
+function updateReviewUi() {
+  $('#review-fields').hidden = !$('#f-review-on').checked;
+  $('#cover-fields').hidden = $('#f-review-cover-same').checked;
+}
+
+function setCover(src) {
+  editor.cover = src || '';
+  const box = $('#f-review-cover-preview');
+  box.hidden = !editor.cover;
+  if (editor.cover) $('img', box).src = editor.cover;
+  $('#f-review-cover-url').value = editor.cover && !editor.cover.startsWith('data:') ? editor.cover : '';
+  if (!editor.cover) $('#f-review-cover-file').value = '';
+}
+
+const defaultPos = () => ({ x: 50, y: 50, z: 1 });
+function applyCrop() {
+  const img = $('#f-crop img'); if (!img) return;
+  const { x, y, z } = editor.pos;
+  img.style.objectPosition = `${x}% ${y}%`;
+  img.style.transformOrigin = `${x}% ${y}%`;
+  img.style.scale = z > 1 ? String(z) : '';
+  $('#f-crop-zoom').value = z;
+}
+function setMainImage(src, pos) {
+  editor.image = src || '';
+  editor.pos = pos && src ? { x: Number(pos.x) || 50, y: Number(pos.y) || 50, z: Math.min(3, Math.max(1, Number(pos.z) || 1)) } : defaultPos();
+  const box = $('#f-image-preview');
+  box.hidden = !editor.image;
+  updateChecklist();
+  if (editor.image) $('#f-crop img').src = editor.image;
+  applyCrop();
+  // pole URL pokazuje tylko zwykły link (nie Base64)
+  $('#f-image-url').value = editor.image && !editor.image.startsWith('data:') ? editor.image : '';
+  if (!editor.image) $('#f-image-file').value = '';
+}
+
+/** Kadrowanie zdjęcia głównego: przeciąganie ustawia punkt ostrości, suwak – przybliżenie (podgląd 16:9 = to, co zobaczą czytelnicy). */
+function initCropper() {
+  const frame = $('#f-crop'); if (!frame) return;
+  const img = $('img', frame);
+  let drag = null;
+  frame.addEventListener('pointerdown', e => {
+    if (!editor.image) return;
+    drag = { sx: e.clientX, sy: e.clientY, x: editor.pos.x, y: editor.pos.y };
+    frame.setPointerCapture(e.pointerId); frame.classList.add('is-drag'); e.preventDefault();
+  });
+  frame.addEventListener('pointermove', e => {
+    if (!drag) return;
+    const r = frame.getBoundingClientRect(), nw = img.naturalWidth, nh = img.naturalHeight;
+    if (!nw || !nh) return;
+    const k = Math.max(r.width / nw, r.height / nh), wi = nw * k, hi = nh * k, z = editor.pos.z;
+    const sx = (z - 1) * r.width + z * (wi - r.width), sy = (z - 1) * r.height + z * (hi - r.height);   // piksele przesunięcia na 1% zmiany punktu ostrości (×100)
+    if (sx > 0.5) editor.pos.x = Math.min(100, Math.max(0, drag.x - (e.clientX - drag.sx) * 100 / sx));
+    if (sy > 0.5) editor.pos.y = Math.min(100, Math.max(0, drag.y - (e.clientY - drag.sy) * 100 / sy));
+    applyCrop();
+  });
+  const end = () => { if (!drag) return; drag = null; frame.classList.remove('is-drag'); onFormChange(); };
+  frame.addEventListener('pointerup', end); frame.addEventListener('pointercancel', end);
+  $('#f-crop-zoom').addEventListener('input', e => { editor.pos.z = Number(e.target.value) || 1; applyCrop(); });
+  $('#f-crop-zoom').addEventListener('change', () => onFormChange());
+  $('#f-crop-reset').addEventListener('click', () => { editor.pos = defaultPos(); applyCrop(); onFormChange(); });
+}
+
+/** Podpowiedzi tagów: istniejące tagi i wykonawcy z recenzji. */
+function updateTagSuggest() {
+  const set = new Map();
+  state.articles.forEach(a => {
+    Utils.tagsOf(a).forEach(t => set.set(t.toLowerCase(), t));
+    if (a.review && a.review.artist) set.set(a.review.artist.toLowerCase(), a.review.artist);
+  });
+  $('#tag-suggest').innerHTML = [...set.values()].sort((p, q) => p.localeCompare(q, 'pl')).map(t => `<option value="${Utils.esc(t)}">`).join('');
+}
+
+/* ---------- Propozycje tagów ---------- */
+const RECENT_TAGS_KEY = 'sliska_recent_tags';
+
+function recentTags() {
+  try { return (JSON.parse(localStorage.getItem(RECENT_TAGS_KEY)) || []).filter(t => typeof t === 'string'); } catch { return []; }
+}
+
+function rememberTags(tags) {
+  if (!tags.length) return;
+  const list = [...tags, ...recentTags()];
+  const seen = new Set();
+  const out = list.filter(t => { const k = t.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; }).slice(0, 14);
+  try { localStorage.setItem(RECENT_TAGS_KEY, JSON.stringify(out)); } catch { /* ignoruj */ }
+}
+
+/** Wszystkie znane tagi z liczbą użyć (tagi artykułów + wykonawcy z recenzji). */
+function tagStats() {
+  const map = new Map();
+  const add = t => { const k = t.toLowerCase(); const e = map.get(k) || { tag: t, n: 0 }; e.n++; map.set(k, e); };
+  state.articles.forEach(a => {
+    Utils.tagsOf(a).forEach(add);
+    if (a.review && a.review.artist) add(a.review.artist.trim());
+  });
+  return map;
+}
+
+function suggestedTags() {
+  const title = $('#f-title').value;
+  const text = `${title} ${$('#f-lead').value} ${editor.quill ? editor.quill.getText() : ''}`;
+  const low = text.toLowerCase();
+  const out = new Map();
+  const put = t => { const k = t.toLowerCase(); if (!out.has(k) && t.length >= 3) out.set(k, t); };
+  const artist = $('#f-review-artist').value.trim();
+  if ($('#f-review-on').checked && artist) put(artist);
+  // znane tagi i wykonawcy, o których jest mowa w tekście (bez względu na polskie znaki i odmianę końcówki)
+  const ftext = ' ' + Utils.fold(text).replace(/[^a-z0-9]+/g, ' ') + ' ';
+  [...tagStats().values()].sort((a, b) => b.n - a.n).forEach(e => {
+    const ft = Utils.fold(e.tag).replace(/[^a-z0-9]+/g, ' ').trim();
+    if (ft.length < 3) return;
+    const stem = ft.length > 5 ? ft.slice(0, -1) : ft;      // „Taco Hemingway” znajdzie też „Taco Hemingwaya”
+    if (ftext.includes(' ' + stem)) put(e.tag);
+  });
+  // nazwy własne z kilku wyrazów (np. „Elizka Sztos”), jeśli są w tytule albo pojawiają się 2+ razy
+  const re = /[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}'’-]+(?:\s+[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}'’-]+)+/gu;
+  const counts = new Map();
+  (text.match(re) || []).forEach(n => counts.set(n, (counts.get(n) || 0) + 1));
+  [...counts.entries()].sort((a, b) => b[1] - a[1]).forEach(([n, c]) => {
+    if (c >= 2 || title.includes(n)) put(n);
+  });
+  // pojedyncze nazwy własne, które padają w tekście co najmniej 3 razy
+  const STOP = new Set(['Instagram', 'Spotify', 'YouTube', 'Facebook', 'TikTok', 'Polska', 'Polsce', 'Polski', 'Twitter', 'Google', 'Netflix', 'Internet', 'Zobacz', 'Jednak', 'Według', 'Dlatego', 'Wczoraj', 'Dzisiaj', 'Również', 'Ponadto', 'Natomiast']);
+  const single = new Map();
+  (text.match(/(?<![.!?]\s)(?<!^)\b[A-ZĄĆĘŁŃÓŚŹŻ][\p{L}]{3,}\b/gu) || []).forEach(w => { if (!STOP.has(w)) single.set(w, (single.get(w) || 0) + 1); });
+  [...single.entries()].filter(([, n]) => n >= 3).sort((a, b) => b[1] - a[1]).forEach(([w]) => put(w));
+  return [...out.values()].slice(0, 10);
+}
+
+let moreTags = false;
+function renderTagChips() {
+  const box = $('#tag-chips');
+  if (!box) return;
+  const chosen = new Set(Utils.parseTags($('#f-tags').value).map(t => t.toLowerCase()));
+  const used = new Set();
+  const group = (label, tags) => {
+    const items = tags.filter(t => t && !used.has(t.toLowerCase()));
+    items.forEach(t => used.add(t.toLowerCase()));
+    if (!items.length) return '';
+    return `<div class="tag-group"><span class="tag-group-label">${label}${label === 'Proponowane' ? ' <button type="button" class="tag-add-all" data-tag-all>dodaj wszystkie</button>' : ''}</span><span class="tag-group-chips">${items.map(t =>
+      `<button type="button" class="tag-chip${chosen.has(t.toLowerCase()) ? ' on' : ''}" data-tag="${Utils.esc(t)}" aria-pressed="${chosen.has(t.toLowerCase())}">${Utils.esc(t)}</button>`).join('')}</span></div>`;
+  };
+  const popular = [...tagStats().values()].sort((a, b) => b.n - a.n || a.tag.localeCompare(b.tag, 'pl')).slice(0, 14).map(e => e.tag);
+  box.innerHTML =
+    group('Proponowane', suggestedTags()) +
+    (moreTags ? `<div class="tag-more">${group('Ostatnio używane', recentTags().slice(0, 10))}${group('Popularne', popular)}</div>` : '') +
+    (`<button type="button" class="tag-more-btn" data-tag-more aria-expanded="${moreTags}">${moreTags ? 'Mniej' : 'Więcej tagów'}</button>`);
+  const pending = suggestedTags().filter(t => !chosen.has(t.toLowerCase())).length;
+  const sum = $('#tag-fold summary');
+  if (sum) { sum.textContent = pending ? `Podpowiedzi tagów (${pending})` : 'Podpowiedzi tagów'; sum.classList.toggle('has-new', pending > 0); }
+}
+const renderTagChipsSoon = Utils.debounce(renderTagChips, 400);
+
+function toggleTag(tag) {
+  const cur = Utils.parseTags($('#f-tags').value);
+  const i = cur.findIndex(t => Utils.same(t, tag));
+  if (i >= 0) cur.splice(i, 1); else cur.push(tag);
+  $('#f-tags').value = cur.slice(0, 12).join(', ');
+  renderTagChips();
+  onFormChange();
+}
+
+function applyData(d) {
+  editor.restoring = true;
+  renderCatPicker(d.categories);
+  $('#f-tags').value = d.tags;
+  updateTagSuggest();
+  $('#f-title').value = d.title;
+  $('#f-lead').value = d.lead;
+  if (window.growLead) setTimeout(window.growLead, 0);
+  $('#f-image-caption').value = d.imageCaption;
+  $('#f-image-source').value = d.imageSource;
+  $('#f-review-on').checked = d.reviewOn;
+  $('#f-review-score').value = d.reviewScore;
+  $('#f-review-kind').value = d.reviewKind;
+  $('#f-review-cover-same').checked = d.reviewCoverSame;
+  setCover(d.reviewCover);
+  $('#f-review-work').value = d.reviewWork;
+  $('#f-review-artist').value = d.reviewArtist;
+  $('#f-review-year').value = d.reviewYear;
+  updateReviewUi();
+  $('#fold-review').open = !!d.reviewOn;
+  // autor: nowy artykuł = nazwa z profilu; edycja = autor zostaje taki, jaki był
+  editor.author = editor.mode === 'new' ? (state.profile.name || 'Redaktor') : (d.author || state.profile.name || 'Redaktor');
+  $('#editor-author').textContent = 'Autor: ' + editor.author;
+  $('#f-urgent').checked = d.urgent;
+  $('#f-featured').checked = d.featured;
+  $('#f-comments-off').checked = !!d.commentsOff;
+  $('#f-status').value = d.status || '';
+  editor.related = (d.related || []).slice(0, 3);
+  renderRelatedPicker();
+  $('#fold-related').open = editor.related.length > 0;
+  $('#f-schedule-on').checked = d.scheduleOn;
+  $('#f-schedule-at').value = d.scheduleAt;
+
+  setMainImage(d.image, d.imagePos);
+
+  if (d.content) {
+    editor.quill.setContents(editor.quill.clipboard.convert(Sanitizer.upgradeQuotes(d.content)), 'silent');
+  } else {
+    editor.quill.setText('', 'silent');
+  }
+  editor.restoring = false;
+  updateCounters();
+  updateStats();
+  updatePublishUi();
+  renderTagChips();
+  setTimeout(updateSizeMeter, 50);
+}
+
+function updateCounters() {
+  const t = $('#f-title').value.length;
+  const l = $('#f-lead').value.length;
+  $('#c-title').textContent = `${t}/200`;
+  $('#c-lead').textContent = `${l}/400`;
+  $('#c-title').classList.toggle('warn', t > 180);
+  $('#c-lead').classList.toggle('warn', l > 360);
+}
+
+function updateChecklist() {
+  if (!editor.quill) return;
+  const words = Utils.countWords(editor.quill.getText());
+  const items = [
+    { ok: $('#f-title').value.trim().length >= 10, text: 'Tytuł (min. 10 znaków)', req: true },
+    { ok: $('#f-lead').value.trim().length >= 40, text: 'Lead (min. 40 znaków)', req: true },
+    { ok: $$('#f-categories input:checked').length > 0, text: 'Kategoria', req: true },
+    { ok: words >= 30, text: 'Treść (min. 30 słów)', req: true },
+    { ok: !!editor.image, text: 'Zdjęcie główne (zalecane)', req: false }
+  ];
+  if ($('#f-review-on').checked) {
+    items.push({ ok: Utils.parseScore($('#f-review-score').value) !== null && !!$('#f-review-work').value.trim(), text: 'Recenzja: ocena i tytuł dzieła', req: true });
+    items.push({ ok: $('#f-review-cover-same').checked ? !!editor.image : !!editor.cover, text: 'Recenzja: okładka', req: true });
+  }
+  $('#checklist').innerHTML = items.map(i =>
+    `<li class="${i.ok ? 'ok' : (i.req ? 'todo' : 'opt')}"><span class="ck" aria-hidden="true">${i.ok ? '✓' : (i.req ? '○' : '–')}</span>${Utils.esc(i.text)}</li>`).join('');
+}
+
+/** Wklejone lub przeciągnięte zdjęcia trafiają prosto do tekstu (bez okna dialogowego). */
+async function insertImageFiles(files, index) {
+  try {
+    for (const file of files) {
+      const src = await Utils.fileToDataUrl(file, 1400, 220);
+      editor.quill.insertEmbed(index, 'figure', { src, caption: '', source: '' }, 'user');
+      index += 1;
+    }
+    editor.quill.setSelection(index, 0, 'silent');
+    toast('Zdjęcie wstawione – kliknij je w tekście, aby dodać podpis i źródło.' + imageNote());
+  } catch (err) {
+    toast(err.message || 'Nie udało się wstawić zdjęcia.', 'error');
+  }
+}
+
+function updateStats() {
+  if (!editor.quill) return;
+  updateChecklist();
+  const words = Utils.countWords(editor.quill.getText()) + Utils.countWords($('#f-lead').value);
+  const minutes = Math.max(1, Math.ceil(words / 200));
+  $('#editor-stats').textContent = `${words} słów · ok. ${minutes} min czytania`;
+}
+
+/** Miernik rozmiaru artykułu względem limitu dokumentu w bazie (ok. 1 MB). */
+const SIZE_LIMIT_KB = 900;
+function updateSizeMeter() {
+  const el = $('#editor-size');
+  if (!el || !editor.quill || !editor.active) return;
+  const kb = Math.round(JSON.stringify(collectData()).length / 1024);
+  const pct = Math.min(100, Math.round(kb / SIZE_LIMIT_KB * 100));
+  el.className = 'editor-size' + (pct >= 90 ? ' is-full' : pct >= 70 ? ' is-warn' : '');
+  el.innerHTML = `<span>Rozmiar artykułu: <strong>${kb} KB</strong> z ok. ${SIZE_LIMIT_KB} KB</span><span class="size-bar"><i style="width:${pct}%"></i></span>${pct >= 90 ? '<span>Za dużo – usuń część zdjęć albo wstaw je linkiem.</span>' : ''}`;
+}
+const updateSizeMeterSoon = Utils.debounce(updateSizeMeter, 700);
+
+function updatePublishUi() {
+  const on = $('#f-schedule-on').checked;
+  $('#schedule-field').hidden = !on;
+  const at = $('#f-schedule-at');
+  at.min = Utils.toLocalInput(Date.now());
+  if (on && !at.value) {
+    // domyślnie jutro o 9:00
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    at.value = Utils.toLocalInput(d);
+  }
+  const existingPublished = editor.existing && isPublished(editor.existing);
+  $('#editor-save').textContent = on ? 'Zaplanuj publikację' : (existingPublished ? 'Zapisz zmiany' : 'Opublikuj');
+  $('#publish-hint').textContent = on
+    ? 'Artykuł pojawi się na stronie automatycznie o wskazanej godzinie.'
+    : existingPublished
+      ? `Artykuł jest opublikowany od ${Utils.formatDate(editor.existing.createdAt)}. Zmiany będą widoczne od razu.`
+      : 'Artykuł zostanie opublikowany od razu po kliknięciu „Opublikuj”.';
+}
+
+function setStatus(text, kind = '') {
+  const el = $('#save-status');
+  el.textContent = text;
+  el.className = 'save-status' + (kind ? ' ' + kind : '');
+}
+
+/* ---------- Edytor: autozapis (kopia w przeglądarce + wersja robocza w bazie) ---------- */
+function captureContext() {
+  return { session: editor.session, draftId: editor.draftId, articleId: editor.articleId, data: collectData() };
+}
+
+function writeBuffer() {
+  if (!editor.active) return;
+  clearTimeout(editor.bufferTimer);
+  const ctx = captureContext();
+  if (isEmptyData(ctx.data)) {
+    Buffers.remove(ctx.draftId);
+    clearPointer(ctx.draftId);
+    return;
+  }
+  Buffers.set(ctx.draftId, { data: ctx.data, articleId: ctx.articleId, savedAt: new Date().toISOString() });
+  if (!ctx.articleId) {
+    try { localStorage.setItem(newPointerKey(), ctx.draftId); } catch { /* ignoruj */ }
+  }
+}
+
+/** Zapisuje wersję roboczą w bazie. Zwraca true/false. */
+async function persistDraft(ctx) {
+  const draft = { id: ctx.draftId, articleId: ctx.articleId, ...ctx.data, savedAt: new Date().toISOString() };
+  await DataService.saveDraft(draft);
+  return draft;
+}
+
+async function saveCloudDraft(manual = false) {
+  clearTimeout(editor.cloudTimer);
+  editor.cloudTimer = null;
+  if (!editor.active || !Auth.isAdmin()) return false;
+
+  const ctx = captureContext();
+  if (isEmptyData(ctx.data)) {
+    if (manual) toast('Nie ma jeszcze czego zapisać.');
+    return false;
+  }
+  const snap = JSON.stringify(ctx.data);
+  if (!manual && snap === editor.lastCloud) { editor.dirty = false; return true; }
+
+  try {
+    const draft = await persistDraft(ctx);
+    if (editor.session === ctx.session) {
+      editor.lastCloud = snap;
+      editor.dirty = JSON.stringify(collectData()) !== snap;
+      setStatus('Szkic zapisany na koncie o ' + Utils.formatTime(draft.savedAt) + ' – dokończysz go na każdym urządzeniu', 'ok');
+      if (!editor.dirty) Buffers.remove(ctx.draftId);
+      else writeBuffer();
+    }
+    return true;
+  } catch (err) {
+    console.warn('Zapis wersji roboczej nie powiódł się:', err);
+    if (editor.session === ctx.session) {
+      writeBuffer();
+      setStatus('Kopia zapisana w tej przeglądarce. Zapis w bazie nie powiódł się: ' + (err.message || 'błąd'), 'warn');
+    }
+    return false;
+  }
+}
+
+function onFormChange() {
+  if (!editor.active || editor.restoring) return;
+  renderTagChipsSoon();
+  updateSizeMeterSoon();
+  editor.dirty = true;
+  setStatus('Niezapisane zmiany…');
+  clearTimeout(editor.bufferTimer);
+  editor.bufferTimer = setTimeout(writeBuffer, CONFIG.BUFFER_DELAY);
+  if (!editor.cloudTimer) editor.cloudTimer = setTimeout(() => saveCloudDraft(false), CONFIG.CLOUD_DRAFT_DELAY);
+}
+
+/** Wyjście z edytora (zmiana widoku): zapisuje to, co zostało napisane, jako wersję roboczą. */
+function leaveEditor() {
+  if (!editor.active) return;
+  clearTimeout(editor.bufferTimer);
+  clearTimeout(editor.cloudTimer);
+  editor.cloudTimer = null;
+
+  const ctx = captureContext();
+  const needsSave = editor.dirty;
+  editor.active = false;
+  editor.dirty = false;
+
+  if (isEmptyData(ctx.data)) {
+    Buffers.remove(ctx.draftId);
+    clearPointer(ctx.draftId);
+    return;
+  }
+  if (!needsSave) {
+    Buffers.remove(ctx.draftId);
+    clearPointer(ctx.draftId);
+    return;
+  }
+
+  // Najpierw kopia lokalna (synchronicznie), potem zapis w bazie
+  Buffers.set(ctx.draftId, { data: ctx.data, articleId: ctx.articleId, savedAt: new Date().toISOString() });
+  if (!Auth.isAdmin()) return;
+  persistDraft(ctx)
+    .then(() => {
+      Buffers.remove(ctx.draftId);
+      clearPointer(ctx.draftId);
+      toast('Zapisano w wersjach roboczych.');
+    })
+    .catch(err => {
+      console.warn('Nie udało się zapisać wersji roboczej przy wyjściu:', err);
+      toast('Kopia zapisana tylko w tej przeglądarce. Sprawdź połączenie i reguły bazy.', 'error');
+    });
+}
+
+
+/* ---------- Galeria zdjęć ---------- */
+const GALLERY_MAX = 12;
+
+function openGalleryModal(edit) {
+  const isEdit = !!edit && typeof edit.index === 'number';
+  editor.gallery = { items: isEdit ? (edit.images || []).map(i => i.src) : [], editing: isEdit ? edit.index : null };
+  editor.range = isEdit ? null : editor.quill.getSelection(true);
+  $('#gallery-title').textContent = isEdit ? 'Edytuj galerię' : 'Galeria zdjęć';
+  $('#gal-submit').textContent = isEdit ? 'Zapisz' : 'Wstaw';
+  $('#gal-delete').hidden = !isEdit;
+  $('#gal-caption').value = isEdit ? edit.caption || '' : '';
+  $('#gal-url').value = '';
+  $('#gal-file').value = '';
+  $('#gal-error').hidden = true;
+  renderGalleryItems();
+  openModal('gallery-modal');
+}
+
+function galleryError(msg) {
+  const el = $('#gal-error');
+  el.textContent = msg || '';
+  el.hidden = !msg;
+}
+
+function renderGalleryItems() {
+  const items = editor.gallery.items;
+  $('#gal-items').innerHTML = items.map((src, i) => `<div class="gal-item" data-i="${i}">
+      <img src="${Utils.esc(src)}" alt="">
+      <span class="gal-num">${i + 1}</span>
+      <span class="gal-btns">
+        <button type="button" class="icon-mini" data-gal="left" aria-label="Przesuń wcześniej"${i === 0 ? ' disabled' : ''}>←</button>
+        <button type="button" class="icon-mini" data-gal="right" aria-label="Przesuń później"${i === items.length - 1 ? ' disabled' : ''}>→</button>
+        <button type="button" class="icon-mini" data-gal="del" aria-label="Usuń zdjęcie">×</button>
+      </span>
+    </div>`).join('');
+}
+
+async function addGalleryFiles(files) {
+  const list = Array.from(files || []).filter(f => f.type.startsWith('image/'));
+  if (!list.length) return;
+  galleryError('');
+  for (const f of list) {
+    if (editor.gallery.items.length >= GALLERY_MAX) { galleryError(`Maksymalnie ${GALLERY_MAX} zdjęć w galerii.`); break; }
+    try {
+      editor.gallery.items.push(await Utils.fileToDataUrl(f, 1200, 150));
+      renderGalleryItems();
+    } catch (err) { galleryError(err.message); }
+  }
+  $('#gal-file').value = '';
+}
+
+function addGalleryUrl() {
+  const v = $('#gal-url').value.trim();
+  if (!v) return;
+  if (!/^https?:\/\//i.test(v)) { galleryError('Adres zdjęcia musi zaczynać się od http:// lub https://'); return; }
+  if (editor.gallery.items.length >= GALLERY_MAX) { galleryError(`Maksymalnie ${GALLERY_MAX} zdjęć w galerii.`); return; }
+  galleryError('');
+  editor.gallery.items.push(v);
+  $('#gal-url').value = '';
+  renderGalleryItems();
+}
+
+function submitGallery(e) {
+  e.preventDefault();
+  if ($('#gal-url').value.trim()) addGalleryUrl();
+  const images = editor.gallery.items.map(src => ({ src }));
+  if (images.length < 2) { galleryError('Dodaj co najmniej 2 zdjęcia (pojedyncze zdjęcie wstaw zwykłym przyciskiem).'); return; }
+  const value = { images, caption: $('#gal-caption').value.trim() };
+  if (editor.gallery.editing !== null) {
+    const index = editor.gallery.editing;
+    editor.quill.deleteText(index, 1, 'user');
+    editor.quill.insertEmbed(index, 'gallery', value, 'user');
+  } else {
+    const index = editor.range ? editor.range.index : Math.max(0, editor.quill.getLength() - 1);
+    editor.quill.insertEmbed(index, 'gallery', value, 'user');
+    editor.quill.setSelection(index + 1, 0, 'silent');
+  }
+  closeModal('gallery-modal');
+}
+
+function deleteGallery() {
+  if (editor.gallery.editing !== null) editor.quill.deleteText(editor.gallery.editing, 1, 'user');
+  closeModal('gallery-modal');
+}
+
+
 /* ---------- Galeria w artykule: scena + miniatury + pełny ekran ---------- */
 const GX_ICON = {
   prev: '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
@@ -3331,7 +4614,170 @@ function galleryClick(e) {
   }
 }
 
-/*@staff-removed*/
+/* ---------- „Zobacz też” – ręczny wybór ---------- */
+function renderRelatedPicker() {
+  const chosen = editor.related.map(id => state.articles.find(a => a.id === id)).filter(Boolean);
+  $('#rel-chosen').innerHTML = chosen.map(a =>
+    `<span class="rel-chip">${Utils.esc(a.title)}<button type="button" data-rel-del="${Utils.esc(a.id)}" aria-label="Usuń z listy">×</button></span>`).join('');
+  const full = editor.related.length >= 3;
+  $('#rel-search').disabled = full;
+  $('#rel-search').placeholder = full ? 'Wybrano maksymalnie 3 artykuły' : 'Szukaj artykułu po tytule…';
+  const q = $('#rel-search').value.trim().toLowerCase();
+  let list = [];
+  if (!full) {
+    list = state.articles
+      .filter(a => !a.quick && a.id !== editor.articleId && !editor.related.includes(a.id) && (!q || a.title.toLowerCase().includes(q)))
+      .sort((p, r) => Date.parse(r.createdAt) - Date.parse(p.createdAt))
+      .slice(0, q ? 6 : 4);
+  }
+  $('#rel-results').innerHTML = list.map(a =>
+    `<button type="button" class="rel-result" data-rel-add="${Utils.esc(a.id)}">${Utils.esc(a.title)}</button>`).join('');
+}
+
+/* ---------- Grafika na Instagram: okno wyboru formatu ---------- */
+function articleQuotes(a) {
+  const doc = new DOMParser().parseFromString(`<body>${Sanitizer.upgradeQuotes(a.content || '')}</body>`, 'text/html');
+  return Array.from(doc.querySelectorAll('aside.article-quote')).map(q => {
+    const t = q.querySelector('.q-text');
+    const au = q.querySelector('.q-author');
+    const parts = t ? Array.from(t.querySelectorAll('.q-part')).map(x => x.textContent.trim()).filter(Boolean) : [];
+    return { text: parts.length ? parts.join(' … ') : (t ? t.textContent.trim() : ''), author: au ? au.textContent.trim() : '' };
+  }).filter(q => q.text);
+}
+
+function articleImages(a) {
+  const out = [];
+  const add = s => { s = String(s || '').trim(); if (s && !out.includes(s)) out.push(s); };
+  add(a.image);
+  try {
+    const doc = new DOMParser().parseFromString(a.content || '', 'text/html');
+    doc.querySelectorAll('img[src]').forEach(im => add(im.getAttribute('src')));
+  } catch { /* ignoruj */ }
+  if (a.review && a.review.cover) add(a.review.cover);
+  return out.slice(0, 14);
+}
+
+function buildIgPhotos() {
+  const a = state.articles.find(x => x.id === editor.igId);
+  const imgs = a ? articleImages(a) : [];
+  editor.igImages = imgs;
+  const box = $('#ig-photo-box');
+  box.hidden = imgs.length < 2;
+  $('#ig-photo-list').innerHTML = imgs.map((src, i) => `<button type="button" class="ig-photo" data-i="${i}" aria-pressed="${i === 0}" title="Użyj tego zdjęcia"><img src="${Utils.esc(src)}" alt="" loading="lazy">${i === 0 ? '<b>główne</b>' : ''}</button>`).join('');
+  editor.igPhoto = '';
+}
+
+function openIgModal(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  editor.igId = id;
+  editor.igQuotes = articleQuotes(a);
+  let fmt = 'post';
+  try { fmt = localStorage.getItem('sliska_igformat') || 'post'; } catch { /* ignoruj */ }
+  if (!['post', 'story', 'quote', 'carousel', 'x', 'review'].includes(fmt)) fmt = 'post';
+  if (fmt === 'review' && !a.review) fmt = 'post';
+  $('#ig-review-fmt').hidden = !a.review;
+  $$('input[name="ig-format"]').forEach(r => { r.checked = r.value === fmt; });
+  const sel = $('#ig-quote-pick');
+  sel.innerHTML = editor.igQuotes.map((q, i) => `<option value="${i}">${Utils.esc(q.text.length > 70 ? q.text.slice(0, 70) + '…' : q.text)}</option>`).join('');
+  $('#ig-quote-pick-wrap').hidden = editor.igQuotes.length < 2;
+  const first = editor.igQuotes[0] || { text: '', author: '' };
+  $('#ig-quote-text').value = first.text;
+  $('#ig-quote-author').value = first.author;
+  // slajd „W skrócie”: domyślnie zajawka artykułu (można zmienić lub wyczyścić = bez tego slajdu)
+  $('#ig-summary').value = String(a.lead || '').trim().slice(0, 400);
+  $('#ig-error').hidden = true;
+  editor.igPick = [];
+  buildIgPhotos();
+  editor.igBgKinds = [];
+  $('#ig-bgmode').value = 'none';
+  updateIgUi();
+  openModal('ig-modal');
+}
+
+function igFormat() {
+  const r = $('input[name="ig-format"]:checked');
+  return r ? r.value : 'post';
+}
+
+let igThumbJob = 0;
+const igThumbCache = new Map();
+
+const IG_TEXT_KINDS = ['title', 'lead', 'sentence', 'quote', 'score', 'author', 'ask', 'link'];
+function igBgFor(kind, mode, kinds) { return mode === 'all' ? IG_TEXT_KINDS.includes(kind) : (mode === 'pick' && (kinds || []).includes(kind)); }
+function igBgMode() { const el = $('#ig-bgmode'); return el ? el.value : 'none'; }
+
+function igSlideTheme(i) { return i % 2 === 0 ? 'red' : 'dark'; }
+
+function buildIgGrid() {
+  const a = state.articles.find(x => x.id === editor.igId);
+  if (!a) return;
+  editor.igPick = editor.igPick || [];
+  $('#ig-slide-grid').innerHTML = IG_SLIDES.map(s => {
+    const off = s.need && !s.need(a);
+    return `<button type="button" class="ig-slide${off ? ' is-off' : ''}" data-slide="${s.k}" ${off ? 'disabled' : ''} aria-pressed="false">
+      <span class="ig-thumb"><canvas width="216" height="270"></canvas><i class="ig-num"></i>${IG_TEXT_KINDS.includes(s.k) && !off ? '<span class="ig-bgtoggle" role="button" tabindex="0" data-bg="' + s.k + '" title="Zdjęcie w tle tego slajdu">Zdjęcie w tle</span>' : ''}</span>
+      <b>${Utils.esc(s.name)}</b><small>${Utils.esc(off ? s.why : s.desc)}</small></button>`;
+  }).join('');
+  refreshIgGrid();
+}
+
+function refreshIgGrid() {
+  const a = state.articles.find(x => x.id === editor.igId);
+  if (!a) return;
+  const job = ++igThumbJob;
+  const todo = [];
+  $$('#ig-slide-grid .ig-slide').forEach(btn => {
+    const k = btn.dataset.slide, pos = editor.igPick.indexOf(k);
+    btn.classList.toggle('is-on', pos >= 0);
+    btn.setAttribute('aria-pressed', String(pos >= 0));
+    const tg = $('.ig-bgtoggle', btn);
+    if (tg) { tg.hidden = igBgMode() !== 'pick'; tg.classList.toggle('is-on', (editor.igBgKinds || []).includes(k)); }
+    $('.ig-num', btn).textContent = pos >= 0 ? String(pos + 1) : '';
+    if (!btn.disabled) todo.push({ btn, k, theme: pos >= 0 ? igSlideTheme(pos) : 'dark' });
+  });
+  const n = editor.igPick.length;
+  const sub = $('#ig-submit');
+  if (igFormat() === 'carousel') sub.textContent = n ? `Pobierz ZIP (${n})` : 'Wybierz slajdy';
+  (async () => {
+    for (const t of todo) {
+      if (job !== igThumbJob) return;
+      const bg = igBgFor(t.k, igBgMode(), editor.igBgKinds);
+      const art = editor.igPhoto ? { ...a, image: editor.igPhoto, _origImage: a.image } : a;
+      const key = `${editor.igId}|${t.k}|${t.theme}|${editor.igPhoto || ''}|${bg ? 1 : 0}`;
+      let src = igThumbCache.get(key);
+      if (!src) {
+        try {
+          const r = await drawSlide(art, t.k, t.theme, { bgPhoto: bg, quote: { text: $('#ig-quote-text').value.trim(), author: $('#ig-quote-author').value.trim() }, summary: $('#ig-summary').value.trim() });
+          const th = document.createElement('canvas'); th.width = 216; th.height = 270;
+          th.getContext('2d').drawImage(r.canvas, 0, 0, 216, 270);
+          src = th; igThumbCache.set(key, th);
+        } catch { continue; }
+      }
+      if (job !== igThumbJob) return;
+      const cv = $('canvas', t.btn);
+      if (cv) cv.getContext('2d').drawImage(src, 0, 0);
+    }
+  })();
+}
+
+function updateIgUi() {
+  const f = igFormat();
+  const car = f === 'carousel';
+  $('#ig-carousel-box').hidden = !car;
+  $('#ig-texts').hidden = !(car || f === 'quote');
+  $('#ig-summary-box').hidden = !car;
+  $('#ig-bgphoto-wrap').hidden = !car;
+  $('#ig-grid-hint').hidden = !(car && igBgMode() === 'pick');
+  if (f === 'quote') $('#ig-texts').open = true;
+  $('#ig-texts-title').textContent = car ? 'Teksty slajdów (opcjonalnie)' : 'Cytat';
+  $('#ig-quote-label').textContent = 'Treść cytatu';
+  $('.modal-box', $('#ig-modal')).classList.toggle('ig-wide', car);
+  const sub = $('#ig-submit');
+  if (car) { buildIgGrid(); } else sub.textContent = 'Pobierz i skopiuj opis';
+}
+
+
 /* ---------- Szybkie przełączanie kont (konta czytelników zapamiętane na tym urządzeniu) ---------- */
 const Accounts = {
   KEY: 'sliska_accounts', MAX: 5, SESSION_MS: 24 * 3600e3,
@@ -3372,6 +4818,7 @@ const Accounts = {
       try { await Push.unlink(); } catch { /* ignoruj */ }
       await this.idbPut(`firebase:authUser:${CONFIG.READER_FIREBASE.apiKey}:readers`, a.user);
       location.hash = '#/konto';
+      if (window.top !== window) { try { window.top.location.href = '/?open=' + encodeURIComponent('/studio/#/konto'); return; } catch { /* ignoruj */ } }
       location.reload();
     } catch (e) { console.warn('Przełączenie konta nie powiodło się:', e); toast('Nie udało się przełączyć konta. Zaloguj się ręcznie.', 'error'); }
   },
@@ -3420,7 +4867,153 @@ async function installApp() {
   }
 }
 
-/*@staff-removed*/
+/* ---------- Wklejanie z Worda / Google Docs: czyszczenie formatowania ---------- */
+function cleanPastedHtml(html) {
+  const doc = new DOMParser().parseFromString(html, 'text/html');
+  doc.querySelectorAll('style,script,meta,link,title,xml,img,svg,iframe,object,form,button').forEach(n => n.remove());
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const BLOCK = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'UL', 'OL', 'LI', 'BLOCKQUOTE', 'TABLE', 'TR', 'TD', 'TH', 'TBODY', 'THEAD', 'SECTION', 'ARTICLE', 'PRE', 'FIGURE']);
+  const hasBlock = el => !!el.querySelector('p,div,h1,h2,h3,h4,h5,h6,ul,ol,li,blockquote,table,tr,pre');
+  const weight = v => (v === 'bold' || v === 'bolder' || Number(v) >= 600);
+
+  function inline(node, inLink) {
+    if (node.nodeType === Node.TEXT_NODE) return esc(node.nodeValue.replace(/ /g, ' ').replace(/[ \t\r\n]+/g, ' '));
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+    const tag = node.tagName;
+    if (tag === 'BR') return '<br>';
+    const st = node.style || {};
+    let inner = Array.from(node.childNodes).map(ch => inline(ch, inLink || tag === 'A')).join('');
+    if (!inner.trim() && !inner.includes('<br>')) return inner;
+    if (tag === 'A') {
+      const href = node.getAttribute('href') || '';
+      return /^(https?:|mailto:)/i.test(href) ? `<a href="${esc(href)}">${inner}</a>` : inner;
+    }
+    const bold = (tag === 'B' || tag === 'STRONG') ? !(st.fontWeight === 'normal' || st.fontWeight === '400') : weight(st.fontWeight);
+    const ital = (tag === 'I' || tag === 'EM') ? st.fontStyle !== 'normal' : st.fontStyle === 'italic';
+    const td = (st.textDecorationLine || st.textDecoration || '');
+    const und = !inLink && (tag === 'U' || /underline/.test(td));
+    const strike = tag === 'S' || tag === 'STRIKE' || tag === 'DEL' || /line-through/.test(td);
+    if (bold) inner = `<strong>${inner}</strong>`;
+    if (ital) inner = `<em>${inner}</em>`;
+    if (und) inner = `<u>${inner}</u>`;
+    if (strike) inner = `<s>${inner}</s>`;
+    return inner;
+  }
+  const tidy = s => s.replace(/(<br>\s*)+$/g, '').replace(/^(\s*<br>)+/g, '').trim();
+  const plain = s => s.replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').trim();
+
+  const out = [];
+  function pushList(items) {
+    // items: [{ordered, level, html}] → kolejne <ul>/<ol> (zagnieżdżenie jako klasa wcięcia Quilla)
+    let i = 0;
+    while (i < items.length) {
+      const ordered = items[i].ordered;
+      let chunk = '';
+      while (i < items.length && items[i].ordered === ordered) {
+        chunk += `<li${items[i].level ? ` class="ql-indent-${Math.min(items[i].level, 5)}"` : ''}>${items[i].html}</li>`;
+        i++;
+      }
+      out.push(`<${ordered ? 'ol' : 'ul'}>${chunk}</${ordered ? 'ol' : 'ul'}>`);
+    }
+  }
+  function listItems(list, level, acc) {
+    const ordered = list.tagName === 'OL';
+    Array.from(list.children).forEach(li => {
+      if (li.tagName === 'UL' || li.tagName === 'OL') { listItems(li, level + 1, acc); return; }
+      if (li.tagName !== 'LI') return;
+      const own = Array.from(li.childNodes).filter(n => !(n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL')));
+      const html = tidy(own.map(n => inline(n, false)).join(''));
+      if (plain(html)) acc.push({ ordered, level, html });
+      Array.from(li.children).filter(n => n.tagName === 'UL' || n.tagName === 'OL').forEach(sub => listItems(sub, level + 1, acc));
+    });
+  }
+
+  let pendingList = [];
+  const flushList = () => { if (pendingList.length) { pushList(pendingList); pendingList = []; } };
+
+  function blocks(parent) {
+    let run = '';
+    const flushRun = () => { const t = tidy(run); if (plain(t)) { flushList(); out.push(`<p>${t}</p>`); } run = ''; };
+    Array.from(parent.childNodes).forEach(node => {
+      if (node.nodeType === Node.TEXT_NODE) { run += inline(node, false); return; }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+      const tag = node.tagName;
+      const isBlock = BLOCK.has(tag) || (hasBlock(node) && !['A'].includes(tag));
+      if (!isBlock) { run += inline(node, false); return; }
+      flushRun();
+      if (tag === 'UL' || tag === 'OL') { flushList(); const acc = []; listItems(node, 0, acc); pushList(acc); return; }
+      if (/^H[1-6]$/.test(tag)) {
+        const t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join('').replace(/<\/?(strong|em|u|s)>/g, ''));
+        if (plain(t)) { flushList(); out.push(`<${tag === 'H1' || tag === 'H2' ? 'h2' : 'h3'}>${t}</${tag === 'H1' || tag === 'H2' ? 'h2' : 'h3'}>`); }
+        return;
+      }
+      if (tag === 'P' || tag === 'LI') {
+        const cls = node.getAttribute('class') || '';
+        const style = node.getAttribute('style') || '';
+        const head = /MsoHeading(\d)|MsoTitle/.exec(cls);
+        if (head && !hasBlock(node)) {
+          const t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join('').replace(/<\/?(strong|em|u|s)>/g, ''));
+          if (plain(t)) { flushList(); const lvl = head[1] ? Number(head[1]) : 1; out.push(lvl <= 2 ? `<h2>${t}</h2>` : `<h3>${t}</h3>`); }
+          return;
+        }
+        if (/MsoList/.test(cls) || /mso-list/.test(style)) {
+          let t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join(''));
+          const txt = plain(t);
+          const ordered = /^(\d+|[a-zA-Z])[.)]\s/.test(txt);
+          t = t.replace(/^(\s|&nbsp;)*(?:<[^>]+>)*(?:[·•o§▪●○\-–]|\d+[.)]|[a-zA-Z][.)])(?:\s|&nbsp;)+(?:<\/[^>]+>)*/, '');
+          const lv = /level(\d)/.exec(style);
+          if (plain(t)) pendingList.push({ ordered, level: lv ? Math.max(0, Number(lv[1]) - 1) : 0, html: t });
+          return;
+        }
+        if (hasBlock(node)) { blocks(node); return; }
+        const t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join(''));
+        if (plain(t)) { flushList(); out.push(`<p>${t}</p>`); }
+        return;
+      }
+      if (tag === 'BLOCKQUOTE') {
+        const t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join(''));
+        if (plain(t)) { flushList(); out.push(`<blockquote>${t}</blockquote>`); }
+        return;
+      }
+      if (tag === 'TD' || tag === 'TH') {
+        const t = tidy(Array.from(node.childNodes).map(n => inline(n, false)).join(''));
+        if (plain(t)) { flushList(); out.push(`<p>${t}</p>`); }
+        return;
+      }
+      blocks(node);     // div, section, table, tr… – tylko przechodzimy głębiej
+    });
+    flushRun();
+  }
+  blocks(doc.body);
+  flushList();
+  return out.join('');
+}
+
+function handleRichPaste(e) {
+  const dt = e.clipboardData;
+  if (!dt) return false;
+  const html = dt.getData('text/html');
+  if (!html || !editor.quill) return false;
+  // wklejanie z samego edytora (zdjęcia, cytaty, filmy, galerie) zostawiamy Quillowi
+  if (/article-(figure|quote|embed|gallery)|class="ql-/.test(html)) return false;
+  const cleaned = cleanPastedHtml(html);
+  if (!cleaned) return false;
+  e.preventDefault();
+  e.stopPropagation();
+  const q = editor.quill;
+  const y = window.scrollY;
+  const sel = q.getSelection(true);
+  if (sel.length) q.deleteText(sel.index, sel.length, 'user');
+  const before = q.getLength();
+  q.clipboard.dangerouslyPasteHTML(sel.index, cleaned, 'user');
+  const added = q.getLength() - before;
+  q.setSelection(sel.index + added, 0, 'silent');
+  requestAnimationFrame(() => { if (Math.abs(window.scrollY - y) > 400) window.scrollTo(window.scrollX, y); });
+  toast('Wklejono tekst z oczyszczonym formatowaniem.');
+  return true;
+}
+
+
 /* ---------- „NOWE”: artykuły opublikowane w ciągu ostatnich 12 godzin ---------- */
 const Visit = {
   HOURS: 12,
@@ -3559,7 +5152,143 @@ function renderQuick() {
     ${list.length > shown.length ? '<div class="load-more"><button type="button" class="btn" data-action="quick-more">Pokaż starsze</button></div>' : ''}`;
 }
 
-/*@staff-removed*/
+function openQuickModal(id) {
+  const a = id ? state.articles.find(x => x.id === id) : null;
+  state.quickId = a ? a.id : null;
+  $('#quick-title').textContent = a ? 'Edytuj nowinkę' : 'Nowa nowinka';
+  $('#qk-submit').textContent = a ? 'Zapisz' : 'Opublikuj';
+  $('#qk-delete').hidden = !a;
+  $('#qk-text').value = a ? a.title : '';
+  $('#qk-link').value = a ? a.link || '' : '';
+  $('#qk-source').value = a ? a.sourceName || '' : (state.profile.quickSource || '');
+  $('#qk-push').checked = a ? false : state.profile.quickPush !== false;
+  $('#qk-push-row').hidden = !!a;
+  $('#qk-count').textContent = $('#qk-text').value.length;
+  $('#qk-error').hidden = true;
+  openModal('quick-modal');
+}
+
+async function submitQuick(e) {
+  e.preventDefault();
+  if (!Auth.isAdmin()) { toast('Sesja wygasła – zaloguj się ponownie.', 'error'); return; }
+  const err = msg => { const el = $('#qk-error'); el.textContent = msg; el.hidden = !msg; };
+  const text = $('#qk-text').value.replace(/\s+/g, ' ').trim();
+  let link = $('#qk-link').value.trim();
+  if (text.length < 8) { err('Wpisz treść newsa (min. 8 znaków).'); return; }
+  if (link && !/^https?:\/\//i.test(link)) link = 'https://' + link;
+  if (link && !/^https?:\/\/[^\s]+\.[^\s]+$/i.test(link)) { err('Link wygląda niepoprawnie.'); return; }
+  const existing = state.quickId ? state.articles.find(x => x.id === state.quickId) : null;
+  const now = new Date().toISOString();
+  const article = {
+    id: existing ? existing.id : Utils.uid(),
+    quick: true,
+    title: text, lead: text, content: '',
+    category: 'Inne', categories: ['Inne'], tags: [],
+    author: (existing && existing.author) || state.profile.name || 'Redaktor',
+    image: '', imageCaption: '', imageSource: '', review: null,
+    urgent: false, featured: false,
+    link, sourceName: $('#qk-source').value.trim().slice(0, 40),
+    createdAt: existing ? existing.createdAt : now,
+    updatedAt: now,
+    noPush: existing ? !!existing.noPush : !$('#qk-push').checked
+  };
+  const btn = $('#qk-submit');
+  btn.disabled = true;
+  try {
+    await DataService.save(article);
+    upsertLocalState(article);
+    closeModal('quick-modal');
+    toast(existing ? 'Nowinka zapisana.' : 'Nowinka opublikowana.');
+    refreshViews();
+  } catch (ex) {
+    err(ex.message || 'Nie udało się zapisać.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function deleteQuick(id) {
+  if (!confirm('Usunąć tę nowinkę?')) return;
+  try {
+    await DataService.remove(id);
+    setArticles(state.articles.filter(x => x.id !== id));
+    closeModal('quick-modal');
+    toast('Nowinka usunięta.');
+    refreshViews();
+  } catch (ex) { toast(ex.message || 'Nie udało się usunąć.', 'error'); }
+}
+
+async function shareQuick(id) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  const url = a.link || (location.href.split('#')[0] + '#/szybkie');
+  if (navigator.share) {
+    try { await navigator.share({ url }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
+  try { await navigator.clipboard.writeText(url); toast('Skopiowano do schowka.'); } catch { toast('Nie udało się skopiować.', 'error'); }
+}
+
+/** Story (1080×1920): tło marki + logo + treść newsa + zwykły napis „sliska.pl” – bez linku i naklejek. */
+async function renderQuickStory(a) {
+  const W = 1080, H = 1920, PAD = 72, topY = 230, footY = H - 520;
+  const family = getComputedStyle(document.body).fontFamily;
+  try { await Promise.all([document.fonts.load(`900 80px ${family}`, PL_SAMPLE), document.fonts.load(`800 80px ${family}`, PL_SAMPLE), document.fonts.load(`700 40px ${family}`, PL_SAMPLE)]); } catch {}
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  // tło: ciemne z czerwoną poświatą (bez zmian)
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#1a1a1a'); bg.addColorStop(1, '#070707');
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  const glow = ctx.createRadialGradient(W * .85, H * .1, 0, W * .85, H * .1, 900);
+  glow.addColorStop(0, 'rgba(214,0,28,.55)'); glow.addColorStop(1, 'rgba(214,0,28,0)');
+  ctx.fillStyle = glow; ctx.fillRect(0, 0, W, H);
+
+  // ta sama rama, logo, kicker i stopka co w pozostałych grafikach
+  drawFrame(ctx, W, H, { a, family, dateY: topY + 28, dateSize: 34, padRight: PAD });
+  await drawLogoWhite(ctx, PAD, topY, 330, family);
+  drawKicker(ctx, 'NOWINKI Z POŚLIZGIEM', PAD, topY + 120, { family });
+
+  const maxH = footY - 120 - (topY + 260);
+  const t = fitText(ctx, family, a.title, W - PAD * 2, maxH, 92, 46, 900, 1.16);
+  const total = t.lines.length * t.lh;
+  let y = Math.round((topY + 260 + footY - 120 - total) / 2);
+  ctx.fillStyle = '#fff'; ctx.textBaseline = 'top'; ctx.textAlign = 'left';
+  ctx.font = `900 ${t.size}px ${family}`;
+  for (const l of t.lines) { ctx.fillText(l, PAD, y); y += t.lh; }
+
+  // stopka jak w pozostałych grafikach: linia + zwykły napis sliska.pl
+  ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.fillRect(PAD, footY - 56, W - PAD * 2, 2);
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.font = `700 32px ${family}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
+  ctx.fillText('sliska.pl', PAD, footY);
+  return canvasBlob(canvas);
+}
+
+async function shareQuickStory(id, btn) {
+  const a = state.articles.find(x => x.id === id);
+  if (!a) return;
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Tworzę…'; }
+  try {
+    const blob = await renderQuickStory(a);
+    const name = `sliska-story-${Utils.slugify(a.title).slice(0, 40) || a.id}.png`;
+    const file = new File([blob], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] }) && window.matchMedia && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    const obj = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = obj; link.download = name;
+    document.body.appendChild(link); link.click(); link.remove();
+    setTimeout(() => URL.revokeObjectURL(obj), 4000);
+    toast('Story pobrane.');
+  } catch (e) {
+    toast('Nie udało się utworzyć grafiki.', 'error');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+  }
+}
+
 /* ---------- Zgłoszenie błędu w artykule ---------- */
 function openReportModal(id) {
   const a = state.articles.find(x => x.id === id);
@@ -3609,7 +5338,44 @@ async function submitReport(e) {
   }
 }
 
-/*@staff-removed*/
+/* ---------- Podgląd linku (og:image) osobny dla każdego artykułu ---------- */
+async function ogJpegDataUrl(a) {
+  const { blob } = await renderInstagramImage(a, { format: 'share' });
+  const bmp = await createImageBitmap(blob);
+  const cv = document.createElement('canvas');
+  cv.width = 1200; cv.height = 630;
+  cv.getContext('2d').drawImage(bmp, 0, 0, 1200, 630);
+  for (const q of [0.86, 0.76, 0.66, 0.55]) {
+    const url = cv.toDataURL('image/jpeg', q);
+    if (url.length < 380000) return url;
+  }
+  return cv.toDataURL('image/jpeg', 0.45);
+}
+
+async function publishOg(a) {
+  if (DataService.mode !== 'firebase' || !Auth.isAdmin() || a.quick) return false;
+  try {
+    await DataService.saveOg(a.id, await ogJpegDataUrl(a));
+    return true;
+  } catch (e) {
+    console.warn('Podgląd linku nie został zapisany:', e);
+    return false;
+  }
+}
+
+async function refreshAllOg(btn) {
+  const list = state.articles.filter(a => !a.quick);
+  const label = btn.textContent;
+  btn.disabled = true;
+  let ok = 0;
+  for (let i = 0; i < list.length; i++) {
+    btn.textContent = `Generuję ${i + 1}/${list.length}…`;
+    if (await publishOg(list[i])) ok++;
+  }
+  btn.disabled = false; btn.textContent = label;
+  toast(ok ? `Podglądy linków zapisane: ${ok}/${list.length}.` : 'Nie udało się zapisać podglądów (tryb demo lub brak uprawnień w regułach Firestore).', ok ? undefined : 'error');
+}
+
 /* ---------- Udostępnianie z grafiką ---------- */
 function articleShortUrl(a) { return location.href.split('#')[0] + '#/a/' + encodeURIComponent(a.id); }
 
@@ -3639,7 +5405,817 @@ async function shareImage(id, btn) {
   }
 }
 
-/*@staff-removed*/
+/* ---------- Edytor: Quill ---------- */
+function registerFigureBlot() {
+  if (registerFigureBlot.done) return;
+  const BlockEmbed = Quill.import('blots/block/embed');
+
+  class FigureBlot extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      const wrap = document.createElement('div');
+      wrap.className = 'fig-media';
+      const img = document.createElement('img');
+      img.setAttribute('src', value.src);
+      img.setAttribute('alt', value.caption || '');
+      wrap.appendChild(img);
+      if (value.source) {
+        const src = document.createElement('span');
+        src.className = 'img-source';
+        src.textContent = value.source;
+        wrap.appendChild(src);
+      }
+      node.appendChild(wrap);
+      if (value.caption) {
+        const cap = document.createElement('figcaption');
+        cap.textContent = value.caption;
+        node.appendChild(cap);
+      }
+      return node;
+    }
+    static value(node) {
+      const img = node.querySelector('img');
+      const cap = node.querySelector('figcaption');
+      const src = node.querySelector('.img-source');
+      return { src: img ? img.getAttribute('src') : '', caption: cap ? cap.textContent : '', source: src ? src.textContent : '' };
+    }
+  }
+  class GalleryBlot extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      node.setAttribute('contenteditable', 'false');
+      const track = document.createElement('div');
+      track.className = 'gallery-track';
+      (value.images || []).forEach(im => {
+        const img = document.createElement('img');
+        img.setAttribute('src', im.src);
+        img.setAttribute('alt', value.caption || '');
+        track.appendChild(img);
+      });
+      node.appendChild(track);
+      if ((value.images || []).length > 1) {
+        const n = document.createElement('span');
+        n.className = 'gallery-count';
+        n.textContent = value.images.length + ' zdjęć';
+        node.appendChild(n);
+      }
+      if (value.caption) {
+        const cap = document.createElement('figcaption');
+        cap.textContent = value.caption;
+        node.appendChild(cap);
+      }
+      return node;
+    }
+    static value(node) {
+      const cap = node.querySelector('figcaption');
+      return {
+        images: Array.from(node.querySelectorAll('.gallery-track img')).map(i => ({ src: i.getAttribute('src') || '' })),
+        caption: cap ? cap.textContent : ''
+      };
+    }
+  }
+  class QuoteBlot extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      const text = document.createElement('p');
+      text.className = 'q-text';
+      const parts = Array.isArray(value.parts) && value.parts.length > 1 ? value.parts : null;
+      if (parts) {                                  // cytat z przerywnikami: cytat, zwykły tekst, dalszy ciąg cytatu…
+        text.classList.add('has-mid');
+        parts.forEach((t, i) => {
+          const sp = document.createElement('span');
+          sp.className = i % 2 ? 'q-mid' : 'q-part';
+          sp.textContent = t;
+          text.appendChild(sp);
+        });
+      } else text.textContent = value.text || '';
+      node.appendChild(text);
+      if (value.author || value.source) {
+        const by = document.createElement('p');
+        by.className = 'q-by';
+        if (value.author) {
+          const a = document.createElement('span');
+          a.className = 'q-author';
+          a.textContent = value.author;
+          by.appendChild(a);
+        }
+        if (value.source) {
+          const src = document.createElement('span');
+          src.className = 'q-source';
+          src.textContent = value.source;
+          by.appendChild(src);
+        }
+        node.appendChild(by);
+      }
+      return node;
+    }
+    static value(node) {
+      const q = node.querySelector('.q-text');
+      const a = node.querySelector('.q-author');
+      const src = node.querySelector('.q-source');
+      const spans = q ? Array.from(q.children).filter(x => x.classList.contains('q-part') || x.classList.contains('q-mid')) : [];
+      if (spans.length > 1) {
+        const parts = spans.map(x => x.textContent);
+        return { text: parts[0], parts, author: a ? a.textContent : '', source: src ? src.textContent : '' };
+      }
+      return { text: q ? q.textContent : '', author: a ? a.textContent : '', source: src ? src.textContent : '' };
+    }
+  }
+  class EmbedBlot extends BlockEmbed {
+    static create(value) {
+      const node = super.create();
+      node.setAttribute('data-kind', value.kind);
+      node.setAttribute('data-id', value.id);
+      node.setAttribute('contenteditable', 'false');
+      const label = document.createElement('span');
+      label.className = 'embed-label';
+      label.textContent = (value.kind === 'youtube' ? '▶ Film z YouTube' : '♫ Odtwarzacz Spotify') + ' – kliknij, aby zmienić lub usunąć';
+      node.appendChild(label);
+      return node;
+    }
+    static value(node) { return { kind: node.getAttribute('data-kind') || '', id: node.getAttribute('data-id') || '' }; }
+  }
+  EmbedBlot.blotName = 'embed';
+  EmbedBlot.tagName = 'aside';
+  EmbedBlot.className = 'article-embed';
+  Quill.register(EmbedBlot);
+
+  QuoteBlot.blotName = 'pullquote';
+  QuoteBlot.tagName = 'aside';
+  QuoteBlot.className = 'article-quote';
+  Quill.register(QuoteBlot);
+
+  GalleryBlot.blotName = 'gallery';
+  GalleryBlot.tagName = 'figure';
+  GalleryBlot.className = 'article-gallery';
+  Quill.register(GalleryBlot);
+
+  FigureBlot.blotName = 'figure';
+  FigureBlot.tagName = 'figure';
+  FigureBlot.className = 'article-figure';
+  Quill.register(FigureBlot);
+  registerFigureBlot.done = true;
+}
+
+/** Skróty w stylu Markdown: wpisanie znaczników na początku linii i spacji formatuje linię. */
+function markdownLine(format, value) {
+  return function (range, context) {
+    const len = context.prefix.length;
+    const start = range.index - len;
+    this.quill.deleteText(start, len, 'user');
+    this.quill.formatLine(start, 1, format, value, 'user');
+  };
+}
+
+function initQuill() {
+  if (editor.quill) return true;
+  if (typeof Quill === 'undefined') {
+    toast('Nie udało się załadować edytora (Quill). Sprawdź połączenie z internetem.', 'error');
+    return false;
+  }
+  registerFigureBlot();
+  editor.quill = new Quill('#quill', {
+    theme: 'snow',
+    placeholder: 'Zacznij pisać artykuł…',
+    // Wklejany tekst (np. z Worda czy innej strony) zachowuje tylko prosty, wspólny wygląd
+    formats: ['header', 'bold', 'italic', 'underline', 'strike', 'blockquote', 'list', 'indent', 'link', 'image', 'figure', 'pullquote', 'embed', 'gallery'],
+    modules: {
+      toolbar: {
+        container: [
+          [{ header: [2, 3, false] }],
+          ['bold', 'italic', 'underline', 'strike'],
+          ['pullquote', 'embed', 'gallery'],
+          [{ list: 'ordered' }, { list: 'bullet' }, { indent: '-1' }, { indent: '+1' }],
+          ['link', 'image'],
+          ['clean']
+        ],
+        handlers: { image() { openImageModal(); }, gallery() { openGalleryModal(); }, pullquote() { openQuoteModal(); }, embed() { openEmbedModal(); } }
+      },
+      keyboard: {
+        bindings: {
+          markdownH2: { key: 32, collapsed: true, prefix: /^##$/, handler: markdownLine('header', 2) },
+          markdownH3: { key: 32, collapsed: true, prefix: /^###$/, handler: markdownLine('header', 3) },
+          markdownQuote: {
+            key: 32, collapsed: true, prefix: /^>$/,
+            handler(range, context) {
+              this.quill.deleteText(range.index - context.prefix.length, context.prefix.length, 'user');
+              openQuoteModal();
+            }
+          },
+          markdownBullet: { key: 32, collapsed: true, prefix: /^[-*]$/, handler: markdownLine('list', 'bullet') },
+          markdownOrdered: { key: 32, collapsed: true, prefix: /^1\.$/, handler: markdownLine('list', 'ordered') },
+          // Enter na pustej linii cytatu kończy cytat (kolejne Entery wewnątrz cytatu go kontynuują)
+          quoteExit: {
+            key: 13, collapsed: true, empty: true, format: ['blockquote'],
+            handler(range) { this.quill.formatLine(range.index, 1, 'blockquote', false, 'user'); }
+          }
+        }
+      }
+    }
+  });
+
+  const toolbar = editor.quill.getModule('toolbar').container;
+  // Zmiana formatu (np. nagłówek) nie może przerzucać strony na górę – pilnujemy pozycji przez chwilę po kliknięciu w pasek
+  let scrollLock = null;
+  const armLock = () => { scrollLock = { x: window.scrollX, y: window.scrollY, until: Date.now() + 900 }; };
+  ['pointerdown', 'mousedown', 'touchstart', 'click', 'change'].forEach(ev => toolbar.addEventListener(ev, armLock, true));
+  window.addEventListener('scroll', () => {
+    if (scrollLock && Date.now() < scrollLock.until && scrollLock.y - window.scrollY > 40) window.scrollTo(scrollLock.x, scrollLock.y);
+  }, { passive: true });
+  editor.quill.root.addEventListener('keydown', e => { if (e.key === ' ') armLock(); }, true);
+  const titles = {
+    '.ql-bold': 'Pogrubienie (Ctrl+B)',
+    '.ql-italic': 'Kursywa (Ctrl+I)',
+    '.ql-underline': 'Podkreślenie (Ctrl+U)',
+    '.ql-strike': 'Przekreślenie',
+    '.ql-pullquote': 'Cytat (ze źródłem i autorem)',
+    '.ql-embed': 'Wstaw film z YouTube lub odtwarzacz Spotify',
+    '.ql-gallery': 'Galeria zdjęć (kilka zdjęć do przewijania)',
+    '.ql-list[value="ordered"]': 'Lista numerowana',
+    '.ql-list[value="bullet"]': 'Lista punktowana',
+    '.ql-indent[value="-1"]': 'Zmniejsz wcięcie',
+    '.ql-indent[value="+1"]': 'Zwiększ wcięcie',
+    '.ql-link': 'Wstaw link (Ctrl+K)',
+    '.ql-image': 'Wstaw zdjęcie z podpisem',
+    '.ql-clean': 'Wyczyść formatowanie'
+  };
+  const quoteBtn = toolbar.querySelector('.ql-pullquote');
+  if (quoteBtn) {
+    quoteBtn.innerHTML = '<svg viewBox="0 0 18 18"><path class="ql-fill" d="M3 4h5v5c0 2.5-1.4 4-4 4v-1.6c1.2-.2 1.9-1 1.9-2.4H3zM10 4h5v5c0 2.5-1.4 4-4 4v-1.6c1.2-.2 1.9-1 1.9-2.4H10z"/></svg>';
+  }
+  const embedBtn = toolbar.querySelector('.ql-embed');
+  if (embedBtn) embedBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="2" y="3.5" width="14" height="11" rx="2.5" fill="none" stroke-width="1.6"/><path class="ql-fill" d="M7.5 6.6v4.8L11.6 9z"/></svg>';
+  const galBtn = toolbar.querySelector('.ql-gallery');
+  if (galBtn) galBtn.innerHTML = '<svg viewBox="0 0 18 18"><rect class="ql-stroke" x="4.5" y="2.5" width="11" height="9" rx="1.6" fill="none" stroke-width="1.5"/><path class="ql-stroke" d="M2.5 5.5v7.2c0 .9.7 1.6 1.6 1.6h8.4" fill="none" stroke-width="1.5" stroke-linecap="round"/><circle class="ql-fill" cx="8" cy="5.8" r="1.1"/><path class="ql-stroke" d="M5.5 10.5l2.7-2.6 2 1.8 2-2 2 2.2" fill="none" stroke-width="1.3" stroke-linejoin="round"/></svg>';
+  Object.entries(titles).forEach(([sel, title]) => {
+    const b = toolbar.querySelector(sel);
+    if (b) b.title = title;
+  });
+
+  // Wklejanie / przeciąganie zdjęć (nasłuch na kontenerze, żeby uprzedzić obsługę Quilla)
+  const imgFiles = dt => Array.from((dt && dt.files) || []).filter(f => f.type.startsWith('image/'));
+  editor.quill.container.addEventListener('paste', e => {
+    const files = imgFiles(e.clipboardData);
+    if (!files.length) { handleRichPaste(e); return; }
+    e.preventDefault();
+    e.stopPropagation();
+    const sel = editor.quill.getSelection(true);
+    insertImageFiles(files, sel ? sel.index : editor.quill.getLength() - 1);
+  }, true);
+  editor.quill.container.addEventListener('drop', e => {
+    const files = imgFiles(e.dataTransfer);
+    if (!files.length) return;
+    e.preventDefault();
+    e.stopPropagation();
+    let index = editor.quill.getLength() - 1;
+    const pos = document.caretRangeFromPoint ? document.caretRangeFromPoint(e.clientX, e.clientY) : null;
+    if (pos) {
+      const blot = Quill.find(pos.startContainer, true);
+      if (blot) index = editor.quill.getIndex(blot) + (blot.length ? Math.min(pos.startOffset, blot.length() - 1) : 0);
+    }
+    insertImageFiles(files, index);
+  }, true);
+
+  editor.quill.on('text-change', () => {
+    if (editor.restoring) return;
+    updateStats();
+    onFormChange();
+  });
+
+  // Kliknięcie zdjęcia w tekście: zmiana podpisu lub usunięcie
+  editor.quill.root.addEventListener('click', e => {
+    const qt = e.target.closest && e.target.closest('aside.article-quote');
+    if (qt) {
+      const qb = Quill.find(qt);
+      if (qb) openQuoteModal({ index: editor.quill.getIndex(qb), ...qb.constructor.value(qb.domNode) });
+      return;
+    }
+    const gl = e.target.closest && e.target.closest('figure.article-gallery');
+    if (gl) {
+      const gb = Quill.find(gl);
+      if (gb) openGalleryModal({ index: editor.quill.getIndex(gb), ...gb.constructor.value(gb.domNode) });
+      return;
+    }
+    const em = e.target.closest && e.target.closest('aside.article-embed');
+    if (em) {
+      const eb = Quill.find(em);
+      if (eb) openEmbedModal({ index: editor.quill.getIndex(eb), ...eb.constructor.value(eb.domNode) });
+      return;
+    }
+    const fig = e.target.closest && e.target.closest('figure.article-figure');
+    if (!fig) return;
+    const blot = Quill.find(fig);
+    if (!blot) return;
+    const val = blot.constructor.value(blot.domNode);
+    openImageModal({ index: editor.quill.getIndex(blot), src: val.src, caption: val.caption, source: val.source });
+  });
+
+  return true;
+}
+
+/* ---------- Edytor: otwieranie ---------- */
+async function openEditor(articleId, draftParam) {
+  if (!Auth.isAdmin()) {
+    location.hash = '#/';
+    openReaderModal('login');
+    return;
+  }
+  if (!initQuill()) { location.hash = '#/'; return; }
+
+  const session = ++editor.session;
+  editor.active = false;
+  const form = $('#editor-form');
+  form.classList.add('is-loading');
+
+  let mode;
+  let draftId;
+  let base = null;
+  const candidates = [];
+
+  try {
+    if (draftParam) {
+      mode = 'draft';
+      draftId = draftParam;
+      const cloud = await DataService.getDraft(draftId).catch(() => null);
+      const buf = Buffers.get(draftId);
+      if (!cloud && !buf) throw new Error('not-found');
+      articleId = (cloud && cloud.articleId) || (buf && buf.articleId) || null;
+      if (cloud) candidates.push({ kind: 'cloud', savedAt: cloud.savedAt || '', data: normalizeData(cloud) });
+      if (buf) candidates.push({ kind: 'buffer', savedAt: buf.savedAt || '', data: normalizeData(buf.data) });
+      base = articleId ? state.articles.find(a => a.id === articleId) || null : null;
+    } else if (articleId) {
+      mode = 'edit';
+      base = state.articles.find(a => a.id === articleId) || null;
+      if (!base) throw new Error('not-found');
+      draftId = editDraftId(articleId);
+      const cloud = await DataService.getDraft(draftId).catch(() => null);
+      const buf = Buffers.get(draftId);
+      const baseTime = base.updatedAt || base.createdAt || '';
+      if (cloud && String(cloud.savedAt) > baseTime) candidates.push({ kind: 'cloud', savedAt: cloud.savedAt, data: normalizeData(cloud) });
+      if (buf && String(buf.savedAt) > baseTime) candidates.push({ kind: 'buffer', savedAt: buf.savedAt, data: normalizeData(buf.data) });
+    } else {
+      mode = 'new';
+      let pointer = null;
+      try { pointer = localStorage.getItem(newPointerKey()); } catch { /* ignoruj */ }
+      const buf = pointer ? Buffers.get(pointer) : null;
+      if (buf && !buf.articleId) {
+        draftId = pointer;
+        candidates.push({ kind: 'buffer', savedAt: buf.savedAt || '', data: normalizeData(buf.data) });
+      } else {
+        // Brak kopii w tej przeglądarce: szukamy niedokończonego szkicu tego konta zapisanego na innym urządzeniu
+        let remote = null;
+        try {
+          const uid = Auth.uid();
+          const lim = Date.now() - 14 * 864e5;
+          remote = (await DataService.getDrafts()).find(d => d && !d.articleId && d.ownerUid === uid && !isEmptyData(normalizeData(d)) && Date.parse(d.savedAt || '') > lim) || null;
+        } catch { /* bez szkicu z konta */ }
+        if (remote) {
+          draftId = remote.id;
+          candidates.push({ kind: 'cloud', savedAt: remote.savedAt || '', data: normalizeData(remote) });
+        } else {
+          draftId = Utils.uid('d_');
+        }
+      }
+    }
+  } catch (err) {
+    if (session !== editor.session) return;
+    form.classList.remove('is-loading');
+    toast(err.message === 'not-found' ? 'Nie znaleziono artykułu lub wersji roboczej.' : 'Nie udało się otworzyć edytora.', 'error');
+    location.hash = '#/panel';
+    return;
+  }
+  if (session !== editor.session) return;
+
+  candidates.sort((a, b) => String(b.savedAt).localeCompare(String(a.savedAt)));
+  const chosen = candidates[0] || null;
+
+  editor.mode = mode;
+  editor.draftId = draftId;
+  editor.articleId = articleId || null;
+  editor.existing = base;
+
+  applyData(chosen ? chosen.data : (base ? dataFromArticle(base) : emptyData()));
+
+  editor.lastCloud = chosen && chosen.kind === 'cloud' ? JSON.stringify(collectData()) : '';
+  editor.dirty = !!(chosen && chosen.kind === 'buffer');
+
+  // Baner informujący o przywróceniu pracy
+  const banner = $('#editor-banner');
+  const discardBtn = $('#banner-discard');
+  banner.hidden = true;
+  if (chosen && chosen.kind === 'buffer') {
+    $('#banner-text').textContent = `Przywrócono niezapisane zmiany z ${Utils.formatDate(chosen.savedAt)}.`;
+    discardBtn.textContent = mode === 'draft' ? 'Odrzuć niezapisane zmiany' : (mode === 'edit' ? 'Wróć do opublikowanej wersji' : 'Zacznij od nowa');
+    banner.hidden = false;
+  } else if (chosen && chosen.kind === 'cloud' && mode === 'new') {
+    $('#banner-text').textContent = `Wczytano niedokończony szkic z konta (zapisany ${Utils.formatDate(chosen.savedAt)} o ${Utils.formatTime(chosen.savedAt)}) – możesz go dokończyć na tym urządzeniu.`;
+    discardBtn.textContent = 'Zacznij od nowa';
+    banner.hidden = false;
+  } else if (chosen && chosen.kind === 'cloud' && mode === 'edit') {
+    $('#banner-text').textContent = `Wczytano wersję roboczą zmian z ${Utils.formatDate(chosen.savedAt)}.`;
+    discardBtn.textContent = 'Wróć do opublikowanej wersji';
+    banner.hidden = false;
+  }
+
+  $('#editor-heading').textContent = mode === 'new' ? 'Nowy artykuł' : (articleId ? 'Edycja artykułu' : 'Wersja robocza');
+  setStatus(chosen && chosen.kind === 'cloud' ? 'Wersja robocza zapisana o ' + Utils.formatTime(chosen.savedAt) : '');
+
+  editor.active = true;
+  form.classList.remove('is-loading');
+  if (mode === 'new' && !chosen) $('#f-title').focus();
+}
+
+async function discardRestored() {
+  if (!confirm('Odrzucić przywrócone zmiany? Tej operacji nie można cofnąć.')) return;
+  const id = editor.draftId;
+  Buffers.remove(id);
+  clearPointer(id);
+
+  let data;
+  if (editor.mode === 'draft') {
+    const cloud = await DataService.getDraft(id).catch(() => null);
+    data = cloud ? normalizeData(cloud) : (editor.existing ? dataFromArticle(editor.existing) : emptyData());
+  } else {
+    await DataService.removeDraft(id).catch(() => {});
+    data = editor.existing ? dataFromArticle(editor.existing) : emptyData();
+  }
+  applyData(data);
+  editor.dirty = false;
+  editor.lastCloud = editor.mode === 'draft' ? JSON.stringify(collectData()) : '';
+  $('#editor-banner').hidden = true;
+  setStatus('');
+}
+
+/* ---------- Edytor: publikacja, podgląd, zdjęcia ---------- */
+async function saveArticle(e) {
+  e.preventDefault();
+  if (!editor.active) return;
+  if (!Auth.isAdmin()) { toast('Sesja wygasła – zaloguj się ponownie.', 'error'); return; }
+
+  const d = collectData();
+  const title = d.title.trim();
+  const lead = d.lead.trim();
+  const author = (d.author || '').trim() || 'Redaktor';
+  if (!Utils.parseTags(d.tags).length) {
+    const sug = suggestedTags();
+    if (sug.length && confirm(`Artykuł nie ma tagów. Dodać proponowane: ${sug.slice(0, 5).join(', ')}?`)) {
+      $('#f-tags').value = sug.slice(0, 5).join(', ');
+      d.tags = $('#f-tags').value;
+      renderTagChips();
+    }
+  }
+
+  if (!title) { toast('Podaj tytuł artykułu.', 'error'); $('#f-title').focus(); return; }
+  if (!lead) { toast('Uzupełnij lead (zajawkę).', 'error'); $('#f-lead').focus(); return; }
+  if (!d.content) { toast('Treść artykułu jest pusta.', 'error'); editor.quill.focus(); return; }
+  if (!d.categories.length) { toast('Wybierz co najmniej jedną kategorię.', 'error'); return; }
+
+  let review = null;
+  if (d.reviewOn) {
+    const score = Utils.parseScore(d.reviewScore);
+    if (score === null) { toast('Ocena musi być liczbą od 0 do 10 (np. 6,4).', 'error'); $('#f-review-score').focus(); return; }
+    if (!d.reviewWork.trim()) { toast('Podaj tytuł ocenianego dzieła.', 'error'); $('#f-review-work').focus(); return; }
+    if (d.reviewCoverSame && !d.image) { toast('Zaznaczono okładkę jak zdjęcie główne, ale artykuł nie ma zdjęcia głównego.', 'error'); return; }
+    if (!d.reviewCoverSame && !d.reviewCover) { toast('Dodaj okładkę recenzji albo zaznacz, że ma być taka jak zdjęcie główne.', 'error'); $('#f-review-cover-url').focus(); return; }
+    review = {
+      score,
+      coverSame: d.reviewCoverSame,
+      cover: d.reviewCoverSame ? '' : d.reviewCover,
+      kind: d.reviewKind.trim(),
+      work: d.reviewWork.trim(),
+      artist: d.reviewArtist.trim(),
+      year: d.reviewYear.trim()
+    };
+  }
+
+  let createdAt;
+  if (d.scheduleOn) {
+    const when = new Date(d.scheduleAt);
+    if (!d.scheduleAt || isNaN(when)) { toast('Wybierz datę i godzinę publikacji.', 'error'); $('#f-schedule-at').focus(); return; }
+    if (when.getTime() <= Date.now() + 30000) {
+      toast('Data publikacji musi być w przyszłości. Odznacz planowanie, aby opublikować od razu.', 'error');
+      $('#f-schedule-at').focus();
+      return;
+    }
+    createdAt = when.toISOString();
+  } else if (editor.existing && isPublished(editor.existing)) {
+    createdAt = editor.existing.createdAt;
+  } else {
+    createdAt = new Date().toISOString();
+  }
+
+  const ownProfile = authorKey(author) === authorKey(state.profile.name) && state.profile.avatar && state.profile.showPhoto !== false;
+  const authorPhoto = ownProfile ? await shrinkAvatar(state.profile.avatar) : ((editor.existing && editor.existing.authorPhoto) || '');
+
+  const article = {
+    id: editor.articleId || Utils.uid(),
+    title,
+    lead,
+    category: d.categories[0],
+    categories: d.categories,
+    tags: Utils.parseTags(d.tags),
+    author,
+    authorUid: Auth.uid(),
+    authorPhoto,
+    image: d.image,
+    imagePos: d.image && d.imagePos ? d.imagePos : null,
+    imageCaption: d.imageCaption.trim(),
+    imageSource: d.imageSource.trim(),
+    review,
+    urgent: d.urgent,
+    featured: d.featured,
+    commentsOff: !!d.commentsOff,
+    status: d.status,
+    related: d.related,
+    content: d.content,
+    createdAt,
+    updatedAt: new Date().toISOString()
+  };
+
+  const buttons = [$('#editor-save'), $('#btn-save-draft')];
+  buttons.forEach(b => { b.disabled = true; });
+  try {
+    await DataService.save(article);
+    upsertLocalState(article);
+    publishOg(article);
+    adminApi('/push/kick', { method: 'POST', body: '{}' }).catch(() => {});      // powiadomienie push od razu, bez czekania na Cron
+    try { localStorage.setItem(CONFIG.AUTHOR_KEY + '_' + Auth.uid(), author); } catch { /* ignoruj */ }
+
+    rememberTags(article.tags);
+
+    // Tylko jeden artykuł może być Tematem dnia – poprzedni zostaje automatycznie odznaczony
+    let unfeatured = 0;
+    if (article.featured && isPublished(article)) {
+      for (const other of state.articles.filter(x => x.id !== article.id && x.featured && isPublished(x))) {
+        try {
+          const cleared = { ...other, featured: false };
+          await DataService.save(cleared);
+          upsertLocalState(cleared);
+          unfeatured++;
+        } catch (err) {
+          console.warn('Nie udało się odznaczyć poprzedniego Tematu dnia:', err);
+        }
+      }
+    }
+
+    // Artykuł jest zapisany – wersja robocza nie jest już potrzebna
+    const draftId = editor.draftId;
+    clearTimeout(editor.bufferTimer);
+    clearTimeout(editor.cloudTimer);
+    editor.cloudTimer = null;
+    editor.active = false;
+    editor.dirty = false;
+    Buffers.remove(draftId);
+    clearPointer(draftId);
+    DataService.removeDraft(draftId).catch(() => {});
+
+    if (d.scheduleOn) {
+      toast('Publikacja zaplanowana na ' + Utils.formatDate(createdAt) + '.');
+      location.hash = '#/panel';
+    } else {
+      toast((editor.existing ? 'Zmiany zapisane.' : 'Artykuł opublikowany.') + (unfeatured ? ' Poprzedni Temat dnia został odznaczony.' : ''));
+      location.hash = '#/artykul/' + encodeURIComponent(article.id);
+    }
+  } catch (err) {
+    console.error(err);
+    toast(err.message || 'Nie udało się zapisać artykułu.', 'error');
+  } finally {
+    buttons.forEach(b => { b.disabled = false; });
+  }
+}
+
+function openPreview() {
+  if (!editor.active) return;
+  const d = collectData();
+  const when = d.scheduleOn && d.scheduleAt ? new Date(d.scheduleAt) : null;
+  const created = when && !isNaN(when)
+    ? when.toISOString()
+    : (editor.existing && isPublished(editor.existing) ? editor.existing.createdAt : new Date().toISOString());
+  const preview = {
+    id: 'preview',
+    title: d.title.trim() || '(bez tytułu)',
+    lead: d.lead.trim(),
+    category: d.categories[0] || '',
+    categories: d.categories,
+    author: d.author.trim() || '(autor)',
+    authorPhoto: (d.author.trim() === state.profile.name && state.profile.avatar) || '',
+    image: d.image,
+    imagePos: d.image && d.imagePos ? d.imagePos : null,
+    imageCaption: d.imageCaption.trim(),
+    imageSource: d.imageSource.trim(),
+    review: d.reviewOn && Utils.parseScore(d.reviewScore) !== null
+      ? { score: Utils.parseScore(d.reviewScore), coverSame: d.reviewCoverSame, cover: d.reviewCoverSame ? '' : d.reviewCover, kind: d.reviewKind.trim(), work: d.reviewWork.trim() || '(tytuł)', artist: d.reviewArtist.trim(), year: d.reviewYear.trim() }
+      : null,
+    urgent: d.urgent,
+    featured: d.featured,
+    commentsOff: !!d.commentsOff,
+    status: d.status,
+    related: d.related,
+    content: d.content,
+    createdAt: created,
+    updatedAt: created
+  };
+  pvArticle = { preview, plain: Utils.stripHtml(d.content) };
+  paintPreview();
+  openModal('preview-modal');
+}
+
+let pvArticle = null, pvMode = 'desktop';
+function pvSkeleton(n, cls) { return Array.from({ length: n }, () => `<div class="pvs-sk ${cls || ''}"><i></i><span></span><span class="s"></span></div>`).join(''); }
+/** Podgląd: komputer / telefon / „cała strona” (nagłówek serwisu + artykuł + szablon komentarzy i kolumny bocznej). */
+function paintPreview() {
+  const body = $('#preview-body'); if (!body || !pvArticle) return;
+  $$('[data-pv]').forEach(x => x.classList.toggle('active', x.dataset.pv === pvMode));
+  body.classList.toggle('pv-phone', pvMode === 'phone');
+  body.classList.toggle('pv-site', pvMode === 'site');
+  const art = articleHtml(pvArticle.preview, pvArticle.plain);
+  if (pvMode !== 'site') { body.innerHTML = art; enhanceGalleries(body); return; }
+  const logo = document.querySelector('.site-header .logo'), nav = document.querySelector('.site-header .main-nav');
+  const links = nav ? [...nav.querySelectorAll('a')].map(a => `<span class="pvs-nl">${Utils.esc(a.textContent.trim())}</span>`).join('') : '';
+  body.innerHTML = `<div class="pvs">
+    <div class="pvs-head"><div class="pvs-logo">${logo ? logo.innerHTML : 'Śliska News'}</div><div class="pvs-nav">${links}</div></div>
+    <div class="pvs-grid">
+      <main class="pvs-main">${art}
+        <section class="pvs-box"><h3>Komentarze <small>(szablon)</small></h3>
+          <div class="pvs-form"><i class="pvs-av"></i><span class="pvs-input">Napisz komentarz…</span><b class="pvs-btn">Opublikuj</b></div>
+          ${pvSkeleton(3, 'pvs-cm')}
+        </section>
+        <section class="pvs-box"><h3>Czytaj także <small>(szablon)</small></h3><div class="pvs-cards">${pvSkeleton(3, 'pvs-card')}</div></section>
+      </main>
+      <aside class="pvs-side"><section class="pvs-box"><h3>Najnowsze</h3>${pvSkeleton(4, 'pvs-li')}</section><section class="pvs-box"><h3>Popularne</h3>${pvSkeleton(4, 'pvs-li')}</section><div class="pvs-ad">Miejsce na reklamę</div></aside>
+    </div></div>`;
+  enhanceGalleries(body);
+}
+
+function openImageModal(edit) {
+  const isEdit = !!edit && typeof edit.index === 'number';
+  editor.editingFigure = isEdit ? edit.index : null;
+  editor.range = isEdit ? null : editor.quill.getSelection(true);
+
+  const src = isEdit ? edit.src : '';
+  $('#image-title').textContent = isEdit ? 'Zdjęcie w tekście' : 'Wstaw zdjęcie do tekstu';
+  $('#im-submit').textContent = isEdit ? 'Zapisz' : 'Wstaw';
+  $('#im-delete').hidden = !isEdit;
+  $('#im-url').value = src && !src.startsWith('data:') ? src : '';
+  $('#im-file').value = '';
+  $('#im-caption').value = isEdit ? edit.caption : '';
+  $('#im-source').value = isEdit ? edit.source || '' : '';
+  $('#im-error').hidden = true;
+  setModalImage(src);
+  openModal('image-modal');
+}
+
+function setModalImage(src) {
+  editor.modalImage = src || '';
+  const box = $('#im-preview');
+  box.hidden = !editor.modalImage;
+  if (editor.modalImage) $('img', box).src = editor.modalImage;
+}
+
+function insertImageIntoEditor(e) {
+  e.preventDefault();
+  const src = editor.modalImage || $('#im-url').value.trim();
+  const err = $('#im-error');
+  if (!src) {
+    err.textContent = 'Podaj adres URL lub wybierz plik ze zdjęciem.';
+    err.hidden = false;
+    return;
+  }
+  const caption = $('#im-caption').value.trim();
+  const source = $('#im-source').value.trim();
+  if (editor.editingFigure !== null) {
+    const index = editor.editingFigure;
+    editor.quill.deleteText(index, 1, 'user');
+    editor.quill.insertEmbed(index, 'figure', { src, caption, source }, 'user');
+  } else {
+    const index = editor.range ? editor.range.index : Math.max(0, editor.quill.getLength() - 1);
+    editor.quill.insertEmbed(index, 'figure', { src, caption, source }, 'user');
+    editor.quill.setSelection(index + 1, 0, 'silent');
+  }
+  closeModal('image-modal');
+}
+
+const QM_MAX_MID = 2;              // do 2 przerywników = do 3 części cytatu
+let qmParts = [''];                // parzyste indeksy: cytat, nieparzyste: przerywnik (zwykły tekst)
+
+function qmRead() {
+  $$('#quote-form [data-qp]').forEach(el => { qmParts[Number(el.dataset.qp)] = el.value; });
+}
+
+function qmRender(focus) {
+  const box = $('#qm-extra');
+  box.innerHTML = qmParts.slice(1).map((v, k) => {
+    const i = k + 1, mid = i % 2 === 1, last = i === qmParts.length - 1;
+    return `<div class="qm-block ${mid ? 'is-mid' : 'is-part'}">
+      <label class="field"><span class="field-label">${mid ? `Przerywnik ${(i + 1) / 2} <small class="hint">(zwykły tekst w cytacie, np. – powiedziała piosenkarka –)</small>` : 'Dalszy ciąg cytatu'}</span>
+        ${mid ? `<input type="text" data-qp="${i}" maxlength="160" placeholder="Np. – powiedziała piosenkarka –">`
+              : `<textarea data-qp="${i}" rows="3" maxlength="600" placeholder="Wpisz dalszą część cytatu…"></textarea>`}</label>
+      ${last ? `<button type="button" class="btn btn-sm qm-del" data-qm="del" aria-label="Usuń ${mid ? 'przerywnik' : 'ciąg dalszy'}">Usuń</button>` : ''}
+    </div>`;
+  }).join('');
+  qmParts.forEach((v, i) => { const el = $(`#quote-form [data-qp="${i}"]`); if (el) el.value = v; });
+  const mids = Math.floor(qmParts.length / 2), lastIsMid = qmParts.length % 2 === 0;
+  const add = $('#qm-add');
+  add.innerHTML = lastIsMid
+    ? '<button type="button" class="btn btn-sm" data-qm="cont">Kontynuuj cytat</button>'
+    : (mids < QM_MAX_MID ? '<button type="button" class="btn btn-sm" data-qm="mid">+ Dodaj przerywnik</button>' : `<small class="hint">Maksymalnie ${QM_MAX_MID} przerywniki.</small>`);
+  if (focus) { const el = $(`#quote-form [data-qp="${qmParts.length - 1}"]`); if (el) el.focus(); }
+}
+
+function qmAction(kind) {
+  qmRead();
+  if (kind === 'mid' || kind === 'cont') qmParts.push('');
+  else if (kind === 'del') qmParts.pop();
+  qmRender(kind !== 'del');
+}
+
+function openQuoteModal(edit) {
+  const isEdit = !!edit && typeof edit.index === 'number';
+  editor.editingQuote = isEdit ? edit.index : null;
+  editor.range = isEdit ? null : editor.quill.getSelection(true);
+  $('#quote-title').textContent = isEdit ? 'Edytuj cytat' : 'Wstaw cytat';
+  $('#qm-submit').textContent = isEdit ? 'Zapisz' : 'Wstaw';
+  $('#qm-delete').hidden = !isEdit;
+  qmParts = isEdit ? (Array.isArray(edit.parts) && edit.parts.length ? edit.parts.slice(0, QM_MAX_MID * 2 + 1) : [edit.text || '']) : [''];
+  $('#qm-source').value = isEdit ? edit.source : '';
+  $('#qm-author').value = isEdit ? edit.author : '';
+  $('#qm-error').hidden = true;
+  qmRender(false);
+  openModal('quote-modal');
+}
+
+function submitQuote(e) {
+  e.preventDefault();
+  qmRead();
+  const parts = qmParts.map(t => t.replace(/[ \t]+$/gm, '').trim());
+  while (parts.length > 1 && !parts[parts.length - 1]) parts.pop();       // puste pola na końcu pomijamy
+  const err = m => { $('#qm-error').textContent = m; $('#qm-error').hidden = false; };
+  if (!parts[0]) return err('Wpisz treść cytatu.');
+  if (parts.some(t => !t)) return err('Uzupełnij przerywnik lub dalszy ciąg cytatu albo usuń puste pole.');
+  const value = { text: parts[0], source: $('#qm-source').value.trim(), author: $('#qm-author').value.trim() };
+  if (parts.length > 1) value.parts = parts;
+  if (editor.editingQuote !== null) {
+    const index = editor.editingQuote;
+    editor.quill.deleteText(index, 1, 'user');
+    editor.quill.insertEmbed(index, 'pullquote', value, 'user');
+  } else {
+    const index = editor.range ? editor.range.index : Math.max(0, editor.quill.getLength() - 1);
+    editor.quill.insertEmbed(index, 'pullquote', value, 'user');
+    editor.quill.setSelection(index + 1, 0, 'silent');
+  }
+  closeModal('quote-modal');
+}
+
+function openEmbedModal(edit) {
+  const isEdit = !!edit && typeof edit.index === 'number';
+  editor.editingEmbed = isEdit ? edit.index : null;
+  editor.range = isEdit ? null : editor.quill.getSelection(true);
+  $('#em-submit').textContent = isEdit ? 'Zapisz' : 'Wstaw';
+  $('#em-delete').hidden = !isEdit;
+  $('#em-url').value = isEdit ? Embeds.link(edit.kind, edit.id) : '';
+  $('#em-error').hidden = true;
+  openModal('embed-modal');
+}
+
+function submitEmbed(e) {
+  e.preventDefault();
+  const v = Embeds.parse($('#em-url').value);
+  if (!v) {
+    $('#em-error').textContent = 'To nie wygląda na link do YouTube ani Spotify. Wklej adres filmu, utworu, albumu, playlisty lub odcinka.';
+    $('#em-error').hidden = false;
+    return;
+  }
+  if (editor.editingEmbed !== null) {
+    const index = editor.editingEmbed;
+    editor.quill.deleteText(index, 1, 'user');
+    editor.quill.insertEmbed(index, 'embed', v, 'user');
+  } else {
+    const index = editor.range ? editor.range.index : Math.max(0, editor.quill.getLength() - 1);
+    editor.quill.insertEmbed(index, 'embed', v, 'user');
+    editor.quill.setSelection(index + 1, 0, 'silent');
+  }
+  closeModal('embed-modal');
+}
+
+function deleteEmbed() {
+  if (editor.editingEmbed === null) return;
+  editor.quill.deleteText(editor.editingEmbed, 1, 'user');
+  closeModal('embed-modal');
+}
+
+function deleteQuote() {
+  if (editor.editingQuote === null) return;
+  editor.quill.deleteText(editor.editingQuote, 1, 'user');
+  closeModal('quote-modal');
+}
+
+function deleteFigure() {
+  if (editor.editingFigure === null) return;
+  editor.quill.deleteText(editor.editingFigure, 1, 'user');
+  closeModal('image-modal');
+}
+
+
 /* =========================================================
    Konta czytelników i komentarze
    ========================================================= */
@@ -3734,7 +6310,23 @@ const Readers = {
     await this.auth.signOut();
   },
   /** Czytelnik z rolą Redaktor/Właściciel dostaje od workera token logowania do projektu redakcji (prawo pisania artykułów). */
-  async joinEditor() { this.editorIssue = ''; },
+  async joinEditor() {
+    try {
+      if (Auth.mode !== 'firebase' || !FirebaseProvider.auth || this._joining) return;
+      const cur = FirebaseProvider.auth.currentUser, role = this.me && this.me.role;
+      this.editorIssue = '';
+      if (!['editor', 'owner'].includes(role)) { if (cur && /^rd_/.test(cur.uid)) await FirebaseProvider.auth.signOut(); return; }   // odebrana rola = koniec sesji redaktora
+      if (cur) return;
+      this._joining = true;
+      const d = await this.api('/editor-token', { method: 'POST' });
+      await FirebaseProvider.auth.signInWithCustomToken(d.token);
+    } catch (e) {
+      const code = e && e.error;
+      this.editorIssue = code === 'forbidden' ? (this.verified() ? 'forbidden' : 'verify') : code === 'no_sa' || code === 'sync' ? 'server' : 'signin';
+      console.warn('Logowanie redaktora nie powiodło się:', e);
+    }
+    finally { this._joining = false; try { renderReaderCard(); } catch { /* ignoruj */ } }
+  },
   /** Własne maile z Workera; gdy Worker nie ma skonfigurowanej wysyłki (albo zawiedzie), idzie standardowy mail Firebase. */
   async sendVerify(strict) {
     try { await this.api('/mail/verify', { method: 'POST' }); return; }
@@ -3987,8 +6579,55 @@ async function commentAction(act, id, btn) {
   } catch (err) { toast(readerErr(err), 'error'); }
 }
 
+
+/** Okno wiadomości e-mail wysyłanej przez Worker od redakcja@sliska.pl (tylko Właściciel). */
+function mailBox(o) {
+  const old = document.getElementById('mailx'); if (old) old.remove();
+  const T = o.templates || [], m = document.createElement('div');
+  m.id = 'mailx'; m.className = 'mailx';
+  m.innerHTML = `<div class="mailx-box" role="dialog" aria-modal="true" aria-label="Wiadomość e-mail">
+    <div class="mailx-h"><div><b>Nowa wiadomość</b><small>Od: Redakcja Śliska News &lt;redakcja@sliska.pl&gt;</small></div><button type="button" class="btn btn-sm" data-x>Zamknij</button></div>
+    <label>Do<input type="email" id="mx-to" value="${Utils.esc(o.to || '')}" autocomplete="off"></label>
+    <label>Temat<input type="text" id="mx-sub" maxlength="160" value="${Utils.esc(o.subject || '')}"></label>
+    ${T.length ? `<label>Szablon<select id="mx-tpl"><option value="">Pusta wiadomość</option>${T.map((t, i) => `<option value="${i}">${Utils.esc(t.t)}</option>`).join('')}</select></label>` : ''}
+    <label>Treść<textarea id="mx-txt" rows="9" placeholder="Napisz wiadomość…"></textarea></label>
+    <p class="mx-msg" id="mx-msg" role="status"></p>
+    <div class="mailx-a"><button type="button" class="btn btn-primary" id="mx-send">Wyślij</button></div></div>`;
+  document.body.appendChild(m);
+  const $m = s => m.querySelector(s), close = () => m.remove();
+  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-x]')) close(); });
+  const tpl = $m('#mx-tpl');
+  if (tpl) tpl.onchange = () => { const t = T[tpl.value]; if (!t) return; if (t.s) $m('#mx-sub').value = t.s; $m('#mx-txt').value = t.b; };
+  $m('#mx-send').onclick = async () => {
+    const msg = $m('#mx-msg'), btn = $m('#mx-send');
+    const body = { to: $m('#mx-to').value.trim(), subject: $m('#mx-sub').value.trim(), text: $m('#mx-txt').value.trim() };
+    if (!body.to || !body.subject || !body.text) { msg.className = 'mx-msg is-e'; msg.textContent = 'Uzupełnij adres, temat i treść.'; return; }
+    btn.disabled = true; msg.className = 'mx-msg'; msg.textContent = 'Wysyłam…';
+    try {
+      const r = await fetch(CONFIG.API_BASE + '/admin/mail', { method: 'POST', headers: { 'content-type': 'application/json', ...(await actorAuth()) }, body: JSON.stringify(body), cache: 'no-store' });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(d.error === 'mail_not_configured' ? 'Wysyłka e-mail nie jest jeszcze skonfigurowana w Workerze (powiązanie EMAIL).' : d.error === 'send_failed' ? 'Nie udało się wysłać: ' + (d.detail || '') : d.error === 'to' ? 'Adres odbiorcy wygląda niepoprawnie.' : d.error === 'forbidden' ? 'Wiadomości może wysyłać tylko Właściciel.' : 'Nie udało się wysłać wiadomości.');
+      msg.className = 'mx-msg is-o'; msg.textContent = 'Wysłano ✓'; toast('Wiadomość wysłana.'); setTimeout(close, 900);
+    } catch (e) { msg.className = 'mx-msg is-e'; msg.textContent = e.message; btn.disabled = false; }
+  };
+  $m('#mx-txt').focus();
+}
+const TIP_MAIL_TPL = [
+  { t: 'Dziękujemy za zgłoszenie', b: 'Dzień dobry,\n\ndziękujemy za zgłoszenie – trafiło do redakcji i zajmiemy się nim w najbliższym czasie.\n\nPozdrawiamy' },
+  { t: 'Temat zostanie opisany', b: 'Dzień dobry,\n\ndziękujemy za podesłany temat. Zajmiemy się nim, a jeśli opublikujemy materiał, damy znać.\n\nPozdrawiamy' },
+  { t: 'Błąd poprawiony', b: 'Dzień dobry,\n\ndziękujemy za wskazanie błędu – już go poprawiliśmy.\n\nPozdrawiamy' },
+  { t: 'Nie tym razem', b: 'Dzień dobry,\n\ndziękujemy za zgłoszenie. Tym razem nie zajmiemy się tym tematem, ale cenimy, że dajesz nam znać.\n\nPozdrawiamy' }
+];
+
 /** Zapytania moderatora: token z projektu redakcji (altplus-news). */
-async function adminApi() { throw new Error('Niedostępne w wersji publicznej.'); }
+async function adminApi(path, opts = {}) {
+  const h = await actorAuth();
+  if (!h.authorization) throw new Error('Moderacja działa po zalogowaniu.');
+  const r = await fetch(CONFIG.API_BASE + path, { ...opts, headers: { 'content-type': 'application/json', ...h }, cache: 'no-store' });
+  let d = {}; try { d = await r.json(); } catch { /* ignoruj */ }
+  if (!r.ok) throw new Error(d.error === 'forbidden' ? 'Brak uprawnień moderatora.' : (READER_ERR[d.error] || 'Nie udało się wykonać akcji.'));
+  return d;
+}
 
 /* ---- okno logowania / rejestracji czytelnika ---- */
 let readerMode = 'login';
@@ -4343,7 +6982,71 @@ function bindReaderEvents() {
 }
 
 
-/*@staff-removed*/
+/* ---- Zgłoszone reklamy (tylko Właściciel): lista z podglądem i pobieraniem plików ---- */
+const AD_ST = { new: 'Nowe', done: 'Przyjęte', rejected: 'Odrzucone' };
+const AD_FMTS = [['long', 'Długi 1456×180'], ['box', 'Okienko 600×500'], ['card', 'Kafelek 900×1000']];
+async function adImgBlob(id, f) {
+  // Dwie ścieżki: „spot” (nie łapią jej blokery reklam) i dawna „ads” – działa ta, którą zna Worker.
+  const h = await actorAuth();
+  let last = 'img';
+  for (const p of ['/admin/spot/img', '/admin/ads/img']) {
+    try {
+      const r = await fetch(CONFIG.API_BASE + p + '?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
+      if (r.ok) return URL.createObjectURL(await r.blob());
+      last = 'HTTP ' + r.status;
+    } catch (e) { last = 'blokada połączenia (wyłącz blokadę reklam dla tej strony)'; }
+  }
+  throw new Error('Nie udało się pobrać grafiki: ' + last);
+}
+/** Zgłoszenia reklam pogrupowane: nowe → przyjęte → odrzucone (każda grupa z nagłówkiem i licznikiem). */
+function adGroups(list, render) {
+  return [['new', 'Nowe'], ['done', 'Przyjęte'], ['rejected', 'Odrzucone']].map(([k, l]) => {
+    const g = list.filter(a => a.status === k);
+    return g.length ? `<h3 class="adsub-h is-${k}">${l} <i>${g.length}</i></h3>` + g.map(render).join('') : '';
+  }).join('');
+}
+async function renderAdSubs(el) {
+  if (!el) return;
+  holdHeight(2500);
+  el.dataset.adsroot = '1';
+  el.innerHTML = '<p class="muted">Ładowanie…</p>';
+  try {
+    const d = await adminApi('/admin/spot');
+    if (!d.ads.length) { el.innerHTML = '<p class="muted">Nikt jeszcze nie wysłał reklamy. Formularz: <a href="spot" target="_blank" rel="noopener">/spot</a></p>'; return; }
+    el.innerHTML = `<p class="muted adsub-note">Zgłoszenia widzisz tylko Ty. Formularz dla reklamodawców: <a href="spot" target="_blank" rel="noopener">/spot</a>. Reklamy do wyświetlania dodajesz w narzędziu <b>Reklamy</b> na stronie głównej dev (baza reklam). <button type="button" class="btn btn-sm" data-ads-open>Otwórz narzędzie Reklamy</button></p>` + adGroups(d.ads, a => {
+      const slug = (a.brand || 'reklama').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'reklama';
+      const fm = AD_FMTS.filter(([f]) => a['has_' + f]);
+      return `<article class="mc adsub" data-id="${a.id}" data-slug="${slug}" data-status="${a.status}">
+        <div class="mc-head"><b>${Utils.esc(a.brand)}</b><span class="mc-st is-${a.status === 'new' ? 'pending' : a.status === 'done' ? 'ok' : 'hidden'}">${AD_ST[a.status] || a.status}</span><time>${ago(a.at)}</time></div>
+        <p class="mc-text">${Utils.esc(a.name)} · <a href="mailto:${Utils.esc(a.email)}?subject=${encodeURIComponent('Twoja reklama w Śliska News')}">${Utils.esc(a.email)}</a><br>Link: <a href="${Utils.esc(a.link)}" target="_blank" rel="noopener nofollow">${Utils.esc(a.link)}</a>${a.note ? '<br>' + Utils.esc(a.note).replace(/\n/g, '<br>') : ''}</p>
+        <div class="adsub-imgs">${fm.map(([f, l]) => `<figure data-f="${f}"><img alt="${l}" data-adimg="${f}"><figcaption>${l} · <button type="button" class="mc-link" data-ads-dl="${f}">Pobierz</button></figcaption></figure>`).join('') || '<small class="muted">Brak grafik.</small>'}</div>
+        ${fm.length < 3 ? `<small class="muted">Brakuje formatów: ${AD_FMTS.filter(([f]) => !a['has_' + f]).map(x => x[1]).join(', ')}</small>` : ''}
+        <div class="mc-actions"><button type="button" data-ads-act="done">Przyjęte</button><button type="button" data-ads-act="rejected">Odrzuć</button>${a.status !== 'new' ? '<button type="button" data-ads-act="new">Przywróć jako nowe</button>' : ''}<button type="button" class="is-danger" data-ads-act="delete">Usuń</button></div>
+      </article>`;
+    });
+    $$('[data-adimg]', el).forEach(async img => { try { img.src = await adImgBlob(img.closest('.adsub').dataset.id, img.dataset.adimg); } catch { img.alt = 'Nie udało się wczytać'; } });
+  } catch (e) { el.innerHTML = `<p class="muted">${Utils.esc(e.message || 'Nie udało się wczytać zgłoszeń.')}</p>`; }
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('[data-ads-open]')) return;
+  if (window.top !== window) window.top.postMessage('sliska-open-ads', '*'); else location.href = '/reklamy/';
+});
+document.addEventListener('click', async e => {
+  const dl = e.target.closest('[data-ads-dl]'), act = e.target.closest('[data-ads-act]');
+  if (!dl && !act) return;
+  const art = e.target.closest('.adsub'); if (!art) return;
+  try {
+    if (dl) {
+      const url = await adImgBlob(art.dataset.id, dl.dataset.adsDl);
+      const a = document.createElement('a'); a.href = url; a.download = art.dataset.slug + '-' + dl.dataset.adsDl + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    } else {
+      if (act.dataset.adsAct === 'delete' && !confirm('Usunąć to zgłoszenie razem z grafikami?')) return;
+      await adminApi('/admin/spot', { method: 'POST', body: JSON.stringify({ id: Number(art.dataset.id), action: act.dataset.adsAct }) });
+      renderAdSubs(art.closest('[data-adsroot]'));
+    }
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+
 /* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
 const Mod = { all: false };
 const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor', mod: 'Moderator' };
@@ -4352,10 +7055,10 @@ const crownHtml = () => `<span class="crown" title="Moderator" role="img" aria-l
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const CMT_EDIT_MS = 5 * 60 * 1000;
-const isOwnerRole = () => false;
-const canMod = () => false;
-const canManage = () => false;          // użytkownikami zarządza tylko Właściciel Portalu
-const roleBadge = c => roleBase(c) + (!c.staff && (c.crown || c.role === 'mod') ? crownHtml() : '');
+const isOwnerRole = () => myRole() === 'owner';
+const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor' || !!(Readers.me && Readers.me.crown);
+const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
+const roleBadge = c => { const h = roleBase(c) + (!c.staff && (c.crown || c.role === 'mod') ? crownHtml() : ''); return h ? `<span class="rb">${h}</span>` : ''; };
 const roleBase = c => !c.staff && c.role === 'mod' ? '' : c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 const MOD_REASON = { spam: 'spam', obraza: 'obraza', spoiler: 'spoiler', inne: 'inne' };
@@ -4375,7 +7078,225 @@ function modItemHtml(c) {
   </article>`;
 }
 
-/*@staff-removed*/
+async function renderModComments(el, all) {
+  if (!el) return;
+  holdHeight(2500);
+  Mod.all = !!all; el.dataset.modroot = '1';
+  el.innerHTML = '<p class="muted">Ładowanie…</p>';
+  try {
+    const d = await adminApi('/admin/comments?status=' + (all ? 'all' : 'attention'));
+    const set = canManage() ? await adminApi('/admin/settings').catch(() => null) : null;
+    const slowBar = set ? `<label class="mod-slow"><span>Tryb wolniejszej dyskusji</span><select data-mod-slow aria-label="Tryb wolniejszej dyskusji">${[[0, 'Wyłączony'], [30, 'Odstęp 30 s'], [60, 'Odstęp 1 min'], [300, 'Odstęp 5 min']].map(([v, l]) => `<option value="${v}" ${set.slow === v ? 'selected' : ''}>${l}</option>`).join('')}</select><small>Dotyczy czytelników; redakcja i Właściciel są wyłączeni z limitu.</small></label><label class="mod-slow mod-guests"><input type="checkbox" data-mod-guests ${set.guests !== false ? 'checked' : ''}><span>Komentarze bez konta (jako „Niezmoczona #numer”)</span></label>` : '';
+    el.innerHTML = `${slowBar}<div class="mod-bar"><b>${all ? 'Ostatnie komentarze' : 'Do sprawdzenia'}</b><button type="button" class="mc-link" data-mod="${all ? 'attention' : 'all'}">${all ? 'Tylko do sprawdzenia' : 'Pokaż ostatnie'}</button></div>
+      <div class="mod-list">${d.comments.length ? d.comments.map(modItemHtml).join('') : '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'}</div>`;
+  } catch (ex) { el.innerHTML = `<p class="form-error">${Utils.esc(ex.message || 'Nie udało się pobrać komentarzy.')}</p>`; }
+}
+
+/** Zmiana bez przeładowania listy: pozycja przewijania zostaje, znika albo zmienia się tylko ta jedna pozycja. */
+function modApply(item, act) {
+  const status = act === 'delete' ? null : act === 'hide' ? 'hidden' : 'ok';
+  const list = item.parentElement;
+  if (!status || (!Mod.all && !['pending', 'reported'].includes(status))) {
+    item.classList.add('is-out');
+    setTimeout(() => { item.remove(); if (!list.querySelector('.mc')) list.innerHTML = '<p class="muted mod-empty">Brak komentarzy do sprawdzenia.</p>'; }, 190);
+    return;
+  }
+  item.dataset.status = status;
+  const st = item.querySelector('.mc-st'); st.className = 'mc-st is-' + status; st.textContent = MOD_ST[status];
+  const first = item.querySelector('.mc-actions button');
+  first.dataset.modAct = status === 'ok' ? 'hide' : 'approve';
+  first.textContent = status === 'ok' ? 'Ukryj' : 'Przywróć';
+  first.disabled = false;
+}
+
+function userVerified(u) { return u.staff || u.role === 'owner' ? true : u.vfy === 1 ? true : u.vfy === 0 ? false : !!u.email_ok; }
+function modUserHtml(u) {
+  const staff = !!u.staff;
+  const isOwner = u.role === 'owner';
+  const opts = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor']];
+  const sel = `<label class="mu-sel"><span>Rola</span><select data-mod-role ${isOwner ? 'disabled' : ''} aria-label="Rola">${opts.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const vOpts = [['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']];
+  const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
+  const vsel = staff || isOwner ? '' : `<label class="mu-sel"><span>Weryfikacja</span><select data-mod-verify aria-label="Weryfikacja konta">${vOpts.map(([v, l]) => `<option value="${v}" ${vCur === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`;
+  const ver = userVerified(u);
+  const how = staff ? 'konto redakcji' : isOwner ? 'Właściciel' : u.vfy === 1 ? 'ręcznie' : u.vfy === 0 ? 'ręcznie' : 'e-mail';
+  const chip = `<span class="mu-chip ${ver ? 'is-ok' : 'is-warn'}" title="Źródło: ${how}">${ver ? 'Zweryfikowany' : 'Niezweryfikowany'}</span>`;
+  const since = u.created ? new Date(u.created).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
+  const av = `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
+  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}${!staff && !isOwner ? `<button type="button" data-mod-user="${u.crown ? 'mod-off' : 'mod-on'}">${u.crown ? 'Odbierz koronę moderatora' : 'Nadaj koronę moderatora'}</button>` : ''}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
+  return `<div class="mu ${u.banned ? 'is-banned' : ''}" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}" data-ver="${ver ? 1 : 0}" data-banned="${u.banned ? 1 : 0}">
+    <div class="mu-top">
+      <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
+      <div class="mu-main"><button type="button" class="mu-name mu-open" data-mod-user="profile" title="Pełny profil"><b>${Utils.esc(u.name)}</b></button><small>${u.comments} ${u.comments === 1 ? 'komentarz' : 'komentarzy'}${since ? ' · od ' + since : ''}</small></div>
+      ${menu}
+    </div>
+    <div class="mu-chips">${roleBadge({ staff, role: u.role, crown: u.crown })}${chip}${u.banned ? '<span class="mu-chip is-bad">Zablokowany</span>' : ''}</div>
+    <div class="mu-ctrl">${sel}${vsel}</div>
+  </div>`;
+}
+
+const MU_FILTERS = [['', 'Wszyscy'], ['staff', 'Redakcja'], ['unver', 'Niezweryfikowani'], ['banned', 'Zablokowani']];
+function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner' || u.crown) : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
+async function loadModUsers(el) {
+  const list = $('.mu-list', el); if (!list) return;
+  const y = window.scrollY, f = el.dataset.f || '';
+  try {
+    const d = await adminApi('/admin/users?q=' + encodeURIComponent($('.mod-q', el).value.trim()));
+    const rows = modUserFilter(d.users, f);
+    list.innerHTML = rows.length ? rows.map(modUserHtml).join('') : '<p class="muted">Brak użytkowników.</p>';
+    window.scrollTo(0, y);
+  } catch (ex) { list.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p>`; }
+}
+function renderModUsersPanel(el) {
+  if (!el) return;
+  el.dataset.modusers = '1'; el.dataset.f = el.dataset.f || '';
+  el.innerHTML = `<div class="mod-bar"><b>Użytkownicy</b><button type="button" class="mc-link" data-mod-backup>Pobierz kopię zapasową</button></div><input type="search" class="mod-q" placeholder="Szukaj po nazwie…" aria-label="Szukaj użytkownika"><div class="mu-filters" role="group" aria-label="Filtr użytkowników">${MU_FILTERS.map(([v, l]) => `<button type="button" class="mu-f ${(el.dataset.f || '') === v ? 'is-on' : ''}" data-mod-f="${v}">${l}</button>`).join('')}</div><div class="mu-list"><p class="muted">Ładowanie…</p></div>`;
+  loadModUsers(el);
+}
+/** Zakładka „Komentarze” w panelu redaktora: moderacja + (dla uprawnionych) użytkownicy. */
+function renderModeration(all) {
+  const el = $('#panel-comments'); if (!el) return;
+  el.innerHTML = '<div id="mod-c"></div>';
+  renderModComments($('#mod-c'), all);
+}
+
+document.addEventListener('click', async e => {
+  const m = e.target.closest('[data-mod]'), a = e.target.closest('[data-mod-act]'), u = e.target.closest('[data-mod-user]'), fl = e.target.closest('[data-mod-f]');
+  try {
+    if (e.target.closest('[data-mod-backup]')) {
+      const b = e.target.closest('[data-mod-backup]'); b.disabled = true; const old = b.textContent; b.textContent = 'Przygotowuję…';
+      try {
+        const h = await actorAuth();
+        const r = await fetch(CONFIG.API_BASE + '/admin/export', { headers: h, cache: 'no-store' });
+        if (!r.ok) throw new Error('Nie udało się pobrać kopii zapasowej.');
+        const url = URL.createObjectURL(await r.blob());
+        const a = document.createElement('a'); a.href = url; a.download = 'sliska-kopia-' + new Date().toISOString().slice(0, 10) + '.json'; document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        toast('Kopia zapasowa pobrana.');
+      } finally { b.disabled = false; b.textContent = old; }
+    }
+    else if (fl) { const box = fl.closest('[data-modusers]'); box.dataset.f = fl.dataset.modF; $$('.mu-f', box).forEach(b => b.classList.toggle('is-on', b === fl)); loadModUsers(box); }
+    else if (m) { renderModComments(m.closest('[data-modroot]'), m.dataset.mod === 'all'); }
+    else if (a) {
+      const item = a.closest('.mc'); if (!item || a.disabled) return;
+      a.disabled = true;
+      try { await adminApi('/admin/comment', { method: 'POST', body: JSON.stringify({ id: Number(item.dataset.id), action: a.dataset.modAct }) }); modApply(item, a.dataset.modAct); }
+      catch (ex) { a.disabled = false; throw ex; }
+    } else if (u) {
+      const row = u.closest('.mu'), body = { uid: row.dataset.uid }, k = u.dataset.modUser;
+      if (k === 'profile') { openUserProfile(row.dataset.uid, () => loadModUsers(row.closest('[data-modusers]'))); return; }
+      if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
+      else if (k === 'mod-on' || k === 'mod-off') body.crown = k === 'mod-on';
+      else if (k === 'cooldown') body.resetCooldown = true;
+      else if (k === 'avatar-remove') { if (!confirm('Usunąć zdjęcie profilowe tego użytkownika?')) return; body.avatar = null; }
+      else if (k === 'delete') { if (!confirm('Usunąć konto „' + row.dataset.name + '” razem z jego komentarzami? Nazwa zostanie zwolniona. Tego nie da się cofnąć.')) return; body.delete = true; }
+      else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; body.banned = k === 'ban'; }
+      await adminApi('/admin/user', { method: 'POST', body: JSON.stringify(body) }); toast('Zapisano.'); loadModUsers(row.closest('[data-modusers]'));
+    }
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-mod-role]'); if (!sel) return;
+  const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
+  try {
+    const d = await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, role: sel.value }) });
+    if (row.dataset.staff === '1') toast('Rola zapisana. Konto redakcji ma dostęp z reguł Firestore – rola zmienia tylko tytuł przy komentarzach.');
+    else if (sel.value === 'editor' && d.editorSync === null) toast('Rola zapisana (plakietka i moderacja). Prawo pisania artykułów wymaga konta serwisowego w workerze – patrz instrukcja.');
+    else if (d.editorSync === false) toast('Rola zapisana, ale synchronizacja z Firebase się nie udała. Sprawdź konto serwisowe w workerze.', 'error');
+    else toast('Rola zapisana.');
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  loadModUsers(box);
+});
+document.addEventListener('change', async e => {
+  const gs = e.target.closest('[data-mod-guests]'); if (!gs) return;
+  try { await adminApi('/admin/settings', { method: 'POST', body: JSON.stringify({ guests: gs.checked }) }); toast(gs.checked ? 'Goście mogą komentować.' : 'Komentowanie bez konta wyłączone.'); }
+  catch (ex) { gs.checked = !gs.checked; toast(ex.message || 'Nie udało się.', 'error'); }
+});
+document.addEventListener('change', async e => {
+  const sl = e.target.closest('[data-mod-slow]'); if (!sl) return;
+  try { await adminApi('/admin/settings', { method: 'POST', body: JSON.stringify({ slow: Number(sl.value) }) }); toast(Number(sl.value) ? 'Tryb wolniejszej dyskusji włączony.' : 'Tryb wolniejszej dyskusji wyłączony.'); }
+  catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+});
+document.addEventListener('change', async e => {
+  const sel = e.target.closest('[data-mod-verify]'); if (!sel) return;
+  const row = sel.closest('.mu'), box = row.closest('[data-modusers]');
+  try {
+    await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, verify: sel.value }) });
+    toast(sel.value === 'on' ? 'Konto oznaczone jako zweryfikowane.' : sel.value === 'off' ? 'Konto oznaczone jako niezweryfikowane.' : 'Weryfikacja wg potwierdzenia e-mail.');
+  } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
+  loadModUsers(box);
+});
+document.addEventListener('change', async e => {
+  const f = e.target.closest('[data-mod-avatar]'); if (!f || !f.files[0]) return;
+  const row = f.closest('.mu'), box = row.closest('[data-modusers]');
+  try { const data = await shrinkToJpeg(f.files[0]); await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid: row.dataset.uid, avatar: data }) }); toast('Zdjęcie zmienione.'); }
+  catch (ex) { toast(ex.message || 'Nie udało się zmienić zdjęcia.', 'error'); }
+  loadModUsers(box);
+});
+
+/* ---------- Pełny profil użytkownika (tylko Właściciel): podgląd danych i edycja wszystkiego oprócz e-maila ---------- */
+const fmtDT = t => t ? new Date(t).toLocaleString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
+async function openUserProfile(uid, onClose) {
+  document.querySelectorAll('.upr-ov').forEach(o => o.remove());
+  const ov = document.createElement('div'); ov.className = 'upr-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
+  ov.innerHTML = '<div class="upr-card"><p class="muted">Ładowanie…</p></div>';
+  document.body.appendChild(ov); document.body.classList.add('modal-open');
+  const close = () => { ov.remove(); document.body.classList.remove('modal-open'); if (onClose) onClose(); };
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-upr-close]')) close(); });
+  const draw = async () => {
+    const card = $('.upr-card', ov);
+    let d; try { d = await adminApi('/admin/user?uid=' + encodeURIComponent(uid)); } catch (ex) { card.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p><button type="button" class="btn" data-upr-close>Zamknij</button>`; return; }
+    const u = d.user, fb = d.fb || {}, staff = !!u.staff, isOwner = u.role === 'owner';
+    const email = fb.email || u.email || '';
+    const prov = (fb.providers || []).map(p => p === 'google.com' ? 'Google' : p === 'password' ? 'e-mail i hasło' : p).join(', ') || (staff ? 'konto redakcji' : '–');
+    const row = (k, v) => `<div class="upr-r"><span>${k}</span><b>${v}</b></div>`;
+    const roles = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor']];
+    const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
+    card.dataset.uid = u.uid;
+    card.innerHTML = `<div class="upr-head"><div class="avatar upr-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
+        <div><h2>${Utils.esc(u.name)}</h2><small>${u.banned ? 'Zablokowany · ' : ''}${d.comments} komentarzy · ${d.votes} ocen${u.pub ? ` · <a href="#/uzytkownik/${Utils.esc(u.pub)}" data-upr-close>profil publiczny</a>` : ''}</small></div>
+        <button type="button" class="upr-x" data-upr-close aria-label="Zamknij">×</button></div>
+      <section class="upr-sec"><h3>Dane konta</h3>
+        <label class="upr-f"><span>E-mail (nie można zmienić)</span><input type="text" value="${Utils.esc(email || 'brak danych')}" readonly disabled></label>
+        ${row('E-mail potwierdzony', fb.verified || u.email_ok ? 'tak' : 'nie')}${row('Logowanie', Utils.esc(prov))}${row('Konto utworzone', fmtDT(fb.created || u.created))}${row('Ostatnie logowanie', fmtDT(fb.lastLogin))}${row('Zmiana nazwy', u.name_at ? fmtDT(u.name_at) : '–')}${row('ID konta', `<code>${Utils.esc(u.uid)}</code>`)}
+        <p class="muted upr-note">Obecnego hasła nie da się podejrzeć – serwis (Firebase) przechowuje tylko jego skrót. Możesz ustawić nowe.</p>
+      </section>
+      <section class="upr-sec"><h3>Edycja</h3>
+        <label class="upr-f"><span>Nazwa użytkownika</span><span class="upr-in"><input type="text" id="upr-name" value="${Utils.esc(u.name)}" maxlength="20"><button type="button" class="btn btn-sm" data-upr="name">Zapisz</button></span></label>
+        <label class="upr-f"><span>Opis profilu</span><span class="upr-in"><textarea id="upr-bio" rows="3" maxlength="300">${Utils.esc(u.bio || '')}</textarea><button type="button" class="btn btn-sm" data-upr="bio">Zapisz</button></span></label>
+        ${staff ? '' : `<label class="upr-f"><span>Nowe hasło (min. 6 znaków)</span><span class="upr-in"><input type="text" id="upr-pass" autocomplete="off" placeholder="wpisz nowe hasło"><button type="button" class="btn btn-sm" data-upr="password" ${d.canPassword ? '' : 'disabled title="Brak konta serwisowego w Workerze"'}>Ustaw</button></span></label>`}
+        <div class="upr-grid"><label class="upr-f"><span>Rola</span><select id="upr-role" ${isOwner ? 'disabled' : ''}>${roles.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        ${staff || isOwner ? '' : `<label class="upr-f"><span>Moderator</span><select id="upr-crown"><option value="0" ${u.crown ? '' : 'selected'}>Brak</option><option value="1" ${u.crown ? 'selected' : ''}>Korona moderatora</option></select></label><label class="upr-f"><span>Weryfikacja</span><select id="upr-vfy">${[['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']].map(([v, l]) => `<option value="${v}" ${vCur === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}</div>
+        <div class="upr-acts"><label class="btn btn-sm">Zmień zdjęcie<input type="file" accept="image/*" id="upr-file" hidden></label>
+          ${u.avatar_at ? '<button type="button" class="btn btn-sm" data-upr="avatar-remove">Usuń zdjęcie</button>' : ''}
+          <button type="button" class="btn btn-sm" data-upr="cooldown">Zeruj limit zmiany nazwy</button>
+          ${isOwner ? '' : `<button type="button" class="btn btn-sm" data-upr="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="btn btn-sm upr-danger" data-upr="delete">Usuń konto</button>`}</div>
+      </section>
+      <section class="upr-sec"><h3>Ostatnie komentarze</h3>${d.recent.length ? `<ul class="upr-cm">${d.recent.map(c => `<li><a href="#/artykul/${Utils.esc(c.article)}" data-upr-close>${Utils.esc(c.text.slice(0, 160))}${c.text.length > 160 ? '…' : ''}</a><small>${fmtDT(c.at)}${c.status !== 'ok' ? ' · ' + Utils.esc(c.status) : ''}</small></li>`).join('')}</ul>` : '<p class="muted">Brak komentarzy.</p>'}</section>`;
+  };
+  const save = async (body, msg) => { try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, ...body }) }); toast(msg || 'Zapisano.'); await draw(); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } };
+  ov.addEventListener('click', async e => {
+    const b = e.target.closest('[data-upr]'); if (!b) return; const k = b.dataset.upr;
+    if (k === 'name') save({ name: $('#upr-name', ov).value.trim() });
+    else if (k === 'bio') save({ bio: $('#upr-bio', ov).value });
+    else if (k === 'password') { const p = $('#upr-pass', ov).value; if (p.length < 6) return toast('Hasło musi mieć co najmniej 6 znaków.', 'error'); if (!confirm('Ustawić nowe hasło dla tego użytkownika? Dotychczasowe przestanie działać.')) return; await save({ password: p }, 'Hasło zmienione.'); }
+    else if (k === 'avatar-remove') { if (confirm('Usunąć zdjęcie profilowe?')) save({ avatar: null }); }
+    else if (k === 'cooldown') save({ resetCooldown: true });
+    else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; save({ banned: k === 'ban' }); }
+    else if (k === 'delete') { if (!confirm('Usunąć to konto razem z komentarzami? Tego nie da się cofnąć.')) return; try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, delete: true }) }); toast('Konto usunięte.'); close(); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } }
+  });
+  ov.addEventListener('change', async e => {
+    if (e.target.id === 'upr-crown') { try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, crown: e.target.value === '1' }) }); toast('Zapisano.'); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } await draw(); }
+    if (e.target.id === 'upr-role') { try { const d = await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, role: e.target.value }) }); toast(d.editorSync === false ? 'Rola zapisana, ale synchronizacja z Firebase się nie udała.' : 'Rola zapisana.'); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } await draw(); }
+    else if (e.target.id === 'upr-vfy') save({ verify: e.target.value });
+    else if (e.target.id === 'upr-file' && e.target.files[0]) { try { save({ avatar: await shrinkToJpeg(e.target.files[0]) }, 'Zdjęcie zmienione.'); } catch (ex) { toast(ex.message || 'Nie udało się zmienić zdjęcia.', 'error'); } }
+  });
+  document.addEventListener('keydown', function esc(e) { if (!ov.isConnected) return document.removeEventListener('keydown', esc); if (e.key === 'Escape') close(); });
+  draw();
+}
+let modQTimer = 0;
+document.addEventListener('input', e => { if (e.target.matches('.mod-q')) { clearTimeout(modQTimer); const box = e.target.closest('[data-modusers]'); modQTimer = setTimeout(() => loadModUsers(box), 300); } });
+
 /* ---------- Routing ---------- */
 function showView(name) {
   ['home', 'article', 'panel', 'editor', 'settings', 'ranking', 'notfound', 'tip', 'legal', 'saved', 'quick', 'account', 'user', 'authors'].forEach(v => { $('#view-' + v).hidden = v !== name; });
@@ -4436,6 +7357,7 @@ function routeCore() {
 
   if ((r.name === 'editor' || r.name === 'panel' || r.name === 'settings') && !Auth.isAdmin()) {
     location.hash = '#/';
+    openReaderModal('login');
     return;
   }
 
@@ -4602,7 +7524,233 @@ function renderProfileStats() {
   const b = $('#pa-sched'); b.hidden = !sched; b.textContent = sched;
 }
 
-/*@staff-removed*/
+async function loadProfile() {
+  const uid = Auth.uid();
+  if (state.profileUid !== uid) { state.profile = EMPTY_PROFILE(); state.profileLoaded = false; state.profileUid = uid; }   // inne konto = inny profil
+  if (state.profileLoaded) { renderProfile(); return; }
+  state.profileLoaded = true;
+  const cached = readLocalProfile();
+  if (cached) state.profile = normProfile(cached);
+  renderProfile();
+  try {
+    const remote = await DataService.getProfile();
+    if (remote) {
+      state.profile = normProfile(remote);
+      writeLocalProfile(state.profile);
+      renderProfile();
+    } else if (/^rd_/.test(uid) && Readers.me && Readers.me.name && !state.profile.name) {     // nowy redaktor z konta czytelnika: zacznij od jego nazwy
+      state.profile.name = Readers.me.name;
+      renderProfile();
+    }
+  } catch (err) {
+    console.warn('Nie udało się pobrać profilu:', err);
+  }
+}
+
+let settingsAvatar = '';
+
+/** Autorzy występujący w artykułach, których nazwa różni się od aktualnej nazwy i nie jest znanym aliasem. */
+/** Opublikowane artykuły podpisane cudzą nazwą (do ręcznego przypisania sobie). */
+function foreignArticles(src) {
+  const me = state.profile.name, known = new Set(state.profile.aliases || []), uid = Auth.uid();
+  return (src || state.articles)
+    .filter(a => !a.quick && a.title)
+    .map(a => Object.assign({}, a, { _mine: !!((uid && a.authorUid === uid) || known.has((a.author || '').trim()) || (a.author || '').trim() === me) }))
+    .sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)));
+}
+
+const myUsername = () => (typeof Readers !== 'undefined' && Readers.me && Readers.me.name) || '';
+/** Podpis pod artykułem: „Redaktor Imię Nazwisko” (albo Redaktor + nazwa użytkownika). */
+const bylineName = n => 'Redaktor ' + String(n || '').replace(/^Redaktor\s+/i, '');
+function fillAuthorNameFields() {
+  const cur = (state.profile.name || '').replace(/^Redaktor\s+/i, '').trim();
+  const user = myUsername();
+  let first = '', last = '';
+  if (cur && cur !== user && !/^[a-z0-9._]+$/.test(cur)) { const i = cur.indexOf(' '); first = i < 0 ? cur : cur.slice(0, i); last = i < 0 ? '' : cur.slice(i + 1).trim(); }
+  $('#st-first').value = first; $('#st-last').value = last;
+  syncAuthorName();
+}
+function syncAuthorName() {
+  const full = [$('#st-first').value, $('#st-last').value].map(s => s.replace(/\s+/g, ' ').trim()).filter(Boolean).join(' ');
+  const name = full || myUsername() || (state.profile.name || '').replace(/^Redaktor\s+/i, '');
+  $('#st-name').value = name;
+  const by = $('#st-byline'); if (by) by.innerHTML = name ? `Tak będzie wyglądał podpis: <b>${Utils.esc(bylineName(name))}</b>` : '';
+}
+
+
+/** „Przypisz artykuły do siebie”: po 5 pozycji, przycisk „Pokaż więcej” dokłada kolejne 5; zaznaczenia zostają przy dokładaniu. */
+let ASSIGN_PICKED = new Set();
+let ASSIGN_ALL = null;
+/** Z wklejonego linku do artykułu wyciąga jego identyfikator (…#/artykul/ID, …/a/ID, samo ID). */
+function articleIdFromInput(v) {
+  v = String(v || '').trim(); if (!v) return '';
+  let m = v.match(/#\/(?:artykul|a)\/([^?#\s]+)/) || v.match(/\/(?:artykul|a)\/([^?#\s/]+)/);
+  if (!m && /^https?:\/\//i.test(v)) { try { const u = new URL(v); const seg = u.pathname.split('/').filter(Boolean); m = [0, seg[seg.length - 1] || '']; } catch { /* ignoruj */ } }
+  try { return decodeURIComponent((m && m[1]) || ''); } catch { return (m && m[1]) || ''; }
+}
+function renderAssignList(list) {
+  const box = $('#st-authors'), card = $('#st-authors-card'); if (!box || !card) return;
+  card.hidden = !list.length;
+  const checked = ASSIGN_PICKED;
+  box.onchange = e => { const i = e.target.closest('input[name="st-article"]'); if (i) { if (i.checked) checked.add(i.value); else checked.delete(i.value); } };
+  const STEP = 5; let shown = Math.max(STEP, box.querySelectorAll('.st-art').length);
+  const row = x => `<label class="check-row st-art"><input type="checkbox" name="st-article" value="${Utils.esc(x.id)}"${checked.has(x.id) ? ' checked' : ''}><span><b>${Utils.esc(x.title)}</b> <em class="muted">· ${Utils.esc((x.author || 'bez autora').trim() || 'bez autora')} · ${Utils.formatDate(x.createdAt)}</em>${x._mine ? ' <span class="st-mine">Twój</span>' : ''}</span></label>`;
+  const flt = $('#st-art-filter');
+  const paint = () => {
+    const q = flt && flt.value ? (Utils.fold ? Utils.fold(flt.value) : flt.value.toLowerCase()) : '';
+    const hay = x => (Utils.fold ? Utils.fold(x.title + ' ' + (x.author || '')) : (x.title + ' ' + (x.author || '')).toLowerCase());
+    const linkId = articleIdFromInput(flt && flt.value);
+    let pool = q ? list.filter(x => hay(x).includes(q)) : list;
+    if (linkId && /^https?:|\/(artykul|a)\//.test(flt.value)) {
+      pool = (ASSIGN_ALL || list).filter(x => x.id === linkId && !x.quick);
+      if (!pool.length && !paint.asked) { paint.asked = linkId; DataService.getArticleById(linkId).then(a => { if (a && a.id) { (ASSIGN_ALL = ASSIGN_ALL || []).push(a); paint(); } }).catch(() => {}); }
+    }
+    const vis = (q || linkId) ? pool : pool.slice(0, shown);
+    box.querySelectorAll('input[name="st-article"]').forEach(i => { if (i.checked) checked.add(i.value); else checked.delete(i.value); });
+    box.innerHTML = vis.map(row).join('') || '<p class="muted">Brak pasujących artykułów. Możesz wkleić link do artykułu.</p>';
+    if (!q && !linkId && pool.length > shown) {
+      const left = pool.length - shown;
+      box.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn-sm st-more" id="st-art-more">Pokaż więcej (jeszcze ${left})</button>`);
+      $('#st-art-more').onclick = () => { shown += STEP; paint(); };
+    }
+  };
+  if (flt) { flt.oninput = () => { paint(); }; }
+  paint();
+}
+
+function renderSettings() {
+  if (currentRoute().name === 'settings') { stashProfileBlock(); fillHub(); }
+  settingsAvatar = state.profile.avatar || '';
+  fillAuthorNameFields();
+  const bioEl = $('#st-bio'), bioN = () => { $('#st-bio-n').textContent = `${Array.from(bioEl.value).length}/150`; };
+  bioEl.value = Authors.bio(state.profile.name || ''); bioEl.dataset.orig = bioEl.value; bioN();
+  bioEl.oninput = bioN;
+  if (!Authors.loaded) Authors.load().then(() => { if (!bioEl.dataset.touched && bioEl.value === bioEl.dataset.orig) { bioEl.value = Authors.bio(state.profile.name || ''); bioEl.dataset.orig = bioEl.value; bioN(); } });
+  bioEl.addEventListener('input', () => { bioEl.dataset.touched = '1'; }, { once: true });
+  $('#st-photo').checked = state.profile.showPhoto !== false;
+  const sel = $('#st-cat');
+  sel.innerHTML = '<option value="">Brak (wybieram za każdym razem)</option>' + CATEGORIES.map(c => `<option value="${Utils.esc(c)}">${Utils.esc(c)}</option>`).join('');
+  sel.value = state.profile.defaultCategory || '';
+  $('#st-quick-push').checked = state.profile.quickPush !== false;
+  $('#st-quick-source').value = state.profile.quickSource || '';
+  $('#st-panel-tab').value = state.profile.panelTab || 'drafts';
+  updateDevicePush();
+  $('#st-error').hidden = true;
+  $('#st-avatar-file').value = '';
+  ASSIGN_PICKED = new Set();
+  renderAssignList(foreignArticles());
+  // lista pełna: pobieramy wszystkie artykuły (nie tylko ostatnie wczytane na stronie)
+  DataService.getAllArticles({ open: true }).then(all => { if (currentRoute().name === 'settings' || $('#st-authors')) { ASSIGN_ALL = all; renderAssignList(foreignArticles(all)); } }).catch(err => { console.warn('Pełna lista artykułów niedostępna:', err); const b = $('#st-authors'); if (b) b.insertAdjacentHTML('afterbegin', '<p class="muted st-warn">Nie udało się pobrać wszystkich artykułów – widać tylko ostatnie. Wklej link do artykułu w wyszukiwarce, żeby go znaleźć.</p>'); });
+  updateSettingsAvatar();
+}
+
+async function testPush() {
+  const out = $('#st-diag'); out.hidden = false; out.className = 'st-diag'; out.textContent = 'Sprawdzam…';
+  const bad = t => { out.className = 'st-diag is-bad'; out.textContent = t; };
+  try {
+    if (!Push.supported()) return bad('Ta przeglądarka nie obsługuje powiadomień' + (Push.isIos() ? ' – na iPhonie otwórz stronę z ikony na ekranie głównym.' : '.'));
+    if (Notification.permission !== 'granted') return bad('Powiadomienia nie są dozwolone – włącz je w ustawieniach przeglądarki/systemu dla tej strony i wróć tutaj.');
+    const sub = await Push.sub();
+    if (!sub) return bad('To urządzenie nie ma subskrypcji. Wyłącz i włącz przełącznik powiadomień powyżej.');
+    const r = await fetch(`${CONFIG.API_BASE}/push/test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ endpoint: sub.endpoint }) });
+    const d = await r.json().catch(() => ({}));
+    const cron = d.cronAge == null ? ' Cron jeszcze nigdy nie ruszył – sprawdź w Cloudflare: Worker → Settings → Trigger Events (co 5 minut).' : d.cronAge > 15 ? ` Cron ostatnio działał ${d.cronAge} min temu – powinien co 5 min, sprawdź Trigger Events.` : '';
+    if (d.error === 'not_subscribed') { try { await Push.post('subscribe', sub.endpoint); } catch { /* ignoruj */ } return bad('Serwer nie znał tej subskrypcji (dopisałem ją). Kliknij test jeszcze raz.' + cron); }
+    if (d.error === 'rate') return bad('Za dużo testów – spróbuj za godzinę.');
+    if (d.error === 'no_vapid') return bad('Worker nie ma kluczy VAPID_PUBLIC / VAPID_PRIVATE.');
+    if (r.status === 404 || r.status === 503 || r.status >= 500 && !d.status) return bad('Worker nie odpowiada na /news/api/push/test – wgraj najnowszy kod Workera (Edit code → Deploy).');
+    if (d.ok) { out.className = 'st-diag is-ok'; out.textContent = 'Serwer wysłał test (kod ' + d.status + '). Powiadomienie powinno pojawić się w kilka sekund. Jeśli go nie ma, to blokuje je system: tryb „Nie przeszkadzać”, wyciszone powiadomienia przeglądarki/aplikacji.' + cron; return; }
+    if (d.status === 401 || d.status === 403) return bad('Serwer powiadomień odrzucił klucze (kod ' + d.status + '). Wyłącz i włącz powiadomienia na tym urządzeniu; jeśli nie pomoże, VAPID_PUBLIC w Workerze różni się od klucza, którym zapisano subskrypcję.');
+    if (d.status === 404 || d.status === 410) return bad('Subskrypcja wygasła i została usunięta. Wyłącz i włącz powiadomienia ponownie.');
+    bad('Nie udało się wysłać (kod ' + (d.status || r.status) + ').' + cron);
+  } catch (err) { bad('Błąd: ' + (err.message || err)); }
+}
+
+async function updateDevicePush() {
+  const el = $('#st-device-push'); if (!el) return;
+  const usable = Push.supported();
+  el.disabled = !usable;
+  el.checked = usable && Notification.permission === 'granted' && !!(await Push.sub());
+  $('#st-device-hint').textContent = usable ? 'Dotyczy tylko tego urządzenia i przeglądarki.' : (Push.isIos() ? 'Na iPhonie dodaj stronę do ekranu głównego i otwórz ją z ikony.' : 'Ta przeglądarka nie obsługuje powiadomień.');
+}
+
+function updateSettingsAvatar() {
+  $('#st-avatar').innerHTML = avatarHtml({ name: $('#st-name').value || state.profile.name, avatar: settingsAvatar });
+  $('#st-avatar-remove').hidden = !settingsAvatar;
+}
+
+/** Zmienia autora we wszystkich artykułach (i wersjach roboczych) należących do redaktora. */
+async function reassignAuthor(claim, nextName, avatar, showPhoto, ids = []) {
+  const uid = Auth.uid();
+  const names = new Set(claim), pick = new Set(ids);
+  let all = [];
+  try { all = await DataService.getAllArticles(); } catch { all = state.articles; }
+  const photo = avatar && showPhoto ? await shrinkAvatar(avatar) : '';
+  const todo = all.filter(a => a && ((a.authorUid && a.authorUid === uid) || names.has((a.author || '').trim()) || pick.has(a.id))
+    && ((a.author || '') !== nextName || (a.authorPhoto || '') !== photo || a.authorUid !== uid));
+  let done = 0;
+  for (const a of todo) {
+    const upd = { ...a, author: nextName, authorUid: uid, authorPhoto: photo };
+    await DataService.save(upd);
+    upsertLocalState(upd);
+    done++;
+  }
+  try {
+    const drafts = await DataService.getDrafts();
+    for (const d of drafts) if (names.has((d.author || '').trim())) await DataService.saveDraft({ ...d, author: nextName });
+  } catch (e) { console.warn('Wersje robocze – pominięto zmianę autora:', e); }
+  return done;
+}
+
+async function saveSettings(e) {
+  e.preventDefault();
+  const errs = [$('#st-error'), $('#st-error-profile')].filter(Boolean);
+  const err = { set hidden(v) { errs.forEach(x => { x.hidden = v; }); }, set textContent(t) { errs.forEach(x => { x.textContent = t; }); } };
+  err.hidden = true;
+  const prev = state.profile;
+  const name = $('#st-name').value.trim().slice(0, 60);
+  const pickedIds = [...new Set([...ASSIGN_PICKED, ...$$('input[name="st-article"]:checked').map(i => i.value)])];
+  const next = normProfile({
+    name, avatar: settingsAvatar,
+    defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
+    quickPush: $('#st-quick-push').checked, quickSource: $('#st-quick-source').value.trim(), panelTab: $('#st-panel-tab').value,
+    aliases: [...new Set([...(prev.aliases || []), ...(prev.name && prev.name !== name ? [prev.name] : [])])].filter(n => n && n !== name)
+  });
+  const claim = [...new Set([prev.name, ...(prev.aliases || [])])].filter(n => n && n !== name);
+  const photoChanged = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto;
+  const btn = $('#st-save'), btn2 = $('#st-save-profile');
+  btn.disabled = true; if (btn2) btn2.disabled = true;
+  try {
+    await DataService.saveProfile(next);
+    const bio = $('#st-bio').value.trim().replace(/\s+/g, ' ').slice(0, 150);
+    let bioFailed = false;
+    const pubPhoto = next.showPhoto !== false ? (next.avatar || '') : '';       // publiczny profil dostaje zdjęcie w pełnej jakości
+    const photoSync = (prev.avatar || '') !== (next.avatar || '') || prev.showPhoto !== next.showPhoto || (!!pubPhoto !== Authors.hasPhoto(name));
+    if (name && (bio !== ($('#st-bio').dataset.orig || '') || (prev.name && prev.name !== name) || photoSync)) {
+      try { await actorApi('/author', { method: 'POST', body: JSON.stringify({ name, bio, ...(photoSync ? { avatar: pubPhoto } : {}), old: prev.name && prev.name !== name ? prev.name : '' }) }); await Authors.load(true); }
+      catch (e2) { console.warn('Biografia nie zapisała się:', e2); bioFailed = true; }
+    }
+    state.profile = next;
+    writeLocalProfile(next);
+    renderProfile();
+    let n = 0;
+    if (name && (claim.length || photoChanged || pickedIds.length)) {
+      btn.textContent = 'Aktualizuję artykuły…';
+      n = await reassignAuthor(claim, name, next.avatar, next.showPhoto, pickedIds);
+    }
+    toast(bioFailed ? 'Ustawienia zapisane, ale biografia nie – wgraj najnowszy kod Workera.' : n ? `Zapisano. Zaktualizowano ${n} ${plural(n, 'artykuł', 'artykuły', 'artykułów')}.` : 'Ustawienia zapisane.');
+    renderSettings();
+    refreshViews();
+  } catch (ex) {
+    console.error(ex);
+    err.textContent = ex.message || 'Nie udało się zapisać ustawień.';
+    err.hidden = false;
+  } finally {
+    btn.disabled = false; if (btn2) btn2.disabled = false;
+    btn.textContent = 'Zapisz ustawienia';
+  }
+}
+
 /* ---------- Akcje (przyciski z data-action) ---------- */
 async function sendPushManual(id, btn) {
   if (!canManage()) return;
@@ -4647,6 +7795,7 @@ function handleAction(action, id, btn) {
   if (!Auth.isAdmin()) return;
   if (action === 'delete-tip') { deleteTip(id); return; }
   if (action === 'tip-status') { openTipStatus(id); return; }
+  if (action === 'tip-mail') { const b = btn; mailBox({ to: b.dataset.to, subject: b.dataset.subj, templates: TIP_MAIL_TPL }); return; }
   if (action === 'tip-quick') { quickTipStatus(id, btn.dataset.st); return; }
   if (action === 'quick-new') { openQuickModal(); return; }
   if (action === 'quick-edit') { openQuickModal(id); return; }
@@ -4858,9 +8007,11 @@ function bindEvents() {
   $('#btn-save-draft').addEventListener('click', manualSaveDraft);
   $('#btn-preview').addEventListener('click', openPreview);
   $('#install-link').addEventListener('click', e => { e.preventDefault(); installApp(); });
+  const pvFull = $('#pv-full');
+  if (pvFull) pvFull.addEventListener('click', () => { const box = $('#preview-modal .modal-box'); const on = box.classList.toggle('pv-full'); pvFull.setAttribute('aria-pressed', on); pvFull.textContent = on ? '⤡ Zmniejsz' : '⤢ Pełny ekran'; });
   $$('[data-pv]').forEach(b => b.addEventListener('click', () => {
     $$('[data-pv]').forEach(x => x.classList.toggle('active', x === b));
-    $('#preview-body').classList.toggle('pv-phone', b.dataset.pv === 'phone');
+    pvMode = b.dataset.pv; paintPreview();
   }));
   $('#btn-focus').addEventListener('click', () => {
     const on = form.classList.toggle('focus-mode');
@@ -5221,7 +8372,7 @@ async function main() {
   document.body.classList.toggle('is-admin', Auth.isAdmin());
 
   await DataService.init();
-  Auth.mode = 'offline';
+  Auth.mode = DataService.mode;
   $('#login-email-field').hidden = Auth.mode !== 'firebase';
   document.body.classList.toggle('is-admin', Auth.isAdmin());
 
@@ -5239,6 +8390,7 @@ async function main() {
     state.loadErrCode = (err && (err.code || err.message)) || 'błąd';
   }
   state.ready = true;
+  setTimeout(() => { const sp = document.getElementById('app-splash'); if (sp) { sp.classList.add('is-out'); setTimeout(() => sp.remove(), 500); } }, 250);
   if (Auth.isAdmin()) loadProfile();
   Auth.onChange(() => applyAuthUI());
   Readers.init();
@@ -5329,3 +8481,4 @@ function initStickyVars() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
+setTimeout(() => { const sp = document.getElementById('app-splash'); if (sp) sp.classList.add('is-out'); }, 12000); // zabezpieczenie: ekran ładowania nigdy nie zostaje na stałe
