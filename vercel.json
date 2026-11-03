@@ -1,14 +1,45 @@
 {
   "redirects": [
-    { "source": "/news", "destination": "https://news.sliska.pl/", "permanent": true },
-    { "source": "/news/:path((?!a/|og/|api/|sw\\.js$|sitemap\\.xml$|rss\\.xml$).*)", "destination": "https://news.sliska.pl/:path", "permanent": true }
+    {
+      "source": "/news",
+      "destination": "https://news.sliska.pl/?z=app",
+      "permanent": true
+    },
+    {
+      "source": "/news/",
+      "destination": "https://news.sliska.pl/?z=app",
+      "permanent": true
+    },
+    {
+      "source": "/news/:path((?!a/|og/|api/|sw\\.js$|sitemap\\.xml$|rss\\.xml$).*)",
+      "destination": "https://news.sliska.pl/:path",
+      "permanent": true
+    }
   ],
   "rewrites": [
-    { "source": "/news/a/:id", "destination": "https://api.sliska.pl/a/:id" },
-    { "source": "/news/og/:file", "destination": "https://api.sliska.pl/og/:file" },
-    { "source": "/news/api/:path*", "destination": "https://api.sliska.pl/news/api/:path*" },
-    { "source": "/news/sitemap.xml", "destination": "https://api.sliska.pl/sitemap.xml" },
-    { "source": "/news/rss.xml", "destination": "https://api.sliska.pl/rss.xml" },
-    { "source": "/news/sw.js", "destination": "https://api.sliska.pl/news/sw.js" }
+    {
+      "source": "/news/a/:id",
+      "destination": "https://api.sliska.pl/a/:id"
+    },
+    {
+      "source": "/news/og/:file",
+      "destination": "https://api.sliska.pl/og/:file"
+    },
+    {
+      "source": "/news/api/:path*",
+      "destination": "https://api.sliska.pl/news/api/:path*"
+    },
+    {
+      "source": "/news/sitemap.xml",
+      "destination": "https://api.sliska.pl/sitemap.xml"
+    },
+    {
+      "source": "/news/rss.xml",
+      "destination": "https://api.sliska.pl/rss.xml"
+    },
+    {
+      "source": "/news/sw.js",
+      "destination": "https://api.sliska.pl/news/sw.js"
+    }
   ]
 }
