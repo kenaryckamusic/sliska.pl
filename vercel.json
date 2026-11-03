@@ -1,52 +1,45 @@
 {
-  "cleanUrls": false,
-  "trailingSlash": false,
-  "rewrites": [
+  "redirects": [
     {
-      "source": "/spot",
-      "destination": "/spot.html"
+      "source": "/news",
+      "destination": "https://news.sliska.pl/?z=app",
+      "permanent": true
+    },
+    {
+      "source": "/news/",
+      "destination": "https://news.sliska.pl/?z=app",
+      "permanent": true
+    },
+    {
+      "source": "/news/:path((?!a/|og/|api/|sw\\.js$|sitemap\\.xml$|rss\\.xml$).*)",
+      "destination": "https://news.sliska.pl/:path",
+      "permanent": true
     }
   ],
-  "headers": [
+  "rewrites": [
     {
-      "source": "/",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
+      "source": "/news/a/:id",
+      "destination": "https://api.sliska.pl/a/:id"
     },
     {
-      "source": "/(.*)\\.(html|js|css|webmanifest)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "no-cache, must-revalidate"
-        }
-      ]
+      "source": "/news/og/:file",
+      "destination": "https://api.sliska.pl/og/:file"
     },
     {
-      "source": "/(.*)",
-      "headers": [
-        {
-          "key": "X-Content-Type-Options",
-          "value": "nosniff"
-        },
-        {
-          "key": "Referrer-Policy",
-          "value": "strict-origin-when-cross-origin"
-        }
-      ]
+      "source": "/news/api/:path*",
+      "destination": "https://api.sliska.pl/news/api/:path*"
     },
     {
-      "source": "/(index\\.html|app\\.js)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "https://dev.sliska.pl"
-        }
-      ]
+      "source": "/news/sitemap.xml",
+      "destination": "https://api.sliska.pl/sitemap.xml"
+    },
+    {
+      "source": "/news/rss.xml",
+      "destination": "https://api.sliska.pl/rss.xml"
+    },
+    {
+      "source": "/news/sw.js",
+      "destination": "https://api.sliska.pl/news/sw.js"
     }
   ]
 }

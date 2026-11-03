@@ -3,12 +3,7 @@
 <head>
   <meta charset="utf-8">
   <script>try{if(/SliskaMacApp/.test(navigator.userAgent))document.documentElement.classList.add('is-mac-app')}catch(e){}</script>
-  <script>try{if(/[?&]embed=1\b/.test(location.search)&&self!==top)document.documentElement.classList.add('is-embed')}catch(e){}</script>
-  <script>try{if(/^dev\./.test(location.hostname)){document.documentElement.classList.add('is-dev');try{if(localStorage.getItem('sliska-dev-logo')==='off')document.documentElement.classList.add('dev-logo-off')}catch(e){}var m=document.createElement('meta');m.name='robots';m.content='noindex,nofollow';document.head.appendChild(m);document.addEventListener('DOMContentLoaded',function(){var d=document.createElement('div');d.id='dev-dock';var p=document.createElement('a');p.id='dev-pill';p.href='/';p.title='Wróć do wyboru wersji';p.innerHTML='<b>\u2190 DEV</b><span>wybór wersji</span>';var o=document.createElement('button');o.id='dev-out';o.type='button';o.textContent='Wyloguj';o.onclick=function(){window.devLogout&&window.devLogout()};var lg=document.querySelector('#logo svg');if(lg){var ns='http://www.w3.org/2000/svg',g=document.createElementNS(ns,'g');g.setAttribute('class','dev-badge');g.innerHTML='<rect x="361" y="108" width="100" height="40" rx="20" fill="#d6001c"/><text x="411" y="137" text-anchor="middle" font-family="Arial,Helvetica,sans-serif" font-weight="800" font-size="26" letter-spacing="4" fill="#ffffff">DEV</text>';lg.appendChild(g)}var lt=document.createElement('button');lt.id='dev-logo';lt.type='button';function lab(){lt.textContent='Logo: '+(document.documentElement.classList.contains('dev-logo-off')?'zwykłe':'DEV')}lab();lt.onclick=function(){var off=document.documentElement.classList.toggle('dev-logo-off');try{localStorage.setItem('sliska-dev-logo',off?'off':'on')}catch(e){}lab()};d.appendChild(p);d.appendChild(lt);d.appendChild(o);document.body.appendChild(d)})}}catch(e){}</script>
-  <script src="dev-art.js?v=20261102k"></script>
-  <script src="dev-gate.js?v=20261102k"></script>
-  <script>try{var d=document.documentElement;if(!d.classList.contains('is-mac-app')&&matchMedia('(min-width:1100px)').matches)d.classList.add('rail-on')}catch(e){}</script>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Śliska News – najświeższe wiadomości</title>
   <meta name="description" content="Śliska News – wiadomości z muzyki, kontrowersji i dram. Codziennie najświeższe informacje.">
   <meta name="theme-color" content="#d6001c">
@@ -47,22 +42,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Figtree:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap">
-  <link rel="stylesheet" href="style.css?v=20261102k">
-  <link rel="stylesheet" href="app-m.css?v=20261102k">
-  <link rel="stylesheet" href="spoty.css?v=20261102k">
-  <link rel="stylesheet" href="panel.css?v=20261102k">
-  <link rel="stylesheet" href="motion.css?v=20261102k">
+  <link rel="stylesheet" href="style.css?v=20261103ad">
+  <link rel="stylesheet" href="ads.css?v=20261103ad">
   <script>
     /* Motyw ustawiany przed wyświetleniem strony (bez migania) */
     try { var t = localStorage.getItem('sliska_theme'); if (t === 'dark' || t === 'light') document.documentElement.setAttribute('data-theme', t); } catch (e) {}
   </script>
-<style id="app-splash-css">#app-splash{display:none}html.is-app #app-splash{position:fixed;inset:0;z-index:2147482000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;background:radial-gradient(1000px 600px at 90% -10%,#46266f 0,transparent 60%),radial-gradient(900px 700px at 0% 110%,#3a0f2a 0,transparent 55%),#0f0b1d;transition:opacity .35s ease,visibility .35s}html.is-app #app-splash.is-out{opacity:0;visibility:hidden;pointer-events:none}#app-splash img{width:min(62vw,260px);height:auto;display:block;animation:spl-in .5s ease both}#app-splash i{width:30px;height:30px;border-radius:50%;border:3px solid rgba(255,255,255,.18);border-top-color:#e0243f;animation:spl-spin .8s linear infinite}@keyframes spl-spin{to{transform:rotate(360deg)}}@keyframes spl-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}</style>
-<script>try{if(navigator.standalone===true||matchMedia('(display-mode: standalone)').matches)document.documentElement.classList.add('is-app')}catch(e){}</script>
 </head>
 <body>
-<div id="app-splash" role="status" aria-label="Ładowanie"><img src="logo-biale.svg" alt="Śliska News"><i></i></div>
-
-  <script>try{if(document.documentElement.classList.contains('rail-on')&&localStorage.getItem('sliska_rail')==='c')document.body.classList.add('rail-c')}catch(e){}</script>
   <a class="skip-link" id="skip-link" href="#app">Przejdź do treści</a>
   <div class="read-progress" id="read-progress" hidden></div>
 
@@ -85,7 +72,7 @@
         <a class="nav-link" id="nav-quick" href="#/szybkie"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg><span>Nowinki</span></a>
         <a class="nav-link" id="nav-authors" href="#/redakcja"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><path d="M16 5.2a3 3 0 0 1 0 5.6M18 14.8c1.8.7 3 2.3 3 5.2"/></svg><span>Redakcja</span></a>
         <a class="nav-link" id="nav-saved" href="#/zapisane"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 4h12v17l-6-4-6 4z"/></svg><span>Zapisane</span><b class="nav-badge" id="saved-count" hidden></b></a>
-        <a class="nav-link" id="nav-spot" href="spot"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><span>Spot</span></a>
+        <a class="nav-link" id="nav-ads" href="reklama.html"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11v2a1 1 0 0 0 1 1h2l5 4V6L6 10H4a1 1 0 0 0-1 1z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/></svg><span>Reklama</span></a>
       </nav>
 
       <div class="search" id="search-box">
@@ -101,7 +88,7 @@
       </div>
     </div>
   </header>
-  <div class="sp-slot-top container wide" id="sp-slot-top" hidden></div>
+  <div class="ad-top container wide" id="ad-top" hidden></div>
 
   <!-- TREŚĆ (SPA) -->
   <div class="container wide layout" id="layout" data-view="home">
@@ -121,6 +108,10 @@
         <div><b id="ps-sched">0</b><span>Zaplanowane</span></div>
       </a>
       <div class="profile-actions">
+        <button type="button" class="btn btn-primary btn-block btn-ico-row" id="btn-new"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span>Napisz artykuł</span></button>
+        <button type="button" class="pa-row" data-action="quick-new"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></i><span>Nowinka</span></button>
+        <button type="button" class="pa-row" id="btn-panel"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg></i><span>Panel</span><em id="pa-sched" hidden></em></button>
+        <button type="button" class="pa-row" id="btn-settings"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3h0a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5h0a1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8v0a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></i><span>Ustawienia</span></button>
         <button type="button" class="pa-row rd-only" id="btn-rd-account"><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></i><span>Moje konto</span></button>
         <button type="button" class="pa-row rd-only" id="btn-rd-mod" hidden><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></i><span>Komentarze</span></button>
         <button type="button" class="pa-row rd-only" id="btn-rd-users" hidden><i class="pa-ico"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></svg></i><span>Użytkownicy</span></button>
@@ -144,8 +135,8 @@
     <section id="view-home" aria-live="polite">
       <div id="home-status" class="home-status">Ładowanie wiadomości…</div>
       <div id="resume-slot"></div>
-      <div id="hero-slot"></div>
       <div id="quick-slot"></div>
+      <div id="hero-slot"></div>
       <h2 class="section-title" id="grid-title" hidden>Najnowsze wiadomości</h2>
         <p class="grid-desc" id="grid-desc" hidden></p>
       <div class="grid" id="news-grid"></div>
@@ -263,6 +254,7 @@
     <section id="view-panel" hidden>
       <div class="article-top">
         <a class="btn" href="#/">← Powrót do strony głównej</a>
+        <button type="button" class="btn btn-primary" id="panel-new">+ Napisz artykuł</button>
       </div>
       <h1 class="panel-title">Panel redaktora</h1>
       <p class="panel-sub" id="panel-hello"></p>
@@ -276,21 +268,17 @@
       </div>
 
       <div class="ptabs ptabs-grouped" role="tablist" aria-label="Sekcje panelu">
-        <div class="ptab-grp">
-          <span class="ptab-group" aria-hidden="true">Artykuły</span>
-          <button type="button" role="tab" class="ptab is-active" data-ptab="drafts">Wersje robocze</button>
-          <button type="button" role="tab" class="ptab" data-ptab="scheduled">Zaplanowane</button>
-        </div>
-        <div class="ptab-grp">
-          <span class="ptab-group" aria-hidden="true">Społeczność</span>
-          <button type="button" role="tab" class="ptab" data-ptab="comments">Komentarze</button>
-          <button type="button" role="tab" class="ptab" data-ptab="tips" hidden>Tematy i błędy</button>
-          <button type="button" role="tab" class="ptab" data-ptab="ads" hidden>Reklamy</button>
-          <button type="button" role="tab" class="ptab" data-ptab="users" id="ptab-users" hidden>Użytkownicy</button>
-        </div>
-        <div class="ptab-grp">
-          <button type="button" role="tab" class="ptab" data-ptab="tools">Narzędzia</button>
-        </div>
+        <span class="ptab-group" aria-hidden="true">Artykuły</span>
+        <button type="button" role="tab" class="ptab is-active" data-ptab="drafts">Wersje robocze</button>
+        <button type="button" role="tab" class="ptab" data-ptab="scheduled">Zaplanowane</button>
+        <span class="ptab-sep" aria-hidden="true"></span>
+        <span class="ptab-group" aria-hidden="true">Społeczność</span>
+        <button type="button" role="tab" class="ptab" data-ptab="comments">Komentarze</button>
+        <button type="button" role="tab" class="ptab" data-ptab="tips" hidden>Tematy i błędy</button>
+        <button type="button" role="tab" class="ptab" data-ptab="ads" hidden>Reklamy</button>
+        <button type="button" role="tab" class="ptab" data-ptab="users" id="ptab-users" hidden>Użytkownicy</button>
+        <span class="ptab-sep" aria-hidden="true"></span>
+        <button type="button" role="tab" class="ptab" data-ptab="tools">Narzędzia</button>
       </div>
 
       <div class="ptab-pane" data-pane="drafts"><div id="panel-drafts" class="panel-list"></div></div>
@@ -300,7 +288,7 @@
       <div class="ptab-pane" data-pane="ads" hidden><div id="panel-ads" class="panel-list"></div></div>
       <div class="ptab-pane" data-pane="users" hidden><div id="panel-users" class="panel-list"></div></div>
       <div class="ptab-pane" data-pane="tools" hidden>
-        <div class="panel backup-box" id="backup-box" hidden>
+        <div class="panel backup-box">
           <h2 class="section-title">Kopia zapasowa</h2>
           <p class="muted">Pobierz wszystkie artykuły, wersje robocze, profil i zgłoszone tematy do jednego pliku. Plik możesz później wczytać z powrotem (przywracane są artykuły).</p>
           <div class="backup-actions">
@@ -556,17 +544,6 @@
     </div>
   </footer>
 
-
-  <!-- MODAL: ŚLISKA+ -->
-  <div class="modal" id="plus-modal" hidden>
-    <div class="modal-box plus-box" role="dialog" aria-modal="true" aria-labelledby="plus-title">
-      <div class="plus-badge" aria-hidden="true">+</div>
-      <h2 id="plus-title">Śliska+ jest już pełna</h2>
-      <p class="plus-p">Limit użytkowników z subskrypcją został wykorzystany. Wszystkie miejsca są zajęte, a lista oczekujących… też.</p>
-      <p class="plus-p plus-s">Gdy zwolni się miejsce, damy znać na stronie.</p>
-      <button type="button" class="btn btn-primary" data-close="plus-modal">Rozumiem</button>
-    </div>
-  </div>
 
   <!-- MODAL: LOGOWANIE -->
   <div class="modal" id="quick-modal" hidden>
@@ -878,9 +855,7 @@
           <div class="seg" role="group" aria-label="Widok podglądu">
             <button type="button" class="seg-btn active" data-pv="desktop">Komputer</button>
             <button type="button" class="seg-btn" data-pv="phone">Telefon</button>
-            <button type="button" class="seg-btn" data-pv="site">Cała strona</button>
           </div>
-          <button type="button" class="btn btn-sm" id="pv-full" aria-pressed="false" title="Pełny ekran">⤢ Pełny ekran</button>
         </div>
         <button type="button" class="btn btn-sm" data-close="preview-modal">Zamknij</button>
       </div>
@@ -941,8 +916,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="https://cdn.jsdelivr.net/npm/quill@1.3.7/dist/quill.min.js"></script>
-  <script src="app.js?v=20261102k"></script>
-  <script src="spoty.js?v=20261102k" defer></script>
-  <script src="app-m.js?v=20261102k" defer></script>
+  <script src="app.js?v=20261103ad"></script>
+  <script src="ads.js?v=20261103ad" defer></script>
 </body>
 </html>

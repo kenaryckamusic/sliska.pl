@@ -691,7 +691,7 @@ const FirebaseProvider = {
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-auth-compat.js`);
     await Utils.loadScript(`https://www.gstatic.com/firebasejs/${v}/firebase-firestore-compat.js`);
 
-    if (!firebase.apps.some(a => a.name === '[DEFAULT]')) firebase.initializeApp(cfg);
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
     this.db = firebase.firestore();
     this.auth = firebase.auth();
 
@@ -770,13 +770,11 @@ const FirebaseProvider = {
   },
 
   // Wszystkie artykuły (także starsze niż limit na stronie) – do kopii zapasowej
-  async getAllArticles(opts) {
-    if (!this.auth.currentUser && !(opts && opts.open)) throw new Error('Zaloguj się, aby pobrać kopię zapasową.');
-    const snap = (opts && opts.open) ? await this.col().orderBy('createdAt', 'desc').limit(1000).get() : await this.col().get();
+  async getAllArticles() {
+    if (!this.auth.currentUser) throw new Error('Zaloguj się, aby pobrać kopię zapasową.');
+    const snap = await this.col().get();
     return snap.docs.map(d => d.data());
   },
-
-  async getArticleById(id) { const d = await this.col().doc(String(id)).get(); return d.exists ? d.data() : null; },
 
   async addTip(tip) {
     try {
@@ -925,8 +923,7 @@ const DataService = {
   removeDraft(id) { return this.provider.removeDraft(id); },
   saveOg(id, img) { return this.provider.saveOg ? this.provider.saveOg(id, img) : Promise.resolve(); },
   removeOg(id) { return this.provider.removeOg ? this.provider.removeOg(id) : Promise.resolve(); },
-  getAllArticles(o) { return this.provider.getAllArticles(o); },
-  getArticleById(id) { return this.provider.getArticleById ? this.provider.getArticleById(id) : Promise.resolve(null); },
+  getAllArticles() { return this.provider.getAllArticles(); },
   addTip(t) { return this.provider.addTip(t); },
   getTips() { return this.provider.getTips(); },
   removeTip(id) { return this.provider.removeTip(id); },
@@ -1275,12 +1272,10 @@ const Push = {
   }
 };
 
-const isStaffViewer = () => { const st = Auth.isAdmin() || ['editor', 'chief', 'owner'].includes(myRole()) || !!(Readers.me && Readers.me.crown); try { document.body.classList.toggle('is-staff', st); } catch { /* ignoruj */ } return st; };
 async function updatePushButton() {
   const b = $('#btn-push');
   if (!b) return;
-  const staffViewer = isStaffViewer();   // redakcja i Właściciel nie potrzebują dzwonka
-  const usable = !staffViewer && (Push.supported() || (Push.isIos() && !Push.standalone()));
+  const usable = Push.supported() || (Push.isIos() && !Push.standalone());
   b.hidden = !usable;
   if (!usable) return;
   const on = Push.supported() && Notification.permission === 'granted' && !!(await Push.sub());
@@ -1292,8 +1287,6 @@ async function updatePushButton() {
 /** Przy każdym wejściu na stronę: prośba o włączenie powiadomień (tylko gdy ktoś jeszcze ich nie włączył). */
 async function maybeAskPush() {
   try {
-    if (typeof Readers !== 'undefined' && Readers.loading && !maybeAskPush.retried) { maybeAskPush.retried = true; setTimeout(maybeAskPush, 3500); return; }
-    if (isStaffViewer()) return;               // redakcja i Właściciel nie dostają prośby o powiadomienia
     const iosBrowser = Push.isIos() && !Push.standalone() && !Push.supported();
     if (!Push.supported() && !iosBrowser) return;
     if (Push.supported()) {
@@ -1372,18 +1365,8 @@ async function initReactions(a) {
 function drawReactions() {
   const box = $('#reactions'); if (!box || box.dataset.article !== Reacts.article) return;
   box.hidden = false;
-  const top = $('#rx-top');
-  if (top) {
-    const best = REACTIONS.map(([k, e]) => [e, Reacts.counts[k] || 0]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    const fv = n => n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' tys.' : String(n);
-    const parts = [];
-    if (Reacts.views) parts.push(`<span class="rx-v"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>${fv(Reacts.views)}</span>`);
-    best.forEach(([e, n]) => parts.push(`<span>${e} ${fv(n)}</span>`));
-    top.innerHTML = parts.join('');
-    top.hidden = !parts.length;
-  }
   const fmt = n => n >= 1000 ? (n / 1000).toFixed(1).replace('.', ',') + ' tys.' : String(n);
-  box.innerHTML = `<div class="rx-head"><b>Jak Ci się podobało?</b><span class="rx-views" title="Wyświetlenia artykułu"><svg class="ic-eye" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg> ${fmt(Reacts.views)}</span></div>
+  box.innerHTML = `<div class="rx-head"><b>Jak Ci się podobało?</b><span class="rx-views" title="Wyświetlenia artykułu">👁 ${fmt(Reacts.views)}</span></div>
     <div class="rx-row">${REACTIONS.map(([k, e, l]) => `<button type="button" class="rx-btn${Reacts.mine === k ? ' is-on' : ''}" data-rx="${k}" aria-pressed="${Reacts.mine === k}"><span class="rx-e" aria-hidden="true">${e}</span><span class="rx-l">${l}</span><b>${Reacts.counts[k] || 0}</b></button>`).join('')}</div>`;
 }
 async function reactTo(kind) {
@@ -1399,10 +1382,7 @@ async function reactTo(kind) {
     Reacts.counts = d.counts || Reacts.counts; Reacts.mine = d.mine || ''; drawReactions();
   } catch (ex) { Reacts.mine = prev.mine; Reacts.counts = prev.counts; drawReactions(); toast(ex.message || 'Nie udało się zapisać reakcji.', 'error'); }
 }
-document.addEventListener('click', e => {
-  const b = e.target.closest('[data-rx]'); if (b) reactTo(b.dataset.rx);
-  if (e.target.closest('[data-rx-go]')) { const r = $('#reactions'); if (r) r.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-});
+document.addEventListener('click', e => { const b = e.target.closest('[data-rx]'); if (b) reactTo(b.dataset.rx); });
 
 async function initReaderVote(a) {
   const box = $('#reader-vote');
@@ -1517,7 +1497,6 @@ function currentRoute() {
 }
 
 function adminButtons(id) {
-  return ''; // narzędzia redakcyjne są tylko na dev.sliska.pl
   if (!Auth.isAdmin()) return '';
   const safe = Utils.esc(id);
   return `<span class="admin-actions">
@@ -1581,7 +1560,7 @@ function authorHeadHtml(list) {
   const last = list.map(a => a.createdAt).sort().pop();
   const pills = [`<span class="au-pill"><b>${list.length}</b> ${plural(list.length, 'artykuł', 'artykuły', 'artykułów')}</span>`];
   if (reviews) pills.push(`<span class="au-pill"><b>${reviews}</b> ${plural(reviews, 'recenzja', 'recenzje', 'recenzji')}</span>`);
-  if (last) pills.push(`<span class="au-pill">ostatni tekst: <b>${Utils.esc(Utils.formatDate(last).replace(/( o)? \d{1,2}:\d{2}$/, ''))}</b></span>`);
+  if (last) pills.push(`<span class="au-pill">ostatni tekst: <b>${Utils.esc(Utils.formatDate(last).replace(/ \d{1,2}:\d{2}$/, ''))}</b></span>`);
   return `<header class="collection-head author-head">
     <div class="author-cover" aria-hidden="true"></div>
     <div class="author-topbar">${backBtn('#/redakcja', '← Redaktorzy', 'btn btn-sm author-back')}</div>
@@ -1794,20 +1773,6 @@ function cardHtml(a, opts = {}) {
   </article>`;
 }
 
-function mastheadHtml(list) {
-  const d = new Date();
-  const date = d.toLocaleDateString('pl-PL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-  const upd = list.length ? Utils.formatTime(list[0].createdAt) : '';
-  return `<div class="masthead"><span class="mh-date">${Utils.esc(date)}</span>${upd ? `<span class="mh-live"><i aria-hidden="true"></i>Ostatnia aktualizacja: ${Utils.esc(upd)}</span>` : ''}<span class="mh-sp"></span><a href="#/szybkie">Nowinki</a><a href="#/ranking">Ranking</a><a href="#/redakcja">Redakcja</a></div>`;
-}
-
-function latestPanelHtml(items) {
-  return `<aside class="latest-panel" aria-label="Najnowsze"><h2 class="lp-h"><i aria-hidden="true"></i>Najnowsze</h2><ol class="lp-list">${items.map(a => {
-    const id = encodeURIComponent(a.id);
-    return `<li class="lp-item" data-id="${Utils.esc(a.id)}"><time datetime="${Utils.esc(a.createdAt)}">${Utils.esc(Utils.formatTime(a.createdAt))}</time><div><span class="lp-cat">${Utils.esc(Utils.catsOf(a)[0] || '')}</span><a class="lp-t" href="#/artykul/${id}">${Utils.esc(a.title)}</a></div></li>`;
-  }).join('')}</ol></aside>`;
-}
-
 function heroHtml(a, useCover) {
   const id = encodeURIComponent(a.id);
   return `<section class="hero" data-id="${Utils.esc(a.id)}" aria-label="Temat dnia">
@@ -1839,8 +1804,7 @@ function renderHome() {
   const status = $('#home-status');
 
   if (state.loadError) {
-    const devCode = /^dev\./.test(location.hostname) ? (state.loadErrCode || DataService.fallbackReason || '') : '';
-    status.innerHTML = '<div class="empty-state">Nie udało się wczytać wiadomości. Odśwież stronę za chwilę.' + (devCode ? '<br><small>[dev: ' + Utils.esc(devCode) + ']</small>' : '') + '</div>';
+    status.innerHTML = '<div class="empty-state">Nie udało się wczytać wiadomości. Odśwież stronę za chwilę.</div>';
     $('#hero-slot').innerHTML = '';
     $('#resume-slot').innerHTML = '';
     $('#quick-slot').innerHTML = '';
@@ -1857,8 +1821,8 @@ function renderHome() {
   const showTop = state.category === ALL && !coll && !state.query.trim() && list.length > 0;
   const hero = showTop ? (list.find(a => a.featured) || list[0]) : null;
   const tiles = showTop ? list.filter(a => a !== hero).slice(0, 2) : [];
-  const top = hero ? [hero] : [];
-  const rest = list.filter(a => !top.includes(a) && !tiles.includes(a));
+  const top = hero ? [hero, ...tiles] : [];
+  const rest = list.filter(a => !top.includes(a));
   const shown = rest.slice(0, state.visible);
 
   if (!list.length) {
@@ -1886,7 +1850,7 @@ function renderHome() {
   }
 
   $('#hero-slot').innerHTML = hero
-    ? mastheadHtml(list) + `<div class="home-top${tiles.length ? '' : ' single'}">${heroHtml(hero, false)}${tiles.length ? `<div class="home-tiles">${tiles.map(tileHtml).join('')}</div>` : ''}</div>`
+    ? `<div class="home-top${tiles.length ? '' : ' single'}">${heroHtml(hero, false)}${tiles.length ? `<div class="home-tiles">${tiles.map(tileHtml).join('')}</div>` : ''}</div>`
     : coll ? collectionHeadHtml(list) : '';
   $('#resume-slot').innerHTML = (state.category === ALL && !coll && !state.query.trim() ? newBannerHtml() : '') + '';
   $('#quick-slot').innerHTML = showTop && !state.onlyNew ? quickStripHtml() : '';
@@ -2000,7 +1964,6 @@ function articleHtml(a, plain) {
           <span class="author-line">${authorAvatarHtml(a)}<a class="author-link" href="${Authors.href(a.author)}"><strong>${Utils.esc(bylineName(a.author))}</strong></a></span>
           <time datetime="${Utils.esc(a.createdAt)}">${Utils.formatDate(a.createdAt)}</time>
           <span>${minutes} min czytania</span>
-          <button type="button" class="rx-top" id="rx-top" data-rx-go hidden aria-label="Reakcje czytelników – przejdź na dół, żeby zareagować"></button>
         </div>
       </header>
       ${heroFig}
@@ -3260,19 +3223,19 @@ function renderTipList() {
   const all = state.tips || [];
   const q = Utils.fold(tipQuery);
   const byKind = all.filter(t => tipKindFilter === 'all' || tipKind(t) === tipKindFilter);
-  const cnt = { open: 0, progress: 0, later: 0, done: 0, rejected: 0, all: byKind.length };
-  byKind.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; if (st !== 'new') cnt[st]++; });
+  const cnt = { open: 0, done: 0, rejected: 0, all: byKind.length };
+  byKind.forEach(t => { const st = tipStatus(t); if (TIP_OPEN.includes(st)) cnt.open++; else cnt[st]++; });
   const kc = k => all.filter(t => (k === 'all' || tipKind(t) === k) && TIP_OPEN.includes(tipStatus(t))).length;
   const kinds = [['all', 'Wszystkie'], ['topic', 'Tematy'], ['error', 'Błędy w artykułach']]
     .map(([k, l]) => `<button type="button" class="tip-kind${tipKindFilter === k ? ' is-active' : ''}" data-tipkind="${k}">${l}${kc(k) ? ` <i>${kc(k)}</i>` : ''}</button>`).join('');
-  const chips = [['open', 'Do rozpatrzenia'], ['progress', tipKindFilter === 'error' ? 'Poprawiam' : 'W toku'], ['later', 'Odłożone'], ['done', tipKindFilter === 'error' ? 'Naprawione' : 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
+  const chips = [['open', 'Do rozpatrzenia'], ['done', tipKindFilter === 'error' ? 'Naprawione' : 'Zrealizowane'], ['rejected', 'Odrzucone'], ['all', 'Archiwum – wszystkie']]
     .map(([k, l]) => `<button type="button" class="tip-filter${tipFilter === k ? ' is-active' : ''}" data-tipfilter="${k}">${l} <i>${cnt[k]}</i></button>`).join('');
   const list = byKind.filter(t => {
     const st = tipStatus(t);
     if (!(tipFilter === 'all' || (tipFilter === 'open' ? TIP_OPEN.includes(st) : st === tipFilter))) return false;
     return !q || Utils.fold([t.title, t.message, t.email].join(' ')).includes(q);
   });
-  const empty = q ? 'Nic nie pasuje do wyszukiwania.' : { open: 'Nic nie czeka na rozpatrzenie. 🎉', progress: 'Nic nie jest teraz w toku.', later: 'Brak odłożonych zgłoszeń.', done: 'Nic jeszcze nie zostało zrealizowane.', rejected: 'Brak odrzuconych zgłoszeń.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
+  const empty = q ? 'Nic nie pasuje do wyszukiwania.' : { open: 'Nic nie czeka na rozpatrzenie. 🎉', done: 'Nic jeszcze nie zostało zrealizowane.', rejected: 'Brak odrzuconych zgłoszeń.', all: 'Brak zgłoszeń od czytelników.' }[tipFilter];
   const item = t => {
     const st = tipStatus(t), err = tipKind(t) === 'error', art = tipArticle(t);
     const label = err ? TIP_ERR_LABEL[st] : TIP_STATUS[st].label;
@@ -3294,7 +3257,7 @@ function renderTipList() {
           <div class="panel-item-actions">${quick}
             ${err && open ? '' : `<button type="button" class="btn btn-sm btn-primary" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status</button>`}
             ${!err && t.link ? `<a class="btn btn-sm" href="${Utils.esc(t.link)}" target="_blank" rel="noopener noreferrer">Źródło</a>` : ''}
-            ${t.email ? (isOwnerRole() ? `<button type="button" class="btn btn-sm" data-action="tip-mail" data-to="${Utils.esc(t.email)}" data-subj="${Utils.esc('Re: ' + title)}">✉ Napisz e-mail</button>` : `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + title)}">Odpisz</a>`) : ''}
+            ${t.email ? `<a class="btn btn-sm" href="mailto:${Utils.esc(t.email)}?subject=${encodeURIComponent('Re: ' + title)}">Odpisz</a>` : ''}
             ${err && open ? `<button type="button" class="btn btn-sm" data-action="tip-status" data-id="${Utils.esc(t.id)}">Status…</button>` : ''}
             <button type="button" class="btn btn-sm btn-danger" data-action="delete-tip" data-id="${Utils.esc(t.id)}">Usuń</button>
           </div>
@@ -3543,7 +3506,6 @@ function downloadFile(name, text, mime) {
 
 /* ---------- Kopia zapasowa ---------- */
 async function exportBackup() {
-  if (!canManage()) { toast('Kopię zapasową może pobrać tylko Właściciel Portalu.', 'error'); return; }
   const btn = $('#backup-export');
   btn.disabled = true;
   try {
@@ -3572,7 +3534,6 @@ async function exportBackup() {
 
 async function importBackup(file) {
   if (!file) return;
-  if (!canManage()) { toast('Kopię zapasową może przywrócić tylko Właściciel Portalu.', 'error'); return; }
   let data;
   try {
     data = JSON.parse(await file.text());
@@ -3657,7 +3618,6 @@ const OWNER_TABS = ['tips', 'ads', 'users'];       // widzi tylko Właściciel P
 function applyOwnerTabs() {
   const own = canManage();
   OWNER_TABS.forEach(k => $$(`#view-panel [data-ptab="${k}"]`).forEach(b => { b.hidden = !own; }));
-  const bb = $('#backup-box'); if (bb) bb.hidden = !own;       // kopię zapasową (pobranie i przywrócenie JSON) ma tylko Właściciel
 }
 /** Dopiero gdy znamy rolę, doładowujemy dane tylko-dla-Właściciela (zgłoszenia tematów, liczba nowych reklam). */
 function ensureOwnerPanes() {
@@ -3665,7 +3625,7 @@ function ensureOwnerPanes() {
   if (currentRoute().name !== 'panel' || !canManage() || state.ownerLoaded) return;
   state.ownerLoaded = true;
   renderTips().then(updatePanelCounts);
-  adminApi('/admin/spot').then(d => { const n = (d.ads || []).filter(a => a.status === 'new').length; const b = $('#view-panel [data-ptab="ads"]'); if (b) b.dataset.count = n ? n : ''; }).catch(() => {});
+  adminApi('/admin/ads').then(d => { const n = (d.ads || []).filter(a => a.status === 'new').length; const b = $('#view-panel [data-ptab="ads"]'); if (b) b.dataset.count = n ? n : ''; }).catch(() => {});
 }
 function setPanelTab(t) {
   holdHeight(2500);
@@ -4299,7 +4259,7 @@ async function saveCloudDraft(manual = false) {
     if (editor.session === ctx.session) {
       editor.lastCloud = snap;
       editor.dirty = JSON.stringify(collectData()) !== snap;
-      setStatus('Szkic zapisany na koncie o ' + Utils.formatTime(draft.savedAt) + ' – dokończysz go na każdym urządzeniu', 'ok');
+      setStatus('Wersja robocza zapisana o ' + Utils.formatTime(draft.savedAt), 'ok');
       if (!editor.dirty) Buffers.remove(ctx.draftId);
       else writeBuffer();
     }
@@ -4819,7 +4779,6 @@ const Accounts = {
       try { await Push.unlink(); } catch { /* ignoruj */ }
       await this.idbPut(`firebase:authUser:${CONFIG.READER_FIREBASE.apiKey}:readers`, a.user);
       location.hash = '#/konto';
-      if (window.top !== window) { try { window.top.location.href = '/?open=' + encodeURIComponent('/studio/#/konto'); return; } catch { /* ignoruj */ } }
       location.reload();
     } catch (e) { console.warn('Przełączenie konta nie powiodło się:', e); toast('Nie udało się przełączyć konta. Zaloguj się ręcznie.', 'error'); }
   },
@@ -5110,7 +5069,7 @@ function quickItemHtml(a, withAdmin) {
   const src = a.link
     ? `<span class="quick-from">Źródło:</span> <a class="quick-src" href="${Utils.esc(a.link)}" target="_blank" rel="noopener noreferrer">${Utils.esc(srcName || 'link')} →</a>`
     : (srcName ? `<span class="quick-from">Źródło:</span> <span class="quick-src quick-src-plain">${Utils.esc(srcName)}</span>` : '');
-  const admin = false && withAdmin && Auth.isAdmin()
+  const admin = withAdmin && Auth.isAdmin()
     ? `<span class="admin-actions"><button type="button" class="btn btn-sm" data-action="quick-edit" data-id="${Utils.esc(a.id)}">Edytuj</button>${canManage() ? `<button type="button" class="btn btn-sm btn-push-send" data-action="push-send" data-id="${Utils.esc(a.id)}" title="Wyślij powiadomienie push o tej nowince">🔔 Powiadom</button>` : ''}<button type="button" class="btn btn-sm btn-danger" data-action="quick-delete" data-id="${Utils.esc(a.id)}">Usuń</button></span>` : '';
   return `<li class="quick-item">
     <time class="quick-time" datetime="${Utils.esc(a.createdAt)}">${Utils.formatTime(a.createdAt)}</time>
@@ -5123,12 +5082,12 @@ function quickItemHtml(a, withAdmin) {
 
 function quickStripHtml() {
   const list = publishedQuick().slice(0, 3);
-  const plus = `<button type="button" class="plus-card" data-action="plus-open" aria-label="Śliska+ – subskrypcja"><span class="plus-top"><b>Śliska+</b><i>NOWOŚĆ</i></span><span class="plus-tx">Bez reklam, wcześniejszy dostęp do newsów i odznaka przy komentarzach.</span><span class="plus-go">Dołącz →</span></button>`;
-  return `<div class="quick-row"><section class="quick-strip" aria-label="Nowinki z Poślizgiem">
+  if (!list.length && !Auth.isAdmin()) return '';
+  return `<section class="quick-strip" aria-label="Nowinki z Poślizgiem">
     <div class="quick-head"><h2 class="section-title">Nowinki z Poślizgiem</h2>
-      <span><a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
+      <span><button type="button" class="btn btn-sm admin-only" data-action="quick-new">+ Dodaj</button> <a class="quick-all" href="#/szybkie">Wszystkie →</a></span></div>
     ${list.length ? `<ul class="quick-list">${list.map(a => quickItemHtml(a, false)).join('')}</ul>` : '<p class="muted">Nie ma jeszcze nowinek.</p>'}
-  </section>${plus}</div>`;
+  </section>`;
 }
 
 function renderQuick() {
@@ -5143,7 +5102,7 @@ function renderQuick() {
   });
   el.innerHTML = `
     <div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a>
-      </div>
+      <div class="top-actions"><button type="button" class="btn btn-primary admin-only" data-action="quick-new">+ Dodaj nowinkę</button></div></div>
     <header class="rank-head">
       <span class="rank-eyebrow">Krótko i na temat</span>
       <h1 class="rank-title">Nowinki z Poślizgiem</h1>
@@ -5763,19 +5722,7 @@ async function openEditor(articleId, draftParam) {
         draftId = pointer;
         candidates.push({ kind: 'buffer', savedAt: buf.savedAt || '', data: normalizeData(buf.data) });
       } else {
-        // Brak kopii w tej przeglądarce: szukamy niedokończonego szkicu tego konta zapisanego na innym urządzeniu
-        let remote = null;
-        try {
-          const uid = Auth.uid();
-          const lim = Date.now() - 14 * 864e5;
-          remote = (await DataService.getDrafts()).find(d => d && !d.articleId && d.ownerUid === uid && !isEmptyData(normalizeData(d)) && Date.parse(d.savedAt || '') > lim) || null;
-        } catch { /* bez szkicu z konta */ }
-        if (remote) {
-          draftId = remote.id;
-          candidates.push({ kind: 'cloud', savedAt: remote.savedAt || '', data: normalizeData(remote) });
-        } else {
-          draftId = Utils.uid('d_');
-        }
+        draftId = Utils.uid('d_');
       }
     }
   } catch (err) {
@@ -5807,10 +5754,6 @@ async function openEditor(articleId, draftParam) {
   if (chosen && chosen.kind === 'buffer') {
     $('#banner-text').textContent = `Przywrócono niezapisane zmiany z ${Utils.formatDate(chosen.savedAt)}.`;
     discardBtn.textContent = mode === 'draft' ? 'Odrzuć niezapisane zmiany' : (mode === 'edit' ? 'Wróć do opublikowanej wersji' : 'Zacznij od nowa');
-    banner.hidden = false;
-  } else if (chosen && chosen.kind === 'cloud' && mode === 'new') {
-    $('#banner-text').textContent = `Wczytano niedokończony szkic z konta (zapisany ${Utils.formatDate(chosen.savedAt)} o ${Utils.formatTime(chosen.savedAt)}) – możesz go dokończyć na tym urządzeniu.`;
-    discardBtn.textContent = 'Zacznij od nowa';
     banner.hidden = false;
   } else if (chosen && chosen.kind === 'cloud' && mode === 'edit') {
     $('#banner-text').textContent = `Wczytano wersję roboczą zmian z ${Utils.formatDate(chosen.savedAt)}.`;
@@ -6016,36 +5959,9 @@ function openPreview() {
     createdAt: created,
     updatedAt: created
   };
-  pvArticle = { preview, plain: Utils.stripHtml(d.content) };
-  paintPreview();
+  $('#preview-body').innerHTML = articleHtml(preview, Utils.stripHtml(d.content));
+  enhanceGalleries($('#preview-body'));
   openModal('preview-modal');
-}
-
-let pvArticle = null, pvMode = 'desktop';
-function pvSkeleton(n, cls) { return Array.from({ length: n }, () => `<div class="pvs-sk ${cls || ''}"><i></i><span></span><span class="s"></span></div>`).join(''); }
-/** Podgląd: komputer / telefon / „cała strona” (nagłówek serwisu + artykuł + szablon komentarzy i kolumny bocznej). */
-function paintPreview() {
-  const body = $('#preview-body'); if (!body || !pvArticle) return;
-  $$('[data-pv]').forEach(x => x.classList.toggle('active', x.dataset.pv === pvMode));
-  body.classList.toggle('pv-phone', pvMode === 'phone');
-  body.classList.toggle('pv-site', pvMode === 'site');
-  const art = articleHtml(pvArticle.preview, pvArticle.plain);
-  if (pvMode !== 'site') { body.innerHTML = art; enhanceGalleries(body); return; }
-  const logo = document.querySelector('.site-header .logo'), nav = document.querySelector('.site-header .main-nav');
-  const links = nav ? [...nav.querySelectorAll('a')].map(a => `<span class="pvs-nl">${Utils.esc(a.textContent.trim())}</span>`).join('') : '';
-  body.innerHTML = `<div class="pvs">
-    <div class="pvs-head"><div class="pvs-logo">${logo ? logo.innerHTML : 'Śliska News'}</div><div class="pvs-nav">${links}</div></div>
-    <div class="pvs-grid">
-      <main class="pvs-main">${art}
-        <section class="pvs-box"><h3>Komentarze <small>(szablon)</small></h3>
-          <div class="pvs-form"><i class="pvs-av"></i><span class="pvs-input">Napisz komentarz…</span><b class="pvs-btn">Opublikuj</b></div>
-          ${pvSkeleton(3, 'pvs-cm')}
-        </section>
-        <section class="pvs-box"><h3>Czytaj także <small>(szablon)</small></h3><div class="pvs-cards">${pvSkeleton(3, 'pvs-card')}</div></section>
-      </main>
-      <aside class="pvs-side"><section class="pvs-box"><h3>Najnowsze</h3>${pvSkeleton(4, 'pvs-li')}</section><section class="pvs-box"><h3>Popularne</h3>${pvSkeleton(4, 'pvs-li')}</section><div class="pvs-ad">Miejsce na reklamę</div></aside>
-    </div></div>`;
-  enhanceGalleries(body);
 }
 
 function openImageModal(edit) {
@@ -6221,7 +6137,6 @@ function deleteFigure() {
    Konta czytelników i komentarze
    ========================================================= */
 const READER_ERR = {
-  weak: 'Hasło musi mieć od 6 do 128 znaków.', fb: 'Firebase odrzucił zmianę. Spróbuj ponownie.', no_sa: 'Brak konta serwisowego w Workerze (READER_SA) – nie da się ustawić hasła.', not_found: 'Nie znaleziono konta.',
   endpoint: 'Worker jest w starej wersji – wgraj najnowszy og-worker.js (Edit code → Deploy).', too_fast: 'Poczekaj chwilę – powiadomienie wysłano przed chwilą.', busy: 'Poprzednie rozsyłanie jeszcze trwa – spróbuj za minutę.', not_found: 'Nie znaleziono artykułu.',
   name_len: 'Nazwa użytkownika musi mieć od 3 do 20 znaków.', name_chars: 'Nazwa: tylko małe litery a–z, cyfry oraz pojedyncza kropka lub podkreślnik w środku (bez spacji i polskich znaków).',
   bad_login: 'Nieprawidłowa nazwa/e-mail lub hasło.', rename: 'Najpierw zmień nazwę użytkownika na zgodną z nowymi zasadami.', session_expired: 'Sesja wygasła – zaloguj się ponownie.',
@@ -6238,13 +6153,7 @@ const READER_ERR = {
   'auth/too-many-requests': 'Zbyt wiele prób. Spróbuj za kilka minut.', 'auth/network-request-failed': 'Brak połączenia z internetem.',
   'auth/missing-password': 'Wpisz hasło.', 'auth/operation-not-allowed': 'Logowanie e-mailem nie jest włączone w projekcie czytelników.'
 };
-const readerErr = e => {
-  const code = e && (e.code || e.error || e.message);
-  const known = READER_ERR[code];
-  if (known !== undefined) return known;
-  const dbg = document.documentElement.classList.contains('is-dev') && code ? ' [dev: ' + String(code).slice(0, 140) + ']' : '';
-  return 'Coś poszło nie tak. Spróbuj ponownie.' + dbg;
-};
+const readerErr = e => READER_ERR[(e && (e.code || e.error || e.message))] || 'Coś poszło nie tak. Spróbuj ponownie.';
 
 const Readers = {
   auth: null, user: null, me: null, loading: true,
@@ -6312,7 +6221,6 @@ const Readers = {
   },
   /** Czytelnik z rolą Redaktor/Właściciel dostaje od workera token logowania do projektu redakcji (prawo pisania artykułów). */
   async joinEditor() {
-    return;   // logowanie do projektu redakcji wyłączone – redakcja pracuje tylko na dev.sliska.pl
     try {
       if (Auth.mode !== 'firebase' || !FirebaseProvider.auth || this._joining) return;
       const cur = FirebaseProvider.auth.currentUser, role = this.me && this.me.role;
@@ -6350,7 +6258,6 @@ const Readers = {
   async saveAvatar(dataUrl) { this.me = await this.api('/me', { method: 'POST', body: JSON.stringify({ avatar: dataUrl || null }) }); this.render(); },
   render() {
     renderReaderCard();
-    updatePushButton();
     const b = $('#btn-account');
     if (b) {
       b.classList.toggle('is-on', this.loggedIn());
@@ -6581,46 +6488,6 @@ async function commentAction(act, id, btn) {
   } catch (err) { toast(readerErr(err), 'error'); }
 }
 
-
-/** Okno wiadomości e-mail wysyłanej przez Worker od redakcja@sliska.pl (tylko Właściciel). */
-function mailBox(o) {
-  const old = document.getElementById('mailx'); if (old) old.remove();
-  const T = o.templates || [], m = document.createElement('div');
-  m.id = 'mailx'; m.className = 'mailx';
-  m.innerHTML = `<div class="mailx-box" role="dialog" aria-modal="true" aria-label="Wiadomość e-mail">
-    <div class="mailx-h"><div><b>Nowa wiadomość</b><small>Od: Redakcja Śliska News &lt;redakcja@sliska.pl&gt;</small></div><button type="button" class="btn btn-sm" data-x>Zamknij</button></div>
-    <label>Do<input type="email" id="mx-to" value="${Utils.esc(o.to || '')}" autocomplete="off"></label>
-    <label>Temat<input type="text" id="mx-sub" maxlength="160" value="${Utils.esc(o.subject || '')}"></label>
-    ${T.length ? `<label>Szablon<select id="mx-tpl"><option value="">Pusta wiadomość</option>${T.map((t, i) => `<option value="${i}">${Utils.esc(t.t)}</option>`).join('')}</select></label>` : ''}
-    <label>Treść<textarea id="mx-txt" rows="9" placeholder="Napisz wiadomość…"></textarea></label>
-    <p class="mx-msg" id="mx-msg" role="status"></p>
-    <div class="mailx-a"><button type="button" class="btn btn-primary" id="mx-send">Wyślij</button></div></div>`;
-  document.body.appendChild(m);
-  const $m = s => m.querySelector(s), close = () => m.remove();
-  m.addEventListener('click', e => { if (e.target === m || e.target.closest('[data-x]')) close(); });
-  const tpl = $m('#mx-tpl');
-  if (tpl) tpl.onchange = () => { const t = T[tpl.value]; if (!t) return; if (t.s) $m('#mx-sub').value = t.s; $m('#mx-txt').value = t.b; };
-  $m('#mx-send').onclick = async () => {
-    const msg = $m('#mx-msg'), btn = $m('#mx-send');
-    const body = { to: $m('#mx-to').value.trim(), subject: $m('#mx-sub').value.trim(), text: $m('#mx-txt').value.trim() };
-    if (!body.to || !body.subject || !body.text) { msg.className = 'mx-msg is-e'; msg.textContent = 'Uzupełnij adres, temat i treść.'; return; }
-    btn.disabled = true; msg.className = 'mx-msg'; msg.textContent = 'Wysyłam…';
-    try {
-      const r = await fetch(CONFIG.API_BASE + '/admin/mail', { method: 'POST', headers: { 'content-type': 'application/json', ...(await actorAuth()) }, body: JSON.stringify(body), cache: 'no-store' });
-      const d = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(d.error === 'mail_not_configured' ? 'Wysyłka e-mail nie jest jeszcze skonfigurowana w Workerze (powiązanie EMAIL).' : d.error === 'send_failed' ? 'Nie udało się wysłać: ' + (d.detail || '') : d.error === 'to' ? 'Adres odbiorcy wygląda niepoprawnie.' : d.error === 'forbidden' ? 'Wiadomości może wysyłać tylko Właściciel.' : 'Nie udało się wysłać wiadomości.');
-      msg.className = 'mx-msg is-o'; msg.textContent = 'Wysłano ✓'; toast('Wiadomość wysłana.'); setTimeout(close, 900);
-    } catch (e) { msg.className = 'mx-msg is-e'; msg.textContent = e.message; btn.disabled = false; }
-  };
-  $m('#mx-txt').focus();
-}
-const TIP_MAIL_TPL = [
-  { t: 'Dziękujemy za zgłoszenie', b: 'Dzień dobry,\n\ndziękujemy za zgłoszenie – trafiło do redakcji i zajmiemy się nim w najbliższym czasie.\n\nPozdrawiamy' },
-  { t: 'Temat zostanie opisany', b: 'Dzień dobry,\n\ndziękujemy za podesłany temat. Zajmiemy się nim, a jeśli opublikujemy materiał, damy znać.\n\nPozdrawiamy' },
-  { t: 'Błąd poprawiony', b: 'Dzień dobry,\n\ndziękujemy za wskazanie błędu – już go poprawiliśmy.\n\nPozdrawiamy' },
-  { t: 'Nie tym razem', b: 'Dzień dobry,\n\ndziękujemy za zgłoszenie. Tym razem nie zajmiemy się tym tematem, ale cenimy, że dajesz nam znać.\n\nPozdrawiamy' }
-];
-
 /** Zapytania moderatora: token z projektu redakcji (altplus-news). */
 async function adminApi(path, opts = {}) {
   const h = await actorAuth();
@@ -6774,7 +6641,7 @@ async function renderUserProfile(pub) {
     <section class="panel up-card">
       <div class="avatar up-av">${readerAvatar(d.name, d.av, d.pub)}</div>
       <div class="up-main"><h1 class="up-name">${Utils.esc(d.name)}</h1>
-        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role, crown: d.crown }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div>
+        <div class="up-meta">${roleBadge({ staff: d.staff, role: d.role }) || '<span class="muted">Czytelnik</span>'}${since ? `<span class="muted">Dołączył(a) ${since}</span>` : ''}<span class="muted">Komentarzy: ${d.count || 0}</span></div>
         ${d.bio ? `<p class="up-bio">${Utils.esc(d.bio)}</p>` : ''}
         ${d.staff || ['editor', 'owner', 'chief'].includes(d.role) ? `<a class="up-more" href="#/redaktor/${encodeURIComponent(d.name)}">Zobacz artykuły autora →</a>` : ''}</div>
     </section>
@@ -6795,10 +6662,10 @@ function renderAccount() {
   const next = me.nextNameChange && me.nextNameChange > Date.now() ? new Date(me.nextNameChange).toLocaleDateString('pl-PL') : '';
   const rt = currentRoute().tab;
   const staff = Auth.isAdmin();
-  if (false && rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy' || rt === 'reklamy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : rt === 'reklamy' ? 'ads' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
-  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : '';
+  if (rt && staff && (rt === 'komentarze' || rt === 'uzytkownicy' || rt === 'reklamy')) { setTimeout(() => goPanelTab(rt === 'komentarze' ? 'comments' : rt === 'reklamy' ? 'ads' : 'users'), 0); return; }   // moderacja mieszka teraz w Panelu
+  const tab = rt === 'komentarze' && canMod() ? 'komentarze' : rt === 'uzytkownicy' && canManage() ? 'uzytkownicy' : rt === 'reklamy' && canManage() ? 'reklamy' : '';
   stashProfileBlock();
-  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a></div>` : '';
+  const tabsHtml = canMod() && !staff ? `<div class="ptabs" role="tablist" aria-label="Sekcje konta"><a class="ptab ${tab ? '' : 'is-active'}" href="#/konto">Konto</a><a class="ptab ${tab === 'komentarze' ? 'is-active' : ''}" href="#/konto/komentarze">Komentarze</a>${canManage() ? `<a class="ptab ${tab === 'uzytkownicy' ? 'is-active' : ''}" href="#/konto/uzytkownicy">Użytkownicy</a><a class="ptab ${tab === 'reklamy' ? 'is-active' : ''}" href="#/konto/reklamy">Reklamy</a>` : ''}</div>` : '';
   const pubLink = Readers.me && Readers.me.pub ? `<a class="btn btn-sm" href="#/uzytkownik/${Utils.esc(Readers.me.pub)}">Zobacz profil publiczny</a>` : '';
   const vChip = Readers.verified() ? '<span class="acc-chip is-ok">E-mail potwierdzony</span>' : '<span class="acc-chip is-warn">E-mail niepotwierdzony</span>';
   el.innerHTML = `<div class="article-top"><a class="btn" href="#/">← Powrót do strony głównej</a></div>
@@ -6809,7 +6676,7 @@ function renderAccount() {
       <div class="acc-hero-body">
         <div class="avatar avatar-lg acc-hero-av">${readerAvatar(me.name, me.avatarAt, me.pub)}</div>
         <div class="acc-hero-main"><h2 class="acc-hero-name">${Utils.esc(me.name || 'Twoje konto')}</h2>
-          <div class="acc-chips"><span class="acc-chip">${Utils.esc(ROLE_LABEL[me.role] || (staff ? 'Redaktor' : 'Czytelnik'))}</span>${me.crown ? `<span class="acc-chip is-crown">${crownHtml()} Moderator</span>` : ''}${vChip}</div></div>
+          <div class="acc-chips"><span class="acc-chip">${Utils.esc(ROLE_LABEL[me.role] || (staff ? 'Redaktor' : 'Czytelnik'))}</span>${vChip}</div></div>
         <div class="acc-hero-actions">${pubLink}</div>
       </div>
     </section>
@@ -6832,7 +6699,6 @@ function renderAccount() {
       </div>
       <div class="acc-col">
       ${Accounts.html()}
-      ${staffAdsHtml(me)}
             <section class="panel st-card">
         <div class="st-head"><h2 class="st-h">Logowanie i bezpieczeństwo</h2><p class="st-sub">Adres e-mail, hasło i aktywne sesje.</p></div>
         <div class="st-row"><span class="muted">Adres e-mail</span><strong>${Utils.esc(Readers.user.email || '')}</strong></div>
@@ -6853,21 +6719,6 @@ function renderAccount() {
   fillHub();
 }
 
-/** Przełącznik „bez reklam na tym urządzeniu” – jedyna funkcja redakcji dostępna także na stronie publicznej (dla kont z rangą). */
-const STAFF_ROLES = ['editor', 'chief', 'owner'];
-function staffAdsHtml(me) {
-  if (!me || !(STAFF_ROLES.includes(me.role) || me.crown)) return '';
-  let on = false; try { on = localStorage.getItem('sliska_ads_off') === '1'; } catch { /* ignoruj */ }
-  return `<section class="panel st-card"><div class="st-head"><h2 class="st-h">Reklamy</h2><p class="st-sub">Tylko dla kont z rangą. Czytelnicy zawsze widzą reklamy.</p></div>
-    <label class="st-switch"><span><b>Wyłącz reklamy na tym urządzeniu</b><small>Dotyczy tylko tej przeglądarki.</small></span><input type="checkbox" id="acc-ads-off" ${on ? 'checked' : ''}></label></section>`;
-}
-document.addEventListener('change', e => {
-  if (!e.target || e.target.id !== 'acc-ads-off') return;
-  try { localStorage.setItem('sliska_ads_off', e.target.checked ? '1' : '0'); } catch { /* ignoruj */ }
-  window.dispatchEvent(new Event('sliska:ads'));
-  toast(e.target.checked ? 'Reklamy wyłączone na tym urządzeniu.' : 'Reklamy włączone.');
-});
-
 /** Blok „Profil redaktora” (zdjęcie, nazwa autora, biografia) mieszka w Moim koncie; poza nim wraca do ukrytego formularza ustawień. */
 function stashProfileBlock() {
   const blk = $('#st-profile-block'), form = $('#settings-form');
@@ -6879,7 +6730,7 @@ function fillHub() {
   const items = [['panel', '#/panel', 'Panel', 'panel'], ['account', '#/konto', 'Moje konto', 'user'], ['settings', '#/ustawienia', 'Ustawienia', 'gear']];
   const ICONS = {"panel": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"5\" rx=\"1.5\"/><rect x=\"14\" y=\"12\" width=\"7\" height=\"9\" rx=\"1.5\"/><rect x=\"3\" y=\"16\" width=\"7\" height=\"5\" rx=\"1.5\"/></svg>", "user": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"8\" r=\"4\"/><path d=\"M4 21a8 8 0 0 1 16 0\"/></svg>", "gear": "<svg viewBox=\"0 0 24 24\" width=\"17\" height=\"17\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"3\"/><path d=\"M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z\"/></svg>"};
   $$('.hub-nav').forEach(n => {
-    n.hidden = true;
+    n.hidden = !Auth.isAdmin();
     n.innerHTML = Auth.isAdmin() ? items.map(([k, href, label, ic]) => `<a class="hub-tab${n.dataset.hub === k ? ' is-active' : ''}" href="${href}"${n.dataset.hub === k ? ' aria-current="page"' : ''}>${ICONS[ic]}<span>${label}</span></a>`).join('') : '';
   });
 }
@@ -6897,14 +6748,15 @@ function renderReaderCard() {
   document.body.classList.toggle('is-reader-only', only);
   const me = Readers.me || {};
   $('#btn-rd-mod').hidden = !canMod();
-  $('#btn-rd-users').hidden = true;   // zarządzanie użytkownikami tylko na dev.sliska.pl
+  $('#btn-rd-users').hidden = !canManage();
   ensureOwnerPanes();
   { const pu = $('#ptab-users'); if (pu) { pu.hidden = !canManage(); if (!pu.hidden && currentRoute().name === 'panel' && !$('#panel-users').children.length && ($('#view-panel .ptab.is-active') || {}).dataset?.ptab === 'users') renderModUsersPanel($('#panel-users')); } }
   let hint = $('#rd-hint');
   if (!hint) { hint = document.createElement('div'); hint.id = 'rd-hint'; hint.className = 'rd-hint'; const pa = $('#profile-card .profile-actions'); if (pa) pa.parentNode.insertBefore(hint, pa); }
-  const toPanel = rd && ['editor', 'owner'].includes(me.role);   // narzędzia redakcji są tylko na dev.sliska.pl
-  hint.hidden = !toPanel;
-  hint.innerHTML = toPanel ? '<a class="btn btn-sm btn-primary" href="https://dev.sliska.pl/" target="_blank" rel="noopener">Przejdź do panelu</a>' : '';
+  const issue = rd && ['editor', 'owner'].includes(me.role) && !Auth.isAdmin() ? Readers.editorIssue : '';
+  const HINT = { verify: 'Panel redaktora czeka na potwierdzenie adresu e-mail. Kliknij link z wiadomości, a potem „Sprawdź ponownie”.', forbidden: 'Konto nie ma teraz dostępu do panelu redaktora. Skontaktuj się z Właścicielem Portalu.', server: 'Nie udało się włączyć panelu redaktora (błąd po stronie serwera). Spróbuj ponownie albo napisz do Właściciela.', signin: 'Nie udało się zalogować do panelu redaktora. Spróbuj ponownie.' };
+  hint.hidden = !issue;
+  hint.innerHTML = issue ? `<span>${HINT[issue] || HINT.signin}</span><button type="button" class="btn btn-sm" data-rd-retry>Sprawdź ponownie</button>` : '';
   if (only) {
     $('#profile-name').textContent = me.name || 'Twoje konto';
     $('#profile-avatar').innerHTML = readerAvatar(me.name, me.avatarAt, me.pub);
@@ -6930,6 +6782,7 @@ function bindReaderEvents() {
   $('#btn-account').addEventListener('click', () => {
     const go = h => { if (location.hash === h) { route(); window.scrollTo({ top: 0, behavior: 'smooth' }); } else location.hash = h; };   // ten sam adres = wcześniej „nic się nie działo”
     if (Readers.loggedIn()) go('#/konto');
+    else if (Auth.isAdmin()) go('#/panel');
     else openReaderModal('login');
   });
   $('#reader-error').className = 'form-error';
@@ -6986,24 +6839,10 @@ function bindReaderEvents() {
 const AD_ST = { new: 'Nowe', done: 'Przyjęte', rejected: 'Odrzucone' };
 const AD_FMTS = [['long', 'Długi 1456×180'], ['box', 'Okienko 600×500'], ['card', 'Kafelek 900×1000']];
 async function adImgBlob(id, f) {
-  // Dwie ścieżki: „spot” (nie łapią jej blokery reklam) i dawna „ads” – działa ta, którą zna Worker.
   const h = await actorAuth();
-  let last = 'img';
-  for (const p of ['/admin/spot/img', '/admin/ads/img']) {
-    try {
-      const r = await fetch(CONFIG.API_BASE + p + '?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
-      if (r.ok) return URL.createObjectURL(await r.blob());
-      last = 'HTTP ' + r.status;
-    } catch (e) { last = 'blokada połączenia (wyłącz blokadę reklam dla tej strony)'; }
-  }
-  throw new Error('Nie udało się pobrać grafiki: ' + last);
-}
-/** Zgłoszenia reklam pogrupowane: nowe → przyjęte → odrzucone (każda grupa z nagłówkiem i licznikiem). */
-function adGroups(list, render) {
-  return [['new', 'Nowe'], ['done', 'Przyjęte'], ['rejected', 'Odrzucone']].map(([k, l]) => {
-    const g = list.filter(a => a.status === k);
-    return g.length ? `<h3 class="adsub-h is-${k}">${l} <i>${g.length}</i></h3>` + g.map(render).join('') : '';
-  }).join('');
+  const r = await fetch(CONFIG.API_BASE + '/admin/ads/img?id=' + id + '&f=' + f, { headers: h, cache: 'no-store' });
+  if (!r.ok) throw new Error('img');
+  return URL.createObjectURL(await r.blob());
 }
 async function renderAdSubs(el) {
   if (!el) return;
@@ -7011,9 +6850,9 @@ async function renderAdSubs(el) {
   el.dataset.adsroot = '1';
   el.innerHTML = '<p class="muted">Ładowanie…</p>';
   try {
-    const d = await adminApi('/admin/spot');
-    if (!d.ads.length) { el.innerHTML = '<p class="muted">Nikt jeszcze nie wysłał reklamy. Formularz: <a href="spot" target="_blank" rel="noopener">/spot</a></p>'; return; }
-    el.innerHTML = `<p class="muted adsub-note">Zgłoszenia widzisz tylko Ty. Formularz dla reklamodawców: <a href="spot" target="_blank" rel="noopener">/spot</a>. Reklamy do wyświetlania dodajesz w narzędziu <b>Reklamy</b> na stronie głównej dev (baza reklam). <button type="button" class="btn btn-sm" data-ads-open>Otwórz narzędzie Reklamy</button></p>` + adGroups(d.ads, a => {
+    const d = await adminApi('/admin/ads');
+    if (!d.ads.length) { el.innerHTML = '<p class="muted">Nikt jeszcze nie wysłał reklamy. Formularz: <a href="reklama.html" target="_blank" rel="noopener">reklama.html</a></p>'; return; }
+    el.innerHTML = `<p class="muted">Zgłoszenia widzisz tylko Ty. Formularz dla reklamodawców: <a href="reklama.html" target="_blank" rel="noopener">reklama.html</a>. Pobrane pliki wrzucasz do folderu <code>ads/</code> i dopisujesz w <code>ads.js</code> (lista <code>ADS</code>).</p>` + d.ads.map(a => {
       const slug = (a.brand || 'reklama').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30) || 'reklama';
       const fm = AD_FMTS.filter(([f]) => a['has_' + f]);
       return `<article class="mc adsub" data-id="${a.id}" data-slug="${slug}" data-status="${a.status}">
@@ -7023,14 +6862,10 @@ async function renderAdSubs(el) {
         ${fm.length < 3 ? `<small class="muted">Brakuje formatów: ${AD_FMTS.filter(([f]) => !a['has_' + f]).map(x => x[1]).join(', ')}</small>` : ''}
         <div class="mc-actions"><button type="button" data-ads-act="done">Przyjęte</button><button type="button" data-ads-act="rejected">Odrzuć</button>${a.status !== 'new' ? '<button type="button" data-ads-act="new">Przywróć jako nowe</button>' : ''}<button type="button" class="is-danger" data-ads-act="delete">Usuń</button></div>
       </article>`;
-    });
+    }).join('');
     $$('[data-adimg]', el).forEach(async img => { try { img.src = await adImgBlob(img.closest('.adsub').dataset.id, img.dataset.adimg); } catch { img.alt = 'Nie udało się wczytać'; } });
   } catch (e) { el.innerHTML = `<p class="muted">${Utils.esc(e.message || 'Nie udało się wczytać zgłoszeń.')}</p>`; }
 }
-document.addEventListener('click', e => {
-  if (!e.target.closest('[data-ads-open]')) return;
-  if (window.top !== window) window.top.postMessage('sliska-open-ads', '*'); else location.href = '/reklamy/';
-});
 document.addEventListener('click', async e => {
   const dl = e.target.closest('[data-ads-dl]'), act = e.target.closest('[data-ads-act]');
   if (!dl && !act) return;
@@ -7041,7 +6876,7 @@ document.addEventListener('click', async e => {
       const a = document.createElement('a'); a.href = url; a.download = art.dataset.slug + '-' + dl.dataset.adsDl + '.jpg'; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
     } else {
       if (act.dataset.adsAct === 'delete' && !confirm('Usunąć to zgłoszenie razem z grafikami?')) return;
-      await adminApi('/admin/spot', { method: 'POST', body: JSON.stringify({ id: Number(art.dataset.id), action: act.dataset.adsAct }) });
+      await adminApi('/admin/ads', { method: 'POST', body: JSON.stringify({ id: Number(art.dataset.id), action: act.dataset.adsAct }) });
       renderAdSubs(art.closest('[data-adsroot]'));
     }
   } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); }
@@ -7049,17 +6884,14 @@ document.addEventListener('click', async e => {
 
 /* ---- moderacja komentarzy i użytkowników (panel redaktora oraz konto właściciela / redaktora-czytelnika) ---- */
 const Mod = { all: false };
-const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor', mod: 'Moderator' };
-const CROWN_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-1.6 10H4.6L3 8zm1.9 12h14.2v1.6H4.9V20z"/></svg>';
-const crownHtml = () => `<span class="crown" title="Moderator" role="img" aria-label="Moderator">${CROWN_SVG}</span>`;
+const ROLE_LABEL = { owner: 'Właściciel Portalu', chief: 'Redaktor naczelny', editor: 'Redaktor' };
 const MOD_ST = { pending: 'Czeka', reported: 'Zgłoszony', hidden: 'Ukryty', ok: 'Widoczny' };
 const myRole = () => (Readers.me && Readers.me.role) || '';
 const CMT_EDIT_MS = 5 * 60 * 1000;
 const isOwnerRole = () => myRole() === 'owner';
-const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor' || !!(Readers.me && Readers.me.crown);
+const canMod = () => Auth.isAdmin() || myRole() === 'owner' || myRole() === 'editor';
 const canManage = () => myRole() === 'owner';          // użytkownikami zarządza tylko Właściciel Portalu
-const roleBadge = c => { const h = roleBase(c) + (!c.staff && (c.crown || c.role === 'mod') ? crownHtml() : ''); return h ? `<span class="rb">${h}</span>` : ''; };
-const roleBase = c => !c.staff && c.role === 'mod' ? '' : c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
+const roleBadge = c => c.staff ? `<span class="cmt-badge${c.role === 'editor' || c.role === 'chief' ? ' is-' + c.role : ''}">${ROLE_LABEL[c.role] || 'Redakcja'}</span>` : ROLE_LABEL[c.role] ? `<span class="cmt-badge is-${c.role}">${ROLE_LABEL[c.role]}</span>` : '';
 
 const MOD_REASON = { spam: 'spam', obraza: 'obraza', spoiler: 'spoiler', inne: 'inne' };
 function modReasons(csv) {
@@ -7123,20 +6955,20 @@ function modUserHtml(u) {
   const chip = `<span class="mu-chip ${ver ? 'is-ok' : 'is-warn'}" title="Źródło: ${how}">${ver ? 'Zweryfikowany' : 'Niezweryfikowany'}</span>`;
   const since = u.created ? new Date(u.created).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric' }) : '';
   const av = `<label class="mu-file">Zmień zdjęcie<input type="file" accept="image/*" data-mod-avatar hidden></label>${u.avatar_at ? '<button type="button" data-mod-user="avatar-remove">Usuń zdjęcie</button>' : ''}`;
-  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}${!staff && !isOwner ? `<button type="button" data-mod-user="${u.crown ? 'mod-off' : 'mod-on'}">${u.crown ? 'Odbierz koronę moderatora' : 'Nadaj koronę moderatora'}</button>` : ''}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
+  const menu = `<details class="mu-more"><summary aria-label="Więcej działań" title="Więcej działań"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg></summary><div class="mu-menu">${av}<button type="button" data-mod-user="rename">Zmień nazwę</button><button type="button" data-mod-user="cooldown">Zdejmij limit 30 dni</button>${isOwner ? '' : `<button type="button" class="${u.banned ? '' : 'is-danger'}" data-mod-user="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="is-danger" data-mod-user="delete">Usuń konto</button>`}</div></details>`;
   return `<div class="mu ${u.banned ? 'is-banned' : ''}" data-uid="${Utils.esc(u.uid)}" data-staff="${staff ? 1 : 0}" data-name="${Utils.esc(u.name)}" data-ver="${ver ? 1 : 0}" data-banned="${u.banned ? 1 : 0}">
     <div class="mu-top">
       <div class="avatar mu-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
-      <div class="mu-main"><button type="button" class="mu-name mu-open" data-mod-user="profile" title="Pełny profil"><b>${Utils.esc(u.name)}</b></button><small>${u.comments} ${u.comments === 1 ? 'komentarz' : 'komentarzy'}${since ? ' · od ' + since : ''}</small></div>
+      <div class="mu-main"><b class="mu-name">${Utils.esc(u.name)}</b><small>${u.comments} ${u.comments === 1 ? 'komentarz' : 'komentarzy'}${since ? ' · od ' + since : ''}</small></div>
       ${menu}
     </div>
-    <div class="mu-chips">${roleBadge({ staff, role: u.role, crown: u.crown })}${chip}${u.banned ? '<span class="mu-chip is-bad">Zablokowany</span>' : ''}</div>
+    <div class="mu-chips">${roleBadge({ staff, role: u.role })}${chip}${u.banned ? '<span class="mu-chip is-bad">Zablokowany</span>' : ''}</div>
     <div class="mu-ctrl">${sel}${vsel}</div>
   </div>`;
 }
 
 const MU_FILTERS = [['', 'Wszyscy'], ['staff', 'Redakcja'], ['unver', 'Niezweryfikowani'], ['banned', 'Zablokowani']];
-function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner' || u.crown) : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
+function modUserFilter(rows, f) { return f === 'staff' ? rows.filter(u => u.staff || u.role === 'editor' || u.role === 'owner') : f === 'unver' ? rows.filter(u => !userVerified(u)) : f === 'banned' ? rows.filter(u => u.banned) : rows; }
 async function loadModUsers(el) {
   const list = $('.mu-list', el); if (!list) return;
   const y = window.scrollY, f = el.dataset.f || '';
@@ -7184,9 +7016,7 @@ document.addEventListener('click', async e => {
       catch (ex) { a.disabled = false; throw ex; }
     } else if (u) {
       const row = u.closest('.mu'), body = { uid: row.dataset.uid }, k = u.dataset.modUser;
-      if (k === 'profile') { openUserProfile(row.dataset.uid, () => loadModUsers(row.closest('[data-modusers]'))); return; }
       if (k === 'rename') { const n = prompt('Nowa nazwa użytkownika:', row.dataset.name); if (!n) return; body.name = n; }
-      else if (k === 'mod-on' || k === 'mod-off') body.crown = k === 'mod-on';
       else if (k === 'cooldown') body.resetCooldown = true;
       else if (k === 'avatar-remove') { if (!confirm('Usunąć zdjęcie profilowe tego użytkownika?')) return; body.avatar = null; }
       else if (k === 'delete') { if (!confirm('Usunąć konto „' + row.dataset.name + '” razem z jego komentarzami? Nazwa zostanie zwolniona. Tego nie da się cofnąć.')) return; body.delete = true; }
@@ -7233,67 +7063,6 @@ document.addEventListener('change', async e => {
   catch (ex) { toast(ex.message || 'Nie udało się zmienić zdjęcia.', 'error'); }
   loadModUsers(box);
 });
-
-/* ---------- Pełny profil użytkownika (tylko Właściciel): podgląd danych i edycja wszystkiego oprócz e-maila ---------- */
-const fmtDT = t => t ? new Date(t).toLocaleString('pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '–';
-async function openUserProfile(uid, onClose) {
-  document.querySelectorAll('.upr-ov').forEach(o => o.remove());
-  const ov = document.createElement('div'); ov.className = 'upr-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true');
-  ov.innerHTML = '<div class="upr-card"><p class="muted">Ładowanie…</p></div>';
-  document.body.appendChild(ov); document.body.classList.add('modal-open');
-  const close = () => { ov.remove(); document.body.classList.remove('modal-open'); if (onClose) onClose(); };
-  ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('[data-upr-close]')) close(); });
-  const draw = async () => {
-    const card = $('.upr-card', ov);
-    let d; try { d = await adminApi('/admin/user?uid=' + encodeURIComponent(uid)); } catch (ex) { card.innerHTML = `<p class="form-error">${Utils.esc(ex.message)}</p><button type="button" class="btn" data-upr-close>Zamknij</button>`; return; }
-    const u = d.user, fb = d.fb || {}, staff = !!u.staff, isOwner = u.role === 'owner';
-    const email = fb.email || u.email || '';
-    const prov = (fb.providers || []).map(p => p === 'google.com' ? 'Google' : p === 'password' ? 'e-mail i hasło' : p).join(', ') || (staff ? 'konto redakcji' : '–');
-    const row = (k, v) => `<div class="upr-r"><span>${k}</span><b>${v}</b></div>`;
-    const roles = isOwner ? [['owner', 'Właściciel Portalu']] : staff ? [['', 'Redakcja'], ['editor', 'Redaktor'], ['chief', 'Redaktor naczelny']] : [['', 'Czytelnik'], ['editor', 'Redaktor']];
-    const vCur = u.vfy === 1 ? 'on' : u.vfy === 0 ? 'off' : 'auto';
-    card.dataset.uid = u.uid;
-    card.innerHTML = `<div class="upr-head"><div class="avatar upr-av">${readerAvatar(u.name, u.avatar_at, u.pub)}</div>
-        <div><h2>${Utils.esc(u.name)}</h2><small>${u.banned ? 'Zablokowany · ' : ''}${d.comments} komentarzy · ${d.votes} ocen${u.pub ? ` · <a href="#/uzytkownik/${Utils.esc(u.pub)}" data-upr-close>profil publiczny</a>` : ''}</small></div>
-        <button type="button" class="upr-x" data-upr-close aria-label="Zamknij">×</button></div>
-      <section class="upr-sec"><h3>Dane konta</h3>
-        <label class="upr-f"><span>E-mail (nie można zmienić)</span><input type="text" value="${Utils.esc(email || 'brak danych')}" readonly disabled></label>
-        ${row('E-mail potwierdzony', fb.verified || u.email_ok ? 'tak' : 'nie')}${row('Logowanie', Utils.esc(prov))}${row('Konto utworzone', fmtDT(fb.created || u.created))}${row('Ostatnie logowanie', fmtDT(fb.lastLogin))}${row('Zmiana nazwy', u.name_at ? fmtDT(u.name_at) : '–')}${row('ID konta', `<code>${Utils.esc(u.uid)}</code>`)}
-        <p class="muted upr-note">Obecnego hasła nie da się podejrzeć – serwis (Firebase) przechowuje tylko jego skrót. Możesz ustawić nowe.</p>
-      </section>
-      <section class="upr-sec"><h3>Edycja</h3>
-        <label class="upr-f"><span>Nazwa użytkownika</span><span class="upr-in"><input type="text" id="upr-name" value="${Utils.esc(u.name)}" maxlength="20"><button type="button" class="btn btn-sm" data-upr="name">Zapisz</button></span></label>
-        <label class="upr-f"><span>Opis profilu</span><span class="upr-in"><textarea id="upr-bio" rows="3" maxlength="300">${Utils.esc(u.bio || '')}</textarea><button type="button" class="btn btn-sm" data-upr="bio">Zapisz</button></span></label>
-        ${staff ? '' : `<label class="upr-f"><span>Nowe hasło (min. 6 znaków)</span><span class="upr-in"><input type="text" id="upr-pass" autocomplete="off" placeholder="wpisz nowe hasło"><button type="button" class="btn btn-sm" data-upr="password" ${d.canPassword ? '' : 'disabled title="Brak konta serwisowego w Workerze"'}>Ustaw</button></span></label>`}
-        <div class="upr-grid"><label class="upr-f"><span>Rola</span><select id="upr-role" ${isOwner ? 'disabled' : ''}>${roles.map(([v, l]) => `<option value="${v}" ${u.role === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        ${staff || isOwner ? '' : `<label class="upr-f"><span>Moderator</span><select id="upr-crown"><option value="0" ${u.crown ? '' : 'selected'}>Brak</option><option value="1" ${u.crown ? 'selected' : ''}>Korona moderatora</option></select></label><label class="upr-f"><span>Weryfikacja</span><select id="upr-vfy">${[['auto', 'Auto (wg e-maila)'], ['on', 'Zweryfikowany'], ['off', 'Niezweryfikowany']].map(([v, l]) => `<option value="${v}" ${vCur === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}</div>
-        <div class="upr-acts"><label class="btn btn-sm">Zmień zdjęcie<input type="file" accept="image/*" id="upr-file" hidden></label>
-          ${u.avatar_at ? '<button type="button" class="btn btn-sm" data-upr="avatar-remove">Usuń zdjęcie</button>' : ''}
-          <button type="button" class="btn btn-sm" data-upr="cooldown">Zeruj limit zmiany nazwy</button>
-          ${isOwner ? '' : `<button type="button" class="btn btn-sm" data-upr="${u.banned ? 'unban' : 'ban'}">${u.banned ? 'Odblokuj' : 'Zablokuj'}</button><button type="button" class="btn btn-sm upr-danger" data-upr="delete">Usuń konto</button>`}</div>
-      </section>
-      <section class="upr-sec"><h3>Ostatnie komentarze</h3>${d.recent.length ? `<ul class="upr-cm">${d.recent.map(c => `<li><a href="#/artykul/${Utils.esc(c.article)}" data-upr-close>${Utils.esc(c.text.slice(0, 160))}${c.text.length > 160 ? '…' : ''}</a><small>${fmtDT(c.at)}${c.status !== 'ok' ? ' · ' + Utils.esc(c.status) : ''}</small></li>`).join('')}</ul>` : '<p class="muted">Brak komentarzy.</p>'}</section>`;
-  };
-  const save = async (body, msg) => { try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, ...body }) }); toast(msg || 'Zapisano.'); await draw(); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } };
-  ov.addEventListener('click', async e => {
-    const b = e.target.closest('[data-upr]'); if (!b) return; const k = b.dataset.upr;
-    if (k === 'name') save({ name: $('#upr-name', ov).value.trim() });
-    else if (k === 'bio') save({ bio: $('#upr-bio', ov).value });
-    else if (k === 'password') { const p = $('#upr-pass', ov).value; if (p.length < 6) return toast('Hasło musi mieć co najmniej 6 znaków.', 'error'); if (!confirm('Ustawić nowe hasło dla tego użytkownika? Dotychczasowe przestanie działać.')) return; await save({ password: p }, 'Hasło zmienione.'); }
-    else if (k === 'avatar-remove') { if (confirm('Usunąć zdjęcie profilowe?')) save({ avatar: null }); }
-    else if (k === 'cooldown') save({ resetCooldown: true });
-    else if (k === 'ban' || k === 'unban') { if (k === 'ban' && !confirm('Zablokować tego użytkownika?')) return; save({ banned: k === 'ban' }); }
-    else if (k === 'delete') { if (!confirm('Usunąć to konto razem z komentarzami? Tego nie da się cofnąć.')) return; try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, delete: true }) }); toast('Konto usunięte.'); close(); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } }
-  });
-  ov.addEventListener('change', async e => {
-    if (e.target.id === 'upr-crown') { try { await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, crown: e.target.value === '1' }) }); toast('Zapisano.'); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } await draw(); }
-    if (e.target.id === 'upr-role') { try { const d = await adminApi('/admin/user', { method: 'POST', body: JSON.stringify({ uid, role: e.target.value }) }); toast(d.editorSync === false ? 'Rola zapisana, ale synchronizacja z Firebase się nie udała.' : 'Rola zapisana.'); } catch (ex) { toast(ex.message || 'Nie udało się.', 'error'); } await draw(); }
-    else if (e.target.id === 'upr-vfy') save({ verify: e.target.value });
-    else if (e.target.id === 'upr-file' && e.target.files[0]) { try { save({ avatar: await shrinkToJpeg(e.target.files[0]) }, 'Zdjęcie zmienione.'); } catch (ex) { toast(ex.message || 'Nie udało się zmienić zdjęcia.', 'error'); } }
-  });
-  document.addEventListener('keydown', function esc(e) { if (!ov.isConnected) return document.removeEventListener('keydown', esc); if (e.key === 'Escape') close(); });
-  draw();
-}
 let modQTimer = 0;
 document.addEventListener('input', e => { if (e.target.matches('.mod-q')) { clearTimeout(modQTimer); const box = e.target.closest('[data-modusers]'); modQTimer = setTimeout(() => loadModUsers(box), 300); } });
 
@@ -7355,8 +7124,9 @@ function routeCore() {
   void document.body.offsetHeight;
   document.title = `${CONFIG.SITE_NAME} – najświeższe wiadomości`;
 
-  if (r.name === 'editor' || r.name === 'panel' || r.name === 'settings') {
+  if ((r.name === 'editor' || r.name === 'panel' || r.name === 'settings') && !Auth.isAdmin()) {
     location.hash = '#/';
+    openReaderModal('login');
     return;
   }
 
@@ -7443,17 +7213,9 @@ function routeCore() {
 }
 
 /* ---------- Kategorie ---------- */
-const CAT_ICONS = {
-  'Wszystkie': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>',
-  'Muzyka': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>',
-  'Recenzje': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3 2.7 5.6 6.1.8-4.5 4.2 1.1 6.1L12 16.8 6.6 19.7l1.1-6.1L3.2 9.4l6.1-.8z"/></svg>',
-  'Kontrowersje': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c1 3.5 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3.2 2-4 .3 1.5 1 2 1.8 2.2C11 8.5 11 5.5 12 3z"/></svg>',
-  'Dramy': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M12 8v4M12 15.5v.01"/></svg>',
-  'Inne': '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></svg>'
-};
 function buildCategoryNav() {
   $('#category-nav').innerHTML = [ALL, ...CATEGORIES].map(c =>
-    `<button type="button" class="chip-btn" data-category="${Utils.esc(c)}" title="${Utils.esc(c)}"><i class="cat-ico" aria-hidden="true">${CAT_ICONS[c] || CAT_ICONS.Inne}</i><span>${Utils.esc(c)}</span></button>`).join('');
+    `<button type="button" class="chip-btn" data-category="${Utils.esc(c)}">${Utils.esc(c)}</button>`).join('');
   updateCategoryNav();
 }
 
@@ -7470,10 +7232,9 @@ function goHomeAndRender() {
 /* ---------- Auth UI ---------- */
 function applyAuthUI() {
   document.body.classList.toggle('is-admin', Auth.isAdmin());
-  updatePushButton();
   const rn = currentRoute().name;
   // Utrata uprawnień (np. wylogowanie) w widoku dla redakcji – wróć na stronę główną
-  if (state.ready && (rn === 'editor' || rn === 'panel' || rn === 'settings')) {
+  if (state.ready && (rn === 'editor' || rn === 'panel' || rn === 'settings') && !Auth.isAdmin()) {
     location.hash = '#/';
     return;
   }
@@ -7520,7 +7281,7 @@ function renderProfileStats() {
   const me = (state.profile && state.profile.name) || '';
   $('#ps-mine').textContent = me ? pub.filter(a => authorKey(a.author) === authorKey(me)).length : pub.length;
   $('#ps-sched').textContent = sched;
-  const b = $('#pa-sched'); if (b) { b.hidden = !sched; b.textContent = sched; }
+  const b = $('#pa-sched'); b.hidden = !sched; b.textContent = sched;
 }
 
 async function loadProfile() {
@@ -7550,11 +7311,10 @@ let settingsAvatar = '';
 
 /** Autorzy występujący w artykułach, których nazwa różni się od aktualnej nazwy i nie jest znanym aliasem. */
 /** Opublikowane artykuły podpisane cudzą nazwą (do ręcznego przypisania sobie). */
-function foreignArticles(src) {
+function foreignArticles() {
   const me = state.profile.name, known = new Set(state.profile.aliases || []), uid = Auth.uid();
-  return (src || state.articles)
-    .filter(a => !a.quick && a.title)
-    .map(a => Object.assign({}, a, { _mine: !!((uid && a.authorUid === uid) || known.has((a.author || '').trim()) || (a.author || '').trim() === me) }))
+  return state.articles
+    .filter(a => !a.quick && a.title && !(uid && a.authorUid === uid) && !known.has((a.author || '').trim()) && (a.author || '').trim() !== me)
     .sort((x, y) => String(y.createdAt).localeCompare(String(x.createdAt)));
 }
 
@@ -7576,47 +7336,6 @@ function syncAuthorName() {
   const by = $('#st-byline'); if (by) by.innerHTML = name ? `Tak będzie wyglądał podpis: <b>${Utils.esc(bylineName(name))}</b>` : '';
 }
 
-
-/** „Przypisz artykuły do siebie”: po 5 pozycji, przycisk „Pokaż więcej” dokłada kolejne 5; zaznaczenia zostają przy dokładaniu. */
-let ASSIGN_PICKED = new Set();
-let ASSIGN_ALL = null;
-/** Z wklejonego linku do artykułu wyciąga jego identyfikator (…#/artykul/ID, …/a/ID, samo ID). */
-function articleIdFromInput(v) {
-  v = String(v || '').trim(); if (!v) return '';
-  let m = v.match(/#\/(?:artykul|a)\/([^?#\s]+)/) || v.match(/\/(?:artykul|a)\/([^?#\s/]+)/);
-  if (!m && /^https?:\/\//i.test(v)) { try { const u = new URL(v); const seg = u.pathname.split('/').filter(Boolean); m = [0, seg[seg.length - 1] || '']; } catch { /* ignoruj */ } }
-  try { return decodeURIComponent((m && m[1]) || ''); } catch { return (m && m[1]) || ''; }
-}
-function renderAssignList(list) {
-  const box = $('#st-authors'), card = $('#st-authors-card'); if (!box || !card) return;
-  card.hidden = !list.length;
-  const checked = ASSIGN_PICKED;
-  box.onchange = e => { const i = e.target.closest('input[name="st-article"]'); if (i) { if (i.checked) checked.add(i.value); else checked.delete(i.value); } };
-  const STEP = 5; let shown = Math.max(STEP, box.querySelectorAll('.st-art').length);
-  const row = x => `<label class="check-row st-art"><input type="checkbox" name="st-article" value="${Utils.esc(x.id)}"${checked.has(x.id) ? ' checked' : ''}><span><b>${Utils.esc(x.title)}</b> <em class="muted">· ${Utils.esc((x.author || 'bez autora').trim() || 'bez autora')} · ${Utils.formatDate(x.createdAt)}</em>${x._mine ? ' <span class="st-mine">Twój</span>' : ''}</span></label>`;
-  const flt = $('#st-art-filter');
-  const paint = () => {
-    const q = flt && flt.value ? (Utils.fold ? Utils.fold(flt.value) : flt.value.toLowerCase()) : '';
-    const hay = x => (Utils.fold ? Utils.fold(x.title + ' ' + (x.author || '')) : (x.title + ' ' + (x.author || '')).toLowerCase());
-    const linkId = articleIdFromInput(flt && flt.value);
-    let pool = q ? list.filter(x => hay(x).includes(q)) : list;
-    if (linkId && /^https?:|\/(artykul|a)\//.test(flt.value)) {
-      pool = (ASSIGN_ALL || list).filter(x => x.id === linkId && !x.quick);
-      if (!pool.length && !paint.asked) { paint.asked = linkId; DataService.getArticleById(linkId).then(a => { if (a && a.id) { (ASSIGN_ALL = ASSIGN_ALL || []).push(a); paint(); } }).catch(() => {}); }
-    }
-    const vis = (q || linkId) ? pool : pool.slice(0, shown);
-    box.querySelectorAll('input[name="st-article"]').forEach(i => { if (i.checked) checked.add(i.value); else checked.delete(i.value); });
-    box.innerHTML = vis.map(row).join('') || '<p class="muted">Brak pasujących artykułów. Możesz wkleić link do artykułu.</p>';
-    if (!q && !linkId && pool.length > shown) {
-      const left = pool.length - shown;
-      box.insertAdjacentHTML('beforeend', `<button type="button" class="btn btn-sm st-more" id="st-art-more">Pokaż więcej (jeszcze ${left})</button>`);
-      $('#st-art-more').onclick = () => { shown += STEP; paint(); };
-    }
-  };
-  if (flt) { flt.oninput = () => { paint(); }; }
-  paint();
-}
-
 function renderSettings() {
   if (currentRoute().name === 'settings') { stashProfileBlock(); fillHub(); }
   settingsAvatar = state.profile.avatar || '';
@@ -7636,10 +7355,11 @@ function renderSettings() {
   updateDevicePush();
   $('#st-error').hidden = true;
   $('#st-avatar-file').value = '';
-  ASSIGN_PICKED = new Set();
-  renderAssignList(foreignArticles());
-  // lista pełna: pobieramy wszystkie artykuły (nie tylko ostatnie wczytane na stronie)
-  DataService.getAllArticles({ open: true }).then(all => { if (currentRoute().name === 'settings' || $('#st-authors')) { ASSIGN_ALL = all; renderAssignList(foreignArticles(all)); } }).catch(err => { console.warn('Pełna lista artykułów niedostępna:', err); const b = $('#st-authors'); if (b) b.insertAdjacentHTML('afterbegin', '<p class="muted st-warn">Nie udało się pobrać wszystkich artykułów – widać tylko ostatnie. Wklej link do artykułu w wyszukiwarce, żeby go znaleźć.</p>'); });
+  const list = foreignArticles();
+  $('#st-authors-card').hidden = !list.length;
+  $('#st-authors').innerHTML = list.map(x =>
+    `<label class="check-row st-art"><input type="checkbox" name="st-article" value="${Utils.esc(x.id)}"><span><b>${Utils.esc(x.title)}</b> <em class="muted">· ${Utils.esc((x.author || 'bez autora').trim() || 'bez autora')} · ${Utils.formatDate(x.createdAt)}</em></span></label>`).join('');
+  const flt = $('#st-art-filter'); if (flt) { flt.value = ''; flt.oninput = () => { const q = Utils.fold ? Utils.fold(flt.value) : flt.value.toLowerCase(); $$('#st-authors .st-art').forEach(r => { r.hidden = !!q && !(Utils.fold ? Utils.fold(r.textContent) : r.textContent.toLowerCase()).includes(q); }); }; }
   updateSettingsAvatar();
 }
 
@@ -7708,7 +7428,7 @@ async function saveSettings(e) {
   err.hidden = true;
   const prev = state.profile;
   const name = $('#st-name').value.trim().slice(0, 60);
-  const pickedIds = [...new Set([...ASSIGN_PICKED, ...$$('input[name="st-article"]:checked').map(i => i.value)])];
+  const pickedIds = $$('input[name="st-article"]:checked').map(i => i.value);
   const next = normProfile({
     name, avatar: settingsAvatar,
     defaultCategory: $('#st-cat').value, showPhoto: $('#st-photo').checked,
@@ -7779,7 +7499,6 @@ function handleAction(action, id, btn) {
   if (action === 'share-image') { shareImage(id, document.activeElement && document.activeElement.dataset && document.activeElement.dataset.action === 'share-image' ? document.activeElement : null); return; }
   if (action === 'report-error') { openReportModal(id); return; }
   if (action === 'quick-share') { shareQuick(id); return; }
-  if (action === 'plus-open') { openModal('plus-modal'); return; }
   if (action === 'quick-story') { shareQuickStory(id, btn); return; }
   if (action === 'quick-more') { state.quickVisible = (state.quickVisible || 30) + 30; renderQuick(); return; }
   if (action === 'share') { shareArticle(id); return; }
@@ -7794,7 +7513,6 @@ function handleAction(action, id, btn) {
   if (!Auth.isAdmin()) return;
   if (action === 'delete-tip') { deleteTip(id); return; }
   if (action === 'tip-status') { openTipStatus(id); return; }
-  if (action === 'tip-mail') { const b = btn; mailBox({ to: b.dataset.to, subject: b.dataset.subj, templates: TIP_MAIL_TPL }); return; }
   if (action === 'tip-quick') { quickTipStatus(id, btn.dataset.st); return; }
   if (action === 'quick-new') { openQuickModal(); return; }
   if (action === 'quick-edit') { openQuickModal(id); return; }
@@ -7909,8 +7627,8 @@ function bindEvents() {
 
   // Przyciski nawigacji
   $('#btn-rd-account').addEventListener('click', () => { location.hash = '#/konto'; });
-  $('#btn-rd-mod').addEventListener('click', () => { location.hash = '#/konto/komentarze'; });
-  $('#btn-rd-users').addEventListener('click', () => { location.hash = '#/konto/uzytkownicy'; });
+  $('#btn-rd-mod').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('comments'); else location.hash = '#/konto/komentarze'; });
+  $('#btn-rd-users').addEventListener('click', () => { if (Auth.isAdmin()) goPanelTab('users'); else location.hash = '#/konto/uzytkownicy'; });
   $('#btn-logout').addEventListener('click', async () => {
     if (!Auth.isAdmin() && Readers.loggedIn()) { await Readers.logout(); location.hash = '#/'; toast('Wylogowano.'); return; }
     await Auth.logout();
@@ -7919,6 +7637,8 @@ function bindEvents() {
     applyAuthUI();
     toast('Wylogowano.');
   });
+  $('#btn-new').addEventListener('click', () => { location.hash = '#/edytor'; });
+  $('#panel-new').addEventListener('click', () => { location.hash = '#/edytor'; });
   $('#btn-push').addEventListener('click', togglePush);
   updatePushButton();
   $('#push-ask-yes').addEventListener('click', pushAskYes);
@@ -7947,6 +7667,8 @@ function bindEvents() {
     finally { updateDevicePush(); updatePushButton(); }
   });
   $('#st-test-push').addEventListener('click', testPush);
+  $('#btn-panel').addEventListener('click', () => { location.hash = '#/panel'; });
+  $('#btn-settings').addEventListener('click', () => { location.hash = '#/ustawienia'; });
 
   // Ustawienia konta
   $('#settings-form').addEventListener('submit', saveSettings);
@@ -8002,11 +7724,9 @@ function bindEvents() {
   $('#btn-save-draft').addEventListener('click', manualSaveDraft);
   $('#btn-preview').addEventListener('click', openPreview);
   $('#install-link').addEventListener('click', e => { e.preventDefault(); installApp(); });
-  const pvFull = $('#pv-full');
-  if (pvFull) pvFull.addEventListener('click', () => { const box = $('#preview-modal .modal-box'); const on = box.classList.toggle('pv-full'); pvFull.setAttribute('aria-pressed', on); pvFull.textContent = on ? '⤡ Zmniejsz' : '⤢ Pełny ekran'; });
   $$('[data-pv]').forEach(b => b.addEventListener('click', () => {
     $$('[data-pv]').forEach(x => x.classList.toggle('active', x === b));
-    pvMode = b.dataset.pv; paintPreview();
+    $('#preview-body').classList.toggle('pv-phone', b.dataset.pv === 'phone');
   }));
   $('#btn-focus').addEventListener('click', () => {
     const on = form.classList.toggle('focus-mode');
@@ -8382,10 +8102,8 @@ async function main() {
   } catch (err) {
     console.error(err);
     state.loadError = true;
-    state.loadErrCode = (err && (err.code || err.message)) || 'błąd';
   }
   state.ready = true;
-  setTimeout(() => { const sp = document.getElementById('app-splash'); if (sp) { sp.classList.add('is-out'); setTimeout(() => sp.remove(), 500); } }, 250);
   if (Auth.isAdmin()) loadProfile();
   Auth.onChange(() => applyAuthUI());
   Readers.init();
@@ -8398,7 +8116,6 @@ async function main() {
       : 'Brak połączenia z bazą danych';
 
   renderBreaking();
-  initRail();
   initStickyVars();
   route();
 
@@ -8416,53 +8133,12 @@ async function main() {
 
 /** Wysokości przyklejonych pasków (nagłówek, tytuł edytora) → zmienne CSS, żeby pasek formatowania
  *  w edytorze zawsze zatrzymywał się dokładnie pod nimi i nie znikał podczas przewijania. */
-
-/* ---------- Pasek boczny (komputer): zwijanie do ikon, profil jako avatar z okienkiem ---------- */
-function initRail() {
-  const top = $('.site-header .header-top'), auth = $('.site-header .auth'), logo = $('#logo');
-  if (!top || !auth || !logo || $('#rail-toggle') || document.documentElement.classList.contains('is-mac-app')) return;
-  document.documentElement.classList.add('rail-on');
-  try { if (localStorage.getItem('sliska_rail') === 'c') document.body.classList.add('rail-c'); } catch { /* ignoruj */ }
-  logo.insertAdjacentHTML('beforeend', '<img class="logo-mini" src="favicon.svg" alt="" aria-hidden="true">');
-  $$('.main-nav .nav-link').forEach(a => { a.title = a.textContent.trim(); });
-  const t = document.createElement('button'); t.type = 'button'; t.id = 'rail-toggle'; t.className = 'rail-toggle';
-  t.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg><span>Zwiń menu</span>';
-  const label = () => { const c = document.body.classList.contains('rail-c'); t.title = c ? 'Rozwiń menu' : 'Zwiń menu'; t.setAttribute('aria-label', t.title); };
-  t.addEventListener('click', () => { const c = document.body.classList.toggle('rail-c'); try { localStorage.setItem('sliska_rail', c ? 'c' : 'e'); } catch { /* ignoruj */ } label(); });
-  top.appendChild(t); label();
-  /* kategorie i „Masz temat?” przenosimy na pasek (tylko szeroki ekran) */
-  const nav = $('.main-nav'), cats = $('#category-nav') && $('#category-nav').closest('.side-card'), tip = $('#side-left .tip-card'), aside = $('#side-left');
-  if (nav && cats && tip && aside) {
-    const sc = document.createElement('div'); sc.className = 'rail-scroll';
-    nav.parentNode.insertBefore(sc, nav); sc.appendChild(nav);
-    const mq = matchMedia('(min-width:1100px)');
-    const place = () => { if (mq.matches) { sc.append(cats, tip); } else { aside.append(cats, tip); } };
-    place(); (mq.addEventListener ? mq.addEventListener('change', place) : mq.addListener(place));
-  }
-  const pb = document.createElement('button'); pb.type = 'button'; pb.id = 'rail-profile'; pb.className = 'rail-profile avatar'; pb.title = 'Profil'; pb.setAttribute('aria-label', 'Profil i skróty');
-  auth.appendChild(pb);
-  const src = $('#profile-avatar'), sync = () => { pb.innerHTML = src.innerHTML; };
-  if (src) { new MutationObserver(sync).observe(src, { childList: true, subtree: true }); sync(); }
-  const closePop = () => document.body.classList.remove('pp-open');
-  pb.addEventListener('click', e => { e.stopPropagation(); document.body.classList.toggle('pp-open'); });
-  document.addEventListener('click', e => {
-    if (!document.body.classList.contains('pp-open')) return;
-    if (e.target.closest('#rail-profile')) return;
-    if (e.target.closest('#profile-card')) { if (e.target.closest('button, a')) setTimeout(closePop, 0); return; }
-    closePop();
-  });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closePop(); });
-  window.addEventListener('hashchange', closePop);
-  const si = $('#search-input');
-  if (si) si.addEventListener('focus', () => { if (document.body.classList.contains('rail-c') && matchMedia('(min-width:1100px)').matches) { document.body.classList.remove('rail-c'); try { localStorage.setItem('sliska_rail', 'e'); } catch { /* ignoruj */ } label(); } });
-}
-
 function initStickyVars() {
   const root = document.documentElement;
   const header = $('.site-header');
   const head = $('.editor-head');
   const update = () => {
-    root.style.setProperty('--hdr-h', (matchMedia('(min-width:1100px)').matches ? 0 : Math.round(header ? header.getBoundingClientRect().height : 64)) + 'px');
+    root.style.setProperty('--hdr-h', Math.round(header ? header.getBoundingClientRect().height : 64) + 'px');
     root.style.setProperty('--edhead-h', Math.round(head ? head.getBoundingClientRect().height : 0) + 'px');
   };
   update();
@@ -8476,4 +8152,3 @@ function initStickyVars() {
 }
 
 document.addEventListener('DOMContentLoaded', main);
-setTimeout(() => { const sp = document.getElementById('app-splash'); if (sp) sp.classList.add('is-out'); }, 12000); // zabezpieczenie: ekran ładowania nigdy nie zostaje na stałe
