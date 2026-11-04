@@ -19,18 +19,15 @@
 <meta name="twitter:image" content="https://sliska.pl/og-sliska.png?v=1">
 <link rel="icon" type="image/svg+xml" href="/news/favicon.svg">
 <meta name="theme-color" content="#000000">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;700;800;900&family=Anton&family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500&display=swap" rel="stylesheet">
 <style>
 :root{
   color-scheme:dark;
   --forest:#000;
   --frost:#fff;
   --display:'Anton','Arial Narrow',sans-serif;
-  --news:'Inter',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --news:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
   --accent:#d6001c;
-  --ui:'Bricolage Grotesque',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --ui:system-ui,-apple-system,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--forest);color:var(--frost);font-family:var(--ui);-webkit-font-smoothing:antialiased;-webkit-text-size-adjust:100%}
@@ -64,7 +61,7 @@ a{color:inherit}
   display:flex;justify-content:center;align-items:center;gap:clamp(.75rem,4vw,2.4rem);padding:.55rem clamp(1rem,3vw,1.8rem);
   background:rgba(0,0,0,.88);-webkit-backdrop-filter:blur(14px) saturate(1.15);backdrop-filter:blur(14px) saturate(1.15);
   border:1px solid rgba(255,255,255,.14);border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
-.nav a{position:relative;color:rgba(255,255,255,.94);text-decoration:none;font-weight:400;font-size:clamp(.7rem,2.8vw,.86rem);letter-spacing:0;white-space:nowrap;padding:.3rem 0}
+.nav a{position:relative;color:rgba(255,255,255,.94);text-decoration:none;font-weight:600;font-size:clamp(.7rem,2.8vw,.86rem);letter-spacing:0;white-space:nowrap;padding:.3rem 0}
 .nav a::after{content:"";position:absolute;left:0;right:0;bottom:.1rem;height:1px;background:currentColor;opacity:0;transition:opacity .2s}
 .nav a:hover::after,.nav a:focus-visible::after{opacity:.8}
 .nav a.nav__logo{display:inline-flex;align-items:center;padding:.1rem 0}
@@ -104,6 +101,23 @@ a{color:inherit}
   .bar{left:12px;right:12px;bottom:12px;border-radius:0 0 22px 22px;justify-content:center;text-align:center;font-size:.68rem}
   .bar__rights{display:none}
 }
+/* najnowsze ze Śliska News – karta w prawym dolnym rogu (komputery) */
+.latest{position:fixed;right:clamp(1.6rem,4vw,3rem);bottom:calc(4.4rem + env(safe-area-inset-bottom,0px));z-index:8;width:min(380px,32vw);padding:14px;border-radius:20px;
+  background:rgba(18,18,18,.78);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2);border:1px solid rgba(255,255,255,.14);box-shadow:0 18px 50px rgba(0,0,0,.45);
+  font-family:var(--news);opacity:0;transform:translateY(10px);transition:opacity .4s ease,transform .4s ease}
+.latest.is-on{opacity:1;transform:none}
+.latest__head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 4px 10px;font-size:.7rem;font-weight:800;letter-spacing:.16em;color:#fff}
+.latest__head span{display:inline-flex;align-items:center;gap:8px}
+.latest__head span::before{content:"";width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 4px rgba(214,0,28,.25)}
+.latest__head a{color:rgba(255,255,255,.7);text-decoration:none;font-weight:700;letter-spacing:.02em}
+.latest__head a:hover{color:#fff}
+.latest__item{display:grid;grid-template-columns:58px minmax(0,1fr);gap:12px;align-items:center;padding:8px;border-radius:14px;color:#fff;text-decoration:none;transition:background .15s}
+.latest__item:hover{background:rgba(255,255,255,.07)}
+.latest__item img{width:58px;height:58px;border-radius:12px;object-fit:cover;background:#262626}
+.latest__item small{display:block;margin-bottom:3px;color:#ff5a6e;font-size:.66rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.latest__item b{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;font-size:.9rem;font-weight:700;line-height:1.3}
+@media (max-width:900px){.latest{display:none}}
+@media (max-height:620px){.latest{display:none}}
 @media (max-height:460px){
   .bar{flex-wrap:nowrap}
 }
@@ -148,6 +162,11 @@ a{color:inherit}
   </div>
 </main>
 
+<aside class="latest" id="latest" aria-label="Najnowsze w Śliska News" hidden>
+  <div class="latest__head"><span>NAJNOWSZE</span><a href="https://news.sliska.pl/">Wszystkie →</a></div>
+  <div id="latest-list"></div>
+</aside>
+
 <footer class="bar">
   <p class="bar__copy">© 2026 Suno Community / Spotted Śliska 10<span class="bar__rights">. Wszelkie prawa zastrzeżone.</span></p>
   <a class="bar__ig" href="https://www.instagram.com/sliska.pl" target="_blank" rel="noopener" aria-label="Instagram: sliska.pl">
@@ -176,6 +195,25 @@ function updateBackgroundVideo() {
 stage.addEventListener('contextmenu', event => event.preventDefault());
 mobileScreen.addEventListener('change', updateBackgroundVideo);
 updateBackgroundVideo();
+
+// Najnowsze artykuły ze Śliska News (bez nowinek); przy braku połączenia karta się nie pokazuje
+(async () => {
+  if (!matchMedia('(min-width:901px)').matches) return;
+  try {
+    const r = await fetch('https://api.sliska.pl/news/api/articles?limit=12', { cache: 'no-store' });
+    const d = await r.json();
+    const esc = v => String(v || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const list = (d.articles || []).filter(a => a && !a.quick && a.title).slice(0, 3);
+    if (!list.length) return;
+    document.getElementById('latest-list').innerHTML = list.map(a => {
+      const img = (a.imageSm && a.imageSmOf === a.image ? a.imageSm : a.image) || '';
+      const cat = (a.categories && a.categories[0]) || a.category || 'Śliska News';
+      return `<a class="latest__item" href="https://news.sliska.pl/a/${encodeURIComponent(a.id)}">${img && !img.startsWith('data:') ? `<img src="${esc(img)}" alt="" loading="lazy">` : '<img alt="">'}<span><small>${esc(cat)}</small><b>${esc(a.title)}</b></span></a>`;
+    }).join('');
+    const box = document.getElementById('latest'); box.hidden = false;
+    requestAnimationFrame(() => box.classList.add('is-on'));
+  } catch (e) { /* bez karty */ }
+})();
 </script>
 </body>
 </html>
