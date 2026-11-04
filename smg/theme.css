@@ -1,0 +1,303 @@
+/* =========================================================
+   Śliska Music Group – wygląd spójny ze Śliska News
+   Ładowany po stylach strony: te same kolory, czcionka, zaokrąglenia,
+   ikony i przyciski co na news.sliska.pl (ciemny motyw).
+   ========================================================= */
+:root {
+  --accent: #d6001c;
+  --accent-dark: #a80016;
+  --paper: #ececec;
+  --muted: #a3a3a3;
+  --rule: #2e2e2e;
+  --sn-bg: #121212;
+  --sn-card: #1c1c1c;
+  --sn-soft: #262626;
+  --sn-border: #2e2e2e;
+  --sn-field: #454545;
+  --sn-font: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --display: var(--sn-font);
+  font-family: var(--sn-font);
+  background: var(--sn-bg);
+}
+html, body { background: var(--sn-bg); font-family: var(--sn-font); -webkit-font-smoothing: antialiased; }
+a:hover, button:hover { color: #fff; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.grain { display: none; }
+
+/* ---------- Pasek u góry: logo w pigułce + okrągłe przyciski ---------- */
+.site-header { height: 72px; }
+.brand {
+  top: 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 18px 9px 14px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 999px;
+  background: rgba(18, 18, 18, .78);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .35);
+  font: 800 15px/1 var(--sn-font);
+  letter-spacing: -.01em;
+  text-transform: none;
+  white-space: nowrap;
+}
+.brand::before {
+  content: "";
+  width: 13px;
+  height: 13px;
+  flex: none;
+  background: var(--accent);
+  clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+}
+.brand small { color: var(--muted); font: 700 10px/1 var(--sn-font); letter-spacing: .16em; text-transform: uppercase; }
+.brand:hover { color: #fff; border-color: rgba(255, 255, 255, .3); }
+
+.menu-toggle, .home-link {
+  top: 14px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 14px;
+  background: rgba(18, 18, 18, .78);
+  color: #fff;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .3);
+  transition: background .15s, border-color .15s;
+}
+.menu-toggle { left: 14px; }
+.home-link { right: 14px; }
+.menu-toggle--open { color: #fff; }
+.menu-toggle:hover, .home-link:hover { background: var(--accent); border-color: var(--accent); color: #fff; }
+.menu-toggle svg, .home-link svg { width: 18px; height: 18px; }
+.home-link svg path { stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; }
+.menu-toggle--close { left: calc(min(340px, 85vw) - 58px); font-size: 26px; font-family: var(--sn-font); }
+
+/* ---------- Menu boczne jak w Śliska News ---------- */
+.site-menu {
+  width: min(340px, 85vw);
+  padding: 80px 16px 24px;
+  background: var(--sn-bg);
+  border-right: 1px solid var(--sn-border);
+  box-shadow: 20px 0 60px rgba(0, 0, 0, .45);
+}
+.site-menu > a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: 12px;
+  font: 600 16px/1.2 var(--sn-font);
+  letter-spacing: 0;
+  text-transform: none;
+  color: #d8d8d8;
+}
+.site-menu > a:hover { background: var(--sn-soft); color: #fff; }
+.site-menu > a[aria-current="page"] { background: rgba(214, 0, 28, .16); color: #ff5a6e; font-weight: 700; }
+.site-menu > a span { color: var(--muted); font: 14px var(--sn-font); }
+.menu-contact {
+  margin: 24px 14px 0;
+  padding-top: 18px;
+  border-top: 1px solid var(--sn-border);
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+.menu-contact a { color: #ececec; letter-spacing: 0; }
+.menu-contact a:hover { color: var(--accent); }
+
+/* ---------- Strona główna SMG: slajdy ---------- */
+.stage { background: #0c0c0c; }
+.slide::before { background: linear-gradient(180deg, rgba(0, 0, 0, .1), rgba(0, 0, 0, .12) 45%, rgba(0, 0, 0, .62)); }
+.artist-name {
+  bottom: 86px;
+  font: 900 clamp(2.2rem, 5.4vw, 4.4rem)/1.02 var(--sn-font);
+  letter-spacing: -.025em;
+  text-transform: none;
+  text-shadow: 0 2px 22px rgba(0, 0, 0, .55);
+}
+.artist-name::before {
+  content: "ŚLISKA MUSIC GROUP";
+  display: block;
+  margin-bottom: 14px;
+  font: 800 12px/1 var(--sn-font);
+  letter-spacing: .18em;
+  color: #fff;
+  opacity: .88;
+}
+.artist-name::after { width: 46px; height: 4px; margin-top: 16px; border-radius: 4px; background: var(--accent); }
+.slide-controls {
+  right: 18px;
+  width: auto;
+  gap: 8px;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.slide-controls button {
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 50%;
+  background: rgba(18, 18, 18, .72);
+  color: #fff;
+  font: 400 22px/1 var(--sn-font);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  transition: background .15s, border-color .15s;
+}
+.slide-controls button:last-child { border-bottom: 1px solid rgba(255, 255, 255, .16); }
+.slide-controls button:hover { background: var(--accent); border-color: var(--accent); }
+
+/* ---------- Stopka jak w Śliska News ---------- */
+.site-footer {
+  border-top: 1px solid var(--sn-border);
+  background: rgba(12, 12, 12, .86);
+  color: var(--muted);
+  font: 12px/1.4 var(--sn-font);
+}
+.legal-links a, .copyright { color: var(--muted); }
+.legal-links a:hover, .legal-links a[aria-current="page"] { color: #fff; }
+.fandom-link {
+  margin: 6px 0;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--sn-border);
+  border-radius: 999px;
+  color: #ececec;
+  font: 700 12px/1 var(--sn-font);
+  letter-spacing: .02em;
+  text-transform: none;
+}
+.fandom-link:hover { border-color: var(--accent); color: #fff; background: rgba(214, 0, 28, .14); }
+
+/* ---------- Nagłówki podstron ---------- */
+.roster-intro h1, .document-intro h1, .contact-hero h1, .form-heading h2 {
+  font-family: var(--sn-font);
+  font-weight: 900;
+  letter-spacing: -.03em;
+  text-transform: none;
+}
+.roster-intro h1 span, .contact-hero h1 span {
+  color: var(--accent);
+  -webkit-text-stroke: 0;
+  text-stroke: 0;
+}
+.roster-intro h1::before, .document-intro h1::before {
+  content: "ŚLISKA MUSIC GROUP";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 14px;
+  font: 800 12px/1 var(--sn-font);
+  letter-spacing: .18em;
+  color: var(--muted);
+}
+.eyebrow, .contact-summary .eyebrow, .form-heading .eyebrow, .contact-hero > .eyebrow {
+  color: var(--accent);
+  font-family: var(--sn-font);
+  font-weight: 800;
+  letter-spacing: .14em;
+}
+
+/* ---------- Artyści: karty jak w Śliska News ---------- */
+.artist-grid { gap: 18px; }
+.artist-card {
+  overflow: hidden;
+  border: 1px solid var(--sn-border);
+  border-radius: 18px;
+  background: var(--sn-card);
+  box-shadow: none;
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease;
+}
+.artist-card:hover { transform: translateY(-3px); border-color: #444; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); }
+.artist-portrait, .artist-photo { border-radius: 0; }
+.artist-placeholder { background: var(--sn-soft); }
+.artist-details {
+  background: var(--sn-card);
+  color: var(--paper);
+  border-top: 1px solid var(--sn-border);
+}
+.artist-details h2 {
+  color: #fff;
+  font: 800 16px/1.25 var(--sn-font);
+  letter-spacing: -.005em;
+}
+.artist-socials { gap: 8px; }
+.artist-socials a {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--sn-soft);
+  color: #d8d8d8;
+  transition: background .15s, color .15s;
+}
+.artist-socials a:hover { background: var(--accent); color: #fff; }
+.artist-socials svg { width: 16px; height: 16px; }
+
+/* ---------- Kontakt ---------- */
+.contact-hero { border-color: var(--sn-border); border-radius: 22px; }
+.email-link { color: #fff; font-family: var(--sn-font); font-weight: 800; letter-spacing: -.01em; }
+.email-link:hover { color: var(--accent); }
+.contact-form-section form, #contact-form {
+  border: 1px solid var(--sn-border);
+  border-radius: 20px;
+  background: var(--sn-card);
+}
+.field label { color: #ececec; font-family: var(--sn-font); font-weight: 700; }
+.field label span { color: var(--accent); }
+.field input, .field select, .field textarea {
+  border: 1px solid var(--sn-field);
+  border-radius: 12px;
+  background: var(--sn-bg);
+  color: #ececec;
+  font-family: var(--sn-font);
+}
+.field input:hover, .field select:hover, .field textarea:hover { border-color: #666; }
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); outline: 2px solid rgba(214, 0, 28, .3); outline-offset: 0; }
+.demo-guidance { border: 1px solid var(--sn-border); border-radius: 14px; background: var(--sn-soft); }
+.consent { border-color: var(--sn-border); border-radius: 12px; background: var(--sn-bg); }
+.consent input { accent-color: var(--accent); }
+.consent a { color: #fff; }
+.consent a:hover, .consent [aria-hidden="true"] { color: var(--accent); }
+.submit-button {
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: 800 14px/1 var(--sn-font);
+  letter-spacing: .02em;
+  text-transform: none;
+  box-shadow: 0 10px 28px rgba(214, 0, 28, .3);
+}
+.submit-button:not(:disabled):hover { background: var(--accent-dark); color: #fff; }
+.submit-button:disabled { background: var(--sn-soft); color: var(--muted); box-shadow: none; }
+.form-note { color: var(--muted); }
+
+/* ---------- Dokumenty (regulamin, prywatność, cookies) ---------- */
+.document-content { font-family: var(--sn-font); }
+.document-content-inner { border-radius: 20px; }
+.document-content h2 { font-family: var(--sn-font); font-weight: 800; letter-spacing: -.01em; }
+.document-content a { color: #ff5a6e; }
+.document-content a:hover { color: #fff; }
+.effective-date { color: var(--muted); }
+
+@media (max-width: 700px) {
+  .brand { padding: 8px 14px 8px 12px; font-size: 14px; }
+  .brand small { display: none; }
+  .artist-name { bottom: 104px; padding: 0 24px; font-size: clamp(1.9rem, 9vw, 2.6rem); }
+  .artist-name::before { font-size: 10px; }
+  .slide-controls { right: 12px; }
+}
+
+/* ikony z „wyciętym” środkiem (Spotify, YouTube) – środek w kolorze tła kółka */
+.artist-socials a { --ib: var(--sn-soft); }
+.artist-socials a:hover { --ib: var(--accent); }
+.artist-socials svg [fill="#f4f4f0"] { fill: var(--ib); }
+.artist-socials svg [stroke="#f4f4f0"] { stroke: var(--ib); }

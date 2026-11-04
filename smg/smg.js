@@ -27,12 +27,29 @@
     matchMedia('(min-width: 861px)').addEventListener('change', function (m) { if (m.matches) set(false); });
   }
 
+  /* ---------- jasny / ciemny motyw (wybór zapamiętany w przeglądarce) ---------- */
+  var root = document.documentElement, dark = matchMedia('(prefers-color-scheme: dark)');
+  var isDark = function () { return root.dataset.theme ? root.dataset.theme === 'dark' : dark.matches; };
+  var syncTheme = function () {
+    $$('[data-theme-toggle]').forEach(function (b) { b.setAttribute('aria-pressed', String(isDark())); b.setAttribute('aria-label', isDark() ? 'Włącz jasny motyw' : 'Włącz ciemny motyw'); });
+  };
+  $$('[data-theme-toggle]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var t = isDark() ? 'light' : 'dark';
+      root.dataset.theme = t;
+      try { localStorage.setItem('smg-theme', t); } catch (e) { /* bez zapamiętania */ }
+      syncTheme();
+    });
+  });
+  if (dark.addEventListener) dark.addEventListener('change', syncTheme);
+  syncTheme();
+
   /* ---------- ikony serwisów ---------- */
   var SOCIAL = {
     instagram: ['Instagram', '<svg viewBox="0 0 24 24" class="ic"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.3" cy="6.7" r=".9" fill="currentColor" stroke="none"/></svg>'],
     spotify: ['Spotify', '<svg viewBox="0 0 24 24" class="ic"><circle cx="12" cy="12" r="9"/><path d="M7.5 9.8c3-.9 6.4-.6 9.3 1M8 12.8c2.5-.7 5.1-.4 7.4.8M8.6 15.6c1.9-.5 3.9-.3 5.6.6"/></svg>'],
     youtube: ['YouTube', '<svg viewBox="0 0 24 24" class="ic"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10.2 9.4v5.2l4.6-2.6z" fill="currentColor" stroke="none"/></svg>'],
-    fandom: ['Wiki Fandom', '<svg viewBox="0 0 24 24" class="ic"><path d="M3 5.2c3.2-.9 6.4-.2 9 2v12c-2.6-2.2-5.8-2.9-9-2zM21 5.2c-3.2-.9-6.4-.2-9 2v12c2.6-2.2 5.8-2.9 9-2z"/></svg>']
+    fandom: ['Wiki Fandom', '<svg viewBox="0 0 24 24" class="ic ic-fill"><path fill-rule="evenodd" clip-rule="evenodd" d="M7.707 1.293a1 1 0 0 0-1.414 0l-5 5A1 1 0 0 0 1 7v5a1 1 0 0 0 .293.707l10 10a1 1 0 0 0 1.414 0l10-10A1 1 0 0 0 23 12V7a1 1 0 0 0-.293-.707l-5-5a1 1 0 0 0-1.414 0L12 5.586zM3 9.414v2.172l6.5 6.5L10.586 17zm9 11.172L10.914 19.5L21 9.414v2.172zm5-17.172L20.586 7L17 10.586L13.414 7zM15.586 12L12 15.586L3.414 7L7 3.414l4.293 4.293l.007.007z"/></svg>']
   };
   function initials(n) { return String(n).split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 2).toUpperCase(); }
   function socialsHtml(s) {
